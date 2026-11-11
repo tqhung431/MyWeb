@@ -78,6 +78,27 @@
       "when": 1794404304277,
       "tag": "0010_hobby_hub",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794408661486,
+      "tag": "0011_watchlist",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794409281561,
+      "tag": "0012_habits_reading",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794410114365,
+      "tag": "0013_arcade_online",
+      "breakpoints": true
     }
   ]
 }

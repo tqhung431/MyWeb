@@ -8,6 +8,9 @@ import { AchievementsProvider } from "@/features/achievements/AchievementsProvid
 import { AmbientProvider } from "@/features/ambient/AmbientProvider";
 import { MeProvider } from "@/features/me/MeProvider";
 import { FocusProvider } from "@/features/focus/FocusProvider";
+import { HabitReminders } from "@/features/habits/Reminders";
+import { OfflineSync } from "@/features/habits/OfflineSync";
+import { ServiceWorker } from "@/features/habits/ServiceWorker";
 import { MusicProvider } from "@/features/music/MusicProvider";
 import { RealtimeProvider } from "@/features/realtime/RealtimeProvider";
 import type { User } from "@/lib/api/me";
@@ -19,7 +22,12 @@ export function AppProviders({ initialUser, children }: { initialUser: User | nu
         <AmbientProvider>
           <AchievementsProvider>
             <FocusProvider>
-              <MusicProvider>{children}</MusicProvider>
+              <MusicProvider>
+                {children}
+                <HabitReminders />
+                <OfflineSync />
+                <ServiceWorker />
+              </MusicProvider>
             </FocusProvider>
           </AchievementsProvider>
         </AmbientProvider>

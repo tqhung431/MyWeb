@@ -4,6 +4,7 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  date,
   index,
   integer,
   jsonb,
@@ -294,6 +295,161 @@ export const chatMessages = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("chat_messages_group_time_idx").on(t.groupId, t.createdAt), index("chat_messages_time_idx").on(t.createdAt)],
+);
+
+// --- Stage 12: WatchList --------------------------------------------------------------
+// A local copy of each show or anime that someone saved (from TVmaze or Jikan), so lists keep working
+// even when those websites are slow or down, and one entry per person per title.
+
+export const watchTitles = pgTable(
+  "watch_titles",
+  {
+    id: serial("id").primaryKey(),
+    source: text("source", { enum: ["tv", "anime"] }).notNull(), // tv = TVmaze, anime = Jikan (MyAnimeList)
+    externalId: text("external_id").notNull(),
+    title: text("title").notNull(),
+    originalTitle: text("original_title"),
+    year: integer("year"),
+    kind: text("kind").notNull(), // "TV show", "Anime series", "Anime movie"…
+    imageUrl: text("image_url"),
+    summary: text("summary").notNull().default(""),
+    genres: text("genres").array().notNull().default(sql`'{}'::text[]`),
+    rating: integer("rating"), // the source's score × 10 (8.5 → 85), null if unknown
+    episodes: integer("episodes"),
+    url: text("url"),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("watch_titles_source_ext_idx").on(t.source, t.externalId)],
+);
+
+export const WATCH_STATUSES = ["want", "watching", "done", "dropped"] as const;
+
+export const watchEntries = pgTable(
+  "watch_entries",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    titleId: integer("title_id")
+      .notNull()
+      .references(() => watchTitles.id, { onDelete: "cascade" }),
+    status: text("status", { enum: WATCH_STATUSES }).notNull(),
+    stars: integer("stars"), // your rating, 1–5
+    note: text("note").notNull().default(""),
+    episodesSeen: integer("episodes_seen"),
+    addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.titleId] }),
+    index("watch_entries_title_idx").on(t.titleId),
+    index("watch_entries_updated_idx").on(t.updatedAt),
+    check("watch_status_valid", sql`${t.status} in ('want', 'watching', 'done', 'dropped')`),
+    check("watch_stars_valid", sql`${t.stars} is null or ${t.stars} between 1 and 5`),
+  ],
+);
+
+// --- Stage 13: Habit & Reading Tracker ---------------------------------------------------
+// Days are calendar dates in YOUR time zone ("2026-11-11"), not moments: "did I read today?"
+
+export const habits = pgTable(
+  "habits",
+  {
+    id: serial("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    emoji: text("emoji").notNull(),
+    color: text("color").notNull().default("violet"),
+    perWeek: integer("per_week").notNull().default(7), // goal: days a week (7 = every day)
+    reminderTime: text("reminder_time"), // "20:30" in timeZone, or null
+    timeZone: text("time_zone").notNull().default("UTC"),
+    lastRemindedOn: date("last_reminded_on", { mode: "string" }), // so a reminder fires once a day
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("habits_user_idx").on(t.userId),
+    index("habits_reminder_idx").on(t.reminderTime),
+    check("habit_per_week_valid", sql`${t.perWeek} between 1 and 7`),
+  ],
+);
+
+export const habitDays = pgTable(
+  "habit_days",
+  {
+    habitId: integer("habit_id")
+      .notNull()
+      .references(() => habits.id, { onDelete: "cascade" }),
+    day: date("day", { mode: "string" }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.habitId, t.day] })],
+);
+
+export const BOOK_STATUSES = ["want", "reading", "finished"] as const;
+
+export const books = pgTable(
+  "books",
+  {
+    id: serial("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    author: text("author").notNull().default(""),
+    totalPages: integer("total_pages"),
+    currentPage: integer("current_page").notNull().default(0),
+    status: text("status", { enum: BOOK_STATUSES }).notNull().default("reading"),
+    startedOn: date("started_on", { mode: "string" }),
+    finishedOn: date("finished_on", { mode: "string" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("books_user_idx").on(t.userId), check("book_status_valid", sql`${t.status} in ('want', 'reading', 'finished')`)],
+);
+
+// Pages read per book per day (adding pages twice on one day adds them up)
+export const readingLog = pgTable(
+  "reading_log",
+  {
+    bookId: integer("book_id")
+      .notNull()
+      .references(() => books.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    day: date("day", { mode: "string" }).notNull(),
+    pages: integer("pages").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.bookId, t.day] }), index("reading_log_user_day_idx").on(t.userId, t.day)],
+);
+
+// --- Stage 14: Arcade Online (Quiz Party) results -------------------------------------------
+// Games are played in the API's memory; when one ends, its result is saved here for the leaderboard.
+
+export const onlineGames = pgTable("online_games", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull(),
+  category: text("category").notNull(),
+  rounds: integer("rounds").notNull(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const onlineGamePlayers = pgTable(
+  "online_game_players",
+  {
+    gameId: integer("game_id")
+      .notNull()
+      .references(() => onlineGames.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    score: integer("score").notNull(),
+    correct: integer("correct").notNull(),
+    place: integer("place").notNull(), // 1 = won
+    players: integer("players").notNull(), // how many played (a win against 3 people means more)
+  },
+  (t) => [primaryKey({ columns: [t.gameId, t.userId] }), index("online_game_players_user_idx").on(t.userId)],
 );
 
 export type Preferences = { timer?: { focus: number; short: number; long: number } };

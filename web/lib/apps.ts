@@ -13,6 +13,7 @@ export type AppInfo = {
   id: string;
   name: string;
   shortName?: string; // for the phone tab bar (default: the first word of the name)
+  pinned?: boolean; // Stage 12: on the phone tab bar; the others are under "Apps"
   tagline: string;
   href: string;
   icon: LucideIcon;
@@ -25,6 +26,7 @@ export type AppInfo = {
 export const APPS: AppInfo[] = [
   {
     id: "chill",
+    pinned: true,
     name: "Chill Corner",
     tagline: "Ambient sounds, a focus timer and tips",
     href: "/chill",
@@ -39,6 +41,7 @@ export const APPS: AppInfo[] = [
   },
   {
     id: "music",
+    pinned: true,
     name: "Music",
     tagline: "Songs with vocals, played by Nook itself: community charts",
     href: "/music",
@@ -69,15 +72,22 @@ export const APPS: AppInfo[] = [
   {
     id: "watchlist",
     name: "WatchList",
-    tagline: "Find, rate and save movies and anime",
+    shortName: "Watch",
+    tagline: "TV shows and anime: your list, and what others watch",
     href: "/watchlist",
     icon: Clapperboard,
     accent: "from-sky-400 to-indigo-500",
-    status: "soon",
-    phase: "Phase 2",
+    status: "live",
+    phase: "Stage 12",
+    links: [
+      { href: "/watchlist", label: "My list" },
+      { href: "/watchlist/search", label: "Find" },
+      { href: "/watchlist/popular", label: "On Nook" },
+    ],
   },
   {
     id: "hobby-hub",
+    pinned: true,
     name: "Hobby Hub",
     shortName: "Hobbies",
     tagline: "Post and chat in hobby groups, live",
@@ -90,22 +100,33 @@ export const APPS: AppInfo[] = [
   {
     id: "habits",
     name: "Habit & Reading Tracker",
-    tagline: "Streaks, charts and reminders",
+    shortName: "Habits",
+    tagline: "Daily habits and books: streaks, charts, reminders, works offline",
     href: "/habits",
     icon: ListChecks,
     accent: "from-lime-400 to-emerald-500",
-    status: "soon",
-    phase: "Phase 3–4",
+    status: "live",
+    phase: "Stage 13",
+    links: [
+      { href: "/habits", label: "Today" },
+      { href: "/habits/reading", label: "Reading" },
+      { href: "/habits/progress", label: "Progress" },
+    ],
   },
   {
     id: "arcade-online",
     name: "Arcade Online",
-    tagline: "Real-time multiplayer games",
+    shortName: "Quiz",
+    tagline: "Quiz Party: play live against everyone on Nook",
     href: "/arcade-online",
     icon: Swords,
     accent: "from-rose-400 to-red-500",
-    status: "soon",
-    phase: "Phase 4",
+    status: "live",
+    phase: "Stage 14",
+    links: [
+      { href: "/arcade-online", label: "Play" },
+      { href: "/arcade-online/leaderboard", label: "Leaderboard" },
+    ],
   },
   {
     id: "companion",

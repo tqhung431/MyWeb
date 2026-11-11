@@ -10,6 +10,7 @@ import { createApp } from "../src/app.js";
 import { pool } from "../src/db/client.js";
 import { mediaDir } from "../src/music/files.js";
 import { detectGenre } from "../src/music/genre.js";
+import { valkey } from "../src/valkey/client.js";
 import { closeAll, ORIGIN, resetDatabase, SITE_HOST } from "./helpers.js";
 
 const app = createApp();
@@ -64,6 +65,31 @@ describe("uploading", () => {
     expect(remix.body).toMatchObject({ title: "Đêm Nay (Vinahouse Remix)", artist: "DJ Thử", genre: "remix", artworkUrl: null });
     const plain = await upload("untagged-song.mp3");
     expect(plain.body).toMatchObject({ title: "untagged-song", artist: "Unknown artist", genre: "pop" });
+  });
+
+  it("reads file names in any language, with emoji and symbols (Stage 12 fix)", async () => {
+    const vi = await upload("untagged-song.mp3", { as: "Đêm Nay – Sơn Tùng M-TP 🎵 (Official).mp3" });
+    expect(vi.status).toBe(201);
+    expect(vi.body.title).toBe("Đêm Nay – Sơn Tùng M-TP 🎵 (Official)");
+    // A Mac writes "ê" as "e" + a separate accent mark; Nook stores the usual single letter
+    const mac = await upload("tagged-hiphop.mp3", { as: "Ca\u0300 phe\u0302 sa\u0301ng.mp3" });
+    expect(mac.status).toBe(201);
+  });
+
+  it("answers 'too many' with a clear message, not a broken connection (Stage 12 fix)", async () => {
+    const client = randomUUID();
+    await valkey.set(`ratelimit:song-add:client:${client}`, "100000", "EX", 3600);
+    const big = Buffer.alloc(12 * 1024 * 1024, 1); // 12 MB, still being sent when the limit is checked
+    const res = await request(app)
+      .post("/api/songs")
+      .set("Origin", ORIGIN)
+      .set("X-Forwarded-Host", SITE_HOST)
+      .set("X-Client-Id", client)
+      .field("rights", "yes")
+      .field("license", "Own work")
+      .attach("file", big, { filename: "big.mp3" });
+    expect(res.status).toBe(429);
+    expect(res.body.error).toMatch(/Too many/i);
   });
 
   it("lets you pick the genre yourself if you want", async () => {

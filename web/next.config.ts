@@ -5,9 +5,19 @@ import type { NextConfig } from "next";
 // but the API only listens on 127.0.0.1.
 const API_URL = process.env.API_URL ?? "http://127.0.0.1:4000";
 
+// Stage 12: the biggest song upload, in MB (the API checks the same number, MAX_UPLOAD_MB).
+const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB ?? 100);
+
 const nextConfig: NextConfig = {
   // Stage 7: build a small self-contained server (.next/standalone) for the Docker image.
   output: "standalone",
+
+  experimental: {
+    // Stage 12 fix: when Next.js passes /api/* on to the API (below), it keeps only the first 10 MB
+    // of a request unless told otherwise. Bigger songs were cut off, the API waited for the rest,
+    // and after 30 s the upload failed ("can't reach Nook"). A little extra for the form fields.
+    proxyClientMaxBodySize: `${MAX_UPLOAD_MB + 5}mb`,
+  },
 
   // Dev mode (npm run dev) only: let other PCs on a home/office network load the
   // live-reload scripts. `npm start` (production) doesn't need this.

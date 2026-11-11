@@ -1,6 +1,6 @@
 # Nook: notes for Claude
 
-Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–11).
+Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–14).
 
 ## The project
 
@@ -11,13 +11,20 @@ Read this first in every session. It carries the context from the sessions that 
 - Work goes stage by stage. Done: 1 static page · 2 Next.js · 3 API + PostgreSQL · 3.5 frontend review and
   design system · 4 guests-first accounts, LAN access · 5 Valkey cache/queue/worker · 6 Socket.IO real time ·
   7 Docker Compose + Caddy · 8 GitHub Actions + OpenTelemetry/Grafana · 9 local AI with Ollama ·
-  10 Mini Arcade (canvas games, high scores) + music player controls · 11 Hobby Hub, names instead of accounts, data retention.
+  10 Mini Arcade (canvas games, high scores) + music player controls · 11 Hobby Hub, names instead of accounts, data retention ·
+  12 WatchList (TVmaze + Jikan, no keys) + song upload fixes (Next proxy 10 MB body limit, UTF-8 file names) ·
+  13 Habit & Reading Tracker (calendar days in the user's time zone, reminder job every minute, offline queue, PWA) ·
+  14 Arcade Online: Quiz Party (server-run game state machine in memory, Socket.IO rooms `ao:<code>`, results in DB).
+  Every app in the plan is now live; what's left in the plan is weeks 51–52: portfolio polish (README, CREDITS, case studies).
   Each stage has an explainer in `docs/stage-N.md`; write one for every new stage and update the README's stage list.
 - Apps: **Chill Corner** (focus timer, generated sounds, tips, achievements), **Music** (uploaded songs
   stored and streamed by Nook, auto genre, charts, queue/shuffle/repeat/volume), **Mini Arcade** (6 games in
   `web/features/arcade/games`, rules in `logic/` with tests, scores in `game_scores`), **Free-time Companion**
   (Ollama + pgvector RAG, SSE streaming). **Hobby Hub** (groups, posts, comments, likes, live chat via Socket.IO rooms `group:<slug>`).
-  Planned ("soon" in `web/lib/apps.ts`): WatchList, Habit & Reading Tracker, Arcade Online.
+  **WatchList** (`api/src/watch/sources.ts`; tests use `tests/fake-watch.ts` on port 4995).
+  **Habit & Reading Tracker** (`/habits`: days are `date` strings in X-Time-Zone; `web/lib/offline.ts` queue; `public/sw.js`).
+  **Arcade Online** (`api/src/arcade-online/`: game.ts has no network code; tests use a fake clock).
+- Phone tab bar: Home + apps with `pinned: true` + an "Apps" grid. Don't pin more than 3–4.
 - People (Stage 11): **name only, one browser** (owner's choice): no email/password, no login page. `POST /api/me {name}`
   sets the `nook_session` cookie; names unique by lower(name). Guests (X-Client-Id) still work until they pick a name.
   Data retention (owner's choice: "store data but not for too long"): worker job `cleanup` daily deletes people unseen for
@@ -67,12 +74,15 @@ After pushing, check the GitHub Actions run (api, web, docker smoke test through
 - PostgreSQL needs pgvector (`apt-get install -y postgresql-16-pgvector`) and the `nook` user (password `nook`)
   with databases `nook` and `nook_test`. The environment's setup script does this.
 - Tests use a **fake Ollama** (`api/tests/fake-ollama.ts`, ports 4996/4997). If tests hang on ports, kill
-  leftovers: `fuser -k 4996/tcp 4997/tcp 4998/tcp 4999/tcp`.
+  leftovers: `fuser -k 4995/tcp 4996/tcp 4997/tcp 4998/tcp 4999/tcp`.
 - Run the app for a browser check: `npm run dev` in `api/` (with `OLLAMA_URL` set if needed), `npm run worker`,
   `npm run dev` in `web/`. Dev mode keeps a long-polling connection open: in Playwright wait for `load`, not
   `networkidle`. Launch Chromium with `--no-proxy-server --proxy-bypass-list=localhost`.
 - Production-like check: build, run the Next standalone server (`cp -r .next/static .next/standalone/.next/static`),
   Caddy from source (Go) with `API_UPSTREAM=127.0.0.1:4000 WEB_UPSTREAM=127.0.0.1:3000`.
 - Free a port: `fuser -k 3000/tcp`.
+- The sandbox reaches the internet only through a proxy that Node's fetch ignores: start the API with
+  `NODE_USE_ENV_PROXY=1 npm run dev` to try WatchList. api.tvmaze.com is allowed; api.jikan.moe never answers from the
+  sandbox (anime is only tested against the fake); poster images (static.tvmaze.com) are blocked.
 - `npm run dev` in `api/` needs `api/.env` (copy `api/.env.example`) and a migrated dev DB (`npm run db:migrate && npm run db:seed`).
 - Code style: Prettier-like with long lines (`npx prettier --print-width 160`); there is no Prettier config in the repo.

@@ -16,7 +16,9 @@ COPY . .
 #   NEXT_PUBLIC_REALTIME_WEBSOCKET=1: Caddy forwards WebSockets, so browsers can use them
 ARG API_URL=http://api:4000
 ARG NEXT_PUBLIC_REALTIME_WEBSOCKET=1
+ARG MAX_UPLOAD_MB=100
 ENV API_URL=$API_URL \
+    MAX_UPLOAD_MB=$MAX_UPLOAD_MB \
     NEXT_PUBLIC_REALTIME_WEBSOCKET=$NEXT_PUBLIC_REALTIME_WEBSOCKET \
     NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
@@ -30,6 +32,8 @@ ENV NODE_ENV=production \
     PORT=3000
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
+# Stage 13: icons, the web app manifest's images and the service worker (sw.js)
+COPY --from=build /app/public ./public
 USER node
 EXPOSE 3000
 CMD ["node", "server.js"]

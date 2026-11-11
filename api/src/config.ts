@@ -54,7 +54,9 @@ export const configSchema = z.object({
   // --- Stage 8: Music files ---
   // Where song files and their cover pictures are kept (a Docker volume in docker-compose).
   MEDIA_DIR: z.string().default("./media"),
-  MAX_UPLOAD_MB: z.coerce.number().int().positive().default(30),
+  // Stage 12: 100 MB (was 30: too small for FLAC or WAV songs), and how many songs a person may add per hour.
+  MAX_UPLOAD_MB: z.coerce.number().int().positive().default(100),
+  SONG_UPLOADS_PER_HOUR: z.coerce.number().int().positive().default(300),
 
   // --- Stage 9: local AI (Ollama). Not set → the Companion is off; everything else works. ---
   // docker-compose (profile "ai"): http://ollama:11434 · Ollama on your PC: http://127.0.0.1:11434
@@ -64,6 +66,10 @@ export const configSchema = z.object({
   // (Apache-2.0, 50+ languages incl. Vietnamese, 768 numbers per text) makes embeddings.
   AI_CHAT_MODEL: z.string().default("qwen2.5:1.5b"),
   AI_EMBED_MODEL: z.string().default("paraphrase-multilingual"),
+
+  // --- Stage 12: WatchList's sources (free, no key). Tests point these at a fake server. ---
+  TVMAZE_URL: z.url().default("https://api.tvmaze.com"),
+  JIKAN_URL: z.url().default("https://api.jikan.moe/v4"),
 
   // OpenTelemetry: where traces and metrics go (Grafana's all-in-one "otel-lgtm" in docker-compose).
   // Not set → telemetry off. Read by the OpenTelemetry SDK itself; listed here so it's documented.

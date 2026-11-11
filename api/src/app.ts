@@ -13,13 +13,16 @@ import { errorHandler, notFound } from "./middleware/errors.js";
 import { sameOrigin } from "./middleware/security.js";
 import { achievementsRouter } from "./routes/achievements.js";
 import { arcadeRouter } from "./routes/arcade.js";
+import { arcadeOnlineRouter } from "./routes/arcadeOnline.js";
 import { activityRouter } from "./routes/activity.js";
 import { companionRouter } from "./routes/companion.js";
+import { booksRouter, habitsRouter } from "./routes/habits.js";
 import { hobbyRouter } from "./routes/hobby.js";
 import { meRouter } from "./routes/me.js";
 import { musicRouter } from "./routes/music.js";
 import { sessionsRouter } from "./routes/sessions.js";
 import { tipsRouter } from "./routes/tips.js";
+import { watchRouter } from "./routes/watch.js";
 import { valkey, valkeyReady } from "./valkey/client.js";
 
 export function createApp() {
@@ -52,7 +55,11 @@ export function createApp() {
   app.use("/api/songs", musicRouter);
   app.use("/api/companion", companionRouter);
   app.use("/api/arcade", arcadeRouter);
+  app.use("/api/arcade-online", arcadeOnlineRouter);
   app.use("/api/hobby", hobbyRouter);
+  app.use("/api/watch", watchRouter);
+  app.use("/api/habits", habitsRouter);
+  app.use("/api/books", booksRouter);
 
   app.use(notFound);
   app.use(errorHandler); // must be last

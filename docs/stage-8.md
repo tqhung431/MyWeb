@@ -103,7 +103,7 @@ sequenceDiagram
     participant D as Disk (media volume)
     participant P as PostgreSQL
     B->>A: POST /api/songs (form: file + what allows sharing it)
-    Note over A: Origin is Nook? size ≤ 30 MB? really audio?<br/>read title, artist, genre tag, length, cover
+    Note over A: Origin is Nook? size ≤ 100 MB (Stage 12)? really audio?<br/>read title, artist, genre tag, length, cover
     Note over A: fingerprint (SHA-256): already added? → 409
     A->>D: save as <random id>.mp3 (+ cover)
     A->>P: INSERT songs (… genre detected …)

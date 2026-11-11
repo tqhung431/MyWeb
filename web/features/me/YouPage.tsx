@@ -22,6 +22,10 @@ const LABELS: [keyof MyData["counts"], string][] = [
   ["posts", "Hobby Hub posts"],
   ["comments", "Comments"],
   ["chatMessages", "Chat messages"],
+  ["watchList", "On your WatchList"],
+  ["habits", "Habits"],
+  ["books", "Books"],
+  ["quizGames", "Quiz Party games"],
 ];
 
 export function YouPage() {

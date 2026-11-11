@@ -7,10 +7,10 @@
 //
 // Posts and comments stay as long as their author is active.
 
-import { and, isNull, like, lt } from "drizzle-orm";
+import { and, isNull, like, lt, notExists, sql } from "drizzle-orm";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
-import { achievements, authSessions, chatMessages, focusSessions, gameScores, songLikes, songPlays, users } from "../db/schema.js";
+import { achievements, authSessions, chatMessages, focusSessions, gameScores, songLikes, songPlays, users, watchEntries, watchTitles, onlineGames, onlineGamePlayers } from "../db/schema.js";
 import { deletePerson } from "../people.js";
 import { broadcast } from "../realtime/emit.js";
 
@@ -47,6 +47,15 @@ export async function cleanup(now = new Date()) {
   };
   const chat = await db.delete(chatMessages).where(lt(chatMessages.createdAt, chatCutoff)).returning({ id: chatMessages.id });
   const sessions = await db.delete(authSessions).where(lt(authSessions.expiresAt, now)).returning({ id: authSessions.id });
+  // Stage 12: WatchList titles nobody has on their list any more
+  const titles = await db
+    .delete(watchTitles)
+    .where(notExists(db.select({ one: sql`1` }).from(watchEntries).where(sql`watch_entries.title_id = watch_titles.id`)))
+    .returning({ id: watchTitles.id });
+  // Stage 14: Quiz Party games whose players have all been deleted
+  await db
+    .delete(onlineGames)
+    .where(notExists(db.select({ one: sql`1` }).from(onlineGamePlayers).where(sql`online_game_players.game_id = online_games.id`)));
 
   if (inactive.length) broadcast("people:changed");
   return {
@@ -54,5 +63,6 @@ export async function cleanup(now = new Date()) {
     guestRows: Object.values(guest).reduce((n, rows) => n + rows.length, 0),
     chatMessages: chat.length,
     sessions: sessions.length,
+    watchTitles: titles.length,
   };
 }

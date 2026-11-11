@@ -58,6 +58,11 @@ export function uploadSong(file: File, fields: UploadFields, onProgress: (fracti
   });
 }
 
+// Stage 12: the biggest file Nook accepts, so the page can say so before uploading anything.
+export function getUploadLimits(): Promise<{ maxMb: number; perHour: number }> {
+  return apiFetch("/api/songs/upload-limits");
+}
+
 export function updateSong(id: number, changes: Partial<Pick<Song, "genre" | "title" | "artist">>): Promise<Song> {
   return apiFetch<Song>(`/api/songs/${id}`, { method: "PATCH", headers: who(), body: JSON.stringify(changes) });
 }
