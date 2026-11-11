@@ -5,7 +5,7 @@
 // (tests/apps.test.ts fails if a "live" app has no page.)
 
 import type { LucideIcon } from "lucide-react";
-import { Clapperboard, Disc3, Gamepad2, ListChecks, Moon, Sparkles, Swords, Users } from "lucide-react";
+import { Clapperboard, Disc3, Gamepad2, ListChecks, Moon, Mountain, Sparkles, Swords, Users } from "lucide-react";
 
 export type AppStatus = "live" | "soon";
 
@@ -127,6 +127,17 @@ export const APPS: AppInfo[] = [
       { href: "/arcade-online", label: "Play" },
       { href: "/arcade-online/leaderboard", label: "Leaderboard" },
     ],
+  },
+  {
+    id: "games",
+    name: "Nook Games",
+    shortName: "Games",
+    tagline: "Bigger games with saves: Vân Lộ, a cultivation adventure",
+    href: "/games",
+    icon: Mountain,
+    accent: "from-stone-500 to-red-700",
+    status: "live",
+    phase: "Stage 16",
   },
   {
     id: "companion",

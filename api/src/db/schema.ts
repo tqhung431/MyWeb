@@ -2,21 +2,7 @@
 // drizzle-kit reads this file and writes the SQL migrations in /drizzle.
 
 import { sql } from "drizzle-orm";
-import {
-  check,
-  date,
-  index,
-  integer,
-  jsonb,
-  pgTable,
-  primaryKey,
-  serial,
-  text,
-  timestamp,
-  uniqueIndex,
-  uuid,
-  vector,
-} from "drizzle-orm/pg-core";
+import { check, date, index, integer, jsonb, pgTable, primaryKey, serial, text, timestamp, uniqueIndex, uuid, vector } from "drizzle-orm/pg-core";
 
 export const tips = pgTable("tips", {
   id: serial("id").primaryKey(),
@@ -313,7 +299,10 @@ export const watchTitles = pgTable(
     kind: text("kind").notNull(), // "TV show", "Anime series", "Anime movie"…
     imageUrl: text("image_url"),
     summary: text("summary").notNull().default(""),
-    genres: text("genres").array().notNull().default(sql`'{}'::text[]`),
+    genres: text("genres")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     rating: integer("rating"), // the source's score × 10 (8.5 → 85), null if unknown
     episodes: integer("episodes"),
     url: text("url"),
@@ -450,6 +439,23 @@ export const onlineGamePlayers = pgTable(
     players: integer("players").notNull(), // how many played (a win against 3 people means more)
   },
   (t) => [primaryKey({ columns: [t.gameId, t.userId] }), index("online_game_players_user_idx").on(t.userId)],
+);
+
+// Stage 16: Nook Games. One save per person per game (the whole game state as JSON).
+// The game checks the save's shape when loading it, so the API only limits its size.
+export const gameSaves = pgTable(
+  "game_saves",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    game: text("game").notNull(), // e.g. "van-lo"
+    version: integer("version").notNull(),
+    data: jsonb("data").notNull(),
+    summary: text("summary").notNull().default(""), // a short line for lists, e.g. "Luyện Khí tầng 5"
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.game] })],
 );
 
 export type Preferences = { timer?: { focus: number; short: number; long: number } };

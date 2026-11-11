@@ -17,7 +17,7 @@ export async function resetDatabase() {
     await waitForValkey();
     migrated = true;
   }
-  await pool.query("truncate tips, focus_sessions, achievements, auth_sessions, songs, song_plays, song_likes, knowledge, game_scores, online_game_players, online_games, habit_days, habits, reading_log, books, watch_entries, watch_titles, chat_messages, post_likes, post_comments, posts, group_members, hobby_groups, users restart identity cascade");
+  await pool.query("truncate game_saves, tips, focus_sessions, achievements, auth_sessions, songs, song_plays, song_likes, knowledge, game_scores, online_game_players, online_games, habit_days, habits, reading_log, books, watch_entries, watch_titles, chat_messages, post_likes, post_comments, posts, group_members, hobby_groups, users restart identity cascade");
   await valkey.flushdb(); // only database 1 (see vitest.config.ts)
   await rm(mediaDir, { recursive: true, force: true }); // uploaded test songs
   await seed();

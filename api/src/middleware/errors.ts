@@ -30,6 +30,10 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     res.status(err.status).json({ error: err.message });
     return;
   }
+  if (err?.type === "entity.too.large") {
+    res.status(413).json({ error: "That's too big to send" });
+    return;
+  }
   if (err?.type === "entity.parse.failed") {
     res.status(400).json({ error: "Body is not valid JSON" });
     return;

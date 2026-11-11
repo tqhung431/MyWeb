@@ -13,12 +13,13 @@ type Props = {
   label: string; // the button's name for screen readers
   button: ReactNode; // what the button shows (usually an icon)
   buttonClassName?: string;
+  bare?: boolean; // skip the round icon-button look (buttonClassName styles it instead)
   width?: number;
   align?: "start" | "end";
   children: (close: () => void) => ReactNode;
 };
 
-export function Popover({ label, button, buttonClassName, width = 288, align = "end", children }: Props) {
+export function Popover({ label, button, buttonClassName, bare = false, width = 288, align = "end", children }: Props) {
   const id = useId();
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -46,9 +47,9 @@ export function Popover({ label, button, buttonClassName, width = 288, align = "
         aria-controls={open ? id : undefined}
         onClick={() => (open ? close() : setOpen(true))}
         className={cn(
-          "inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-border bg-surface-strong/70 text-muted transition hover:text-text",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-          open && "text-text",
+          "inline-flex cursor-pointer items-center justify-center border border-border transition focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none",
+          !bare && "h-9 w-9 rounded-full bg-surface-strong/70 text-muted hover:text-text",
+          open && !bare && "text-text",
           buttonClassName,
         )}
       >
