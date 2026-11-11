@@ -1,6 +1,6 @@
 # Nook: notes for Claude
 
-Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–9).
+Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–10).
 
 ## The project
 
@@ -10,11 +10,13 @@ Read this first in every session. It carries the context from the sessions that 
   https://claude.ai/artifact/SxwvQ9psg9j8iuBXmh1Gvc. Read it before starting a new stage.
 - Work goes stage by stage. Done: 1 static page · 2 Next.js · 3 API + PostgreSQL · 3.5 frontend review and
   design system · 4 guests-first accounts, LAN access · 5 Valkey cache/queue/worker · 6 Socket.IO real time ·
-  7 Docker Compose + Caddy · 8 GitHub Actions + OpenTelemetry/Grafana · 9 local AI with Ollama.
+  7 Docker Compose + Caddy · 8 GitHub Actions + OpenTelemetry/Grafana · 9 local AI with Ollama ·
+  10 Mini Arcade (canvas games, high scores) + music player controls.
   Each stage has an explainer in `docs/stage-N.md`; write one for every new stage and update the README's stage list.
 - Apps: **Chill Corner** (focus timer, generated sounds, tips, achievements), **Music** (uploaded songs
-  stored and streamed by Nook, auto genre, charts), **Free-time Companion** (Ollama + pgvector RAG, SSE streaming).
-  Planned ("soon" in `web/lib/apps.ts`): Mini Arcade, WatchList, Hobby Hub, Habit & Reading Tracker, Arcade Online.
+  stored and streamed by Nook, auto genre, charts, queue/shuffle/repeat/volume), **Mini Arcade** (6 games in
+  `web/features/arcade/games`, rules in `logic/` with tests, scores in `game_scores`), **Free-time Companion**
+  (Ollama + pgvector RAG, SSE streaming). Planned ("soon" in `web/lib/apps.ts`): WatchList, Hobby Hub, Habit & Reading Tracker, Arcade Online.
 
 ## Working with the owner
 
@@ -67,3 +69,5 @@ After pushing, check the GitHub Actions run (api, web, docker smoke test through
 - Production-like check: build, run the Next standalone server (`cp -r .next/static .next/standalone/.next/static`),
   Caddy from source (Go) with `API_UPSTREAM=127.0.0.1:4000 WEB_UPSTREAM=127.0.0.1:3000`.
 - Free a port: `fuser -k 3000/tcp`.
+- `npm run dev` in `api/` needs `api/.env` (copy `api/.env.example`) and a migrated dev DB (`npm run db:migrate && npm run db:seed`).
+- Code style: Prettier-like with long lines (`npx prettier --print-width 160`); there is no Prettier config in the repo.

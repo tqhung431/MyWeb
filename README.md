@@ -8,6 +8,9 @@ everyone on your network (family, roommates, classmates).
 - 🎵 **Music**: songs with vocals that Nook stores and plays itself, so they play on any network (no YouTube or
   SoundCloud to be blocked). Drag in your songs: the title, artist, cover and genre are read for you.
   Top songs of the week and month, with a starter pack of 12 Creative Commons songs.
+  Shuffle, repeat, volume and an "up next" queue.
+- 🎮 **Mini Arcade**: six silly games (Hungry Worm, Silly Pairs, Bonk-a-Blob, Pancake Tower, Too Early!,
+  Odd Emoji Out) with high scores and live leaderboards for everyone on your Nook.
 - ✨ **Free-time Companion**: an AI buddy that suggests songs and tips from Nook, in English or Vietnamese.
   It runs **on your PC** (Ollama), so your chats never leave your network. Optional.
 - 👥 **Together, live**: see who's online and what others are doing, as it happens. Use it as a guest right away,
@@ -248,5 +251,6 @@ stage-1-static/        Stage 1: the plain HTML/CSS/JS version
 7. Packaging — Docker Compose, Caddy; Music app ✅ · [docs](docs/stage-7.md)
 8. Automation and monitoring — GitHub Actions, OpenTelemetry, Grafana ✅ · [docs](docs/stage-8.md)
 9. Local AI — Ollama, embeddings in pgvector, streamed answers ✅ · [docs](docs/stage-9.md)
+10. Games in the browser — Mini Arcade (canvas, game loop, high scores); better music player ✅ · [docs](docs/stage-10.md)
 
 Credits and licences: [CREDITS.md](CREDITS.md)

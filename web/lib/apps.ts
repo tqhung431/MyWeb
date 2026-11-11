@@ -12,6 +12,7 @@ export type AppStatus = "live" | "soon";
 export type AppInfo = {
   id: string;
   name: string;
+  shortName?: string; // for the phone tab bar (default: the first word of the name)
   tagline: string;
   href: string;
   icon: LucideIcon;
@@ -53,12 +54,17 @@ export const APPS: AppInfo[] = [
   {
     id: "arcade",
     name: "Mini Arcade",
-    tagline: "2048, Snake and memory cards",
+    shortName: "Arcade",
+    tagline: "Six silly games, with high scores to beat",
     href: "/arcade",
     icon: Gamepad2,
     accent: "from-amber-400 to-orange-500",
-    status: "soon",
-    phase: "Phase 1",
+    status: "live",
+    phase: "Stage 10",
+    links: [
+      { href: "/arcade", label: "Games" },
+      { href: "/arcade/scores", label: "Leaderboards" },
+    ],
   },
   {
     id: "watchlist",

@@ -11,7 +11,7 @@ if (process.env.NODE_ENV !== "test") {
   }
 }
 
-const schema = z.object({
+export const configSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   DATABASE_URL: z.string().startsWith("postgres"),
   PORT: z.coerce.number().int().default(4000),
@@ -59,7 +59,8 @@ const schema = z.object({
 
   // --- Stage 9: local AI (Ollama). Not set → the Companion is off; everything else works. ---
   // docker-compose (profile "ai"): http://ollama:11434 · Ollama on your PC: http://127.0.0.1:11434
-  OLLAMA_URL: z.url().optional(),
+  // Empty (OLLAMA_URL= in .env) also means off.
+  OLLAMA_URL: z.preprocess((v) => (v === "" ? undefined : v), z.url().optional()),
   // Open models: qwen2.5 1.5B (Apache-2.0) chats, incl. Vietnamese; paraphrase-multilingual
   // (Apache-2.0, 50+ languages incl. Vietnamese, 768 numbers per text) makes embeddings.
   AI_CHAT_MODEL: z.string().default("qwen2.5:1.5b"),
@@ -70,4 +71,4 @@ const schema = z.object({
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().optional(),
 });
 
-export const config = schema.parse(process.env);
+export const config = configSchema.parse(process.env);

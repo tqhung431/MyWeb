@@ -3,7 +3,7 @@
 // The charts: songs ranked by Nook listeners (plays + 3 × likes) this week, this month or all time.
 // They update live: when anyone plays or adds a song, everyone's chart refreshes.
 
-import { CloudOff, Heart, ListMusic, Play, Plus, Trash2 } from "lucide-react";
+import { Check, CloudOff, Heart, ListMusic, ListPlus, Play, Plus, Shuffle, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
@@ -27,7 +27,7 @@ export function Charts() {
   const [genre, setGenre] = useState<Genre | "all">("all");
   const [songs, setSongs] = useState<Song[] | null>(null);
   const [offline, setOffline] = useState(false);
-  const { play, current } = useMusic();
+  const { play, current, queue, enqueue } = useMusic();
 
   const load = useCallback(async () => {
     try {
@@ -81,9 +81,18 @@ export function Charts() {
         <SegmentedControl label="Chart period" options={PERIODS} value={period} onChange={setPeriod} />
         <div className="flex gap-2">
           {songs && songs.length > 0 && (
-            <Button variant="primary" size="sm" onClick={() => play(songs[0], songs)}>
-              <Play className="h-4 w-4" aria-hidden="true" /> Play all
-            </Button>
+            <>
+              <Button variant="primary" size="sm" onClick={() => play(songs[0], songs)}>
+                <Play className="h-4 w-4" aria-hidden="true" /> Play all
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => play(songs[Math.floor(Math.random() * songs.length)], songs, { shuffle: true })}
+              >
+                <Shuffle className="h-4 w-4" aria-hidden="true" /> Shuffle
+              </Button>
+            </>
           )}
           <Link href="/music/add" className={buttonClasses("secondary", "sm")}>
             <Plus className="h-4 w-4" aria-hidden="true" /> Add songs
@@ -115,7 +124,9 @@ export function Charts() {
                 song={song}
                 period={period}
                 playing={current?.id === song.id}
+                queued={queue.some((s) => s.id === song.id)}
                 onPlay={() => play(song, songs)}
+                onQueue={() => enqueue(song)}
                 onLike={() => toggleLike(song)}
                 onGenre={(g) => changeGenre(song, g)}
                 onRemove={() => remove(song)}
@@ -138,13 +149,15 @@ type RowProps = {
   song: Song;
   period: Period;
   playing: boolean;
+  queued: boolean;
   onPlay: () => void;
+  onQueue: () => void;
   onLike: () => void;
   onGenre: (g: Genre) => void;
   onRemove: () => void;
 };
 
-function Row({ rank, song, period, playing, onPlay, onLike, onGenre, onRemove }: RowProps) {
+function Row({ rank, song, period, playing, queued, onPlay, onQueue, onLike, onGenre, onRemove }: RowProps) {
   const g = genreOf(song.genre);
   return (
     <li className={cn("group flex items-center gap-3 rounded-2xl p-2 transition sm:gap-4", playing ? "bg-primary/10" : "hover:bg-surface-muted")}>
@@ -202,6 +215,19 @@ function Row({ rank, song, period, playing, onPlay, onLike, onGenre, onRemove }:
       <span className="hidden w-24 text-right text-xs text-muted tabular-nums md:block" title={`plays ${period === "all" ? "in total" : `this ${period}`}`}>
         {song.plays} {song.plays === 1 ? "play" : "plays"}
       </span>
+      <button
+        type="button"
+        onClick={onQueue}
+        disabled={queued}
+        aria-label={queued ? `${song.title} is in the queue` : `Add ${song.title} to the queue`}
+        title={queued ? "In the queue" : "Add to the queue"}
+        className={cn(
+          "inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+          queued ? "text-primary" : "text-muted hover:bg-surface-muted hover:text-text",
+        )}
+      >
+        {queued ? <Check className="h-4 w-4" aria-hidden="true" /> : <ListPlus className="h-4 w-4" aria-hidden="true" />}
+      </button>
       <button
         type="button"
         onClick={onLike}
