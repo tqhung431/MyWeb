@@ -1,6 +1,6 @@
 # Nook: notes for Claude
 
-Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–15).
+Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–16).
 
 ## The project
 
@@ -19,9 +19,11 @@ Read this first in every session. It carries the context from the sessions that 
   (no native `<select>` anymore), `Dialog`/`useConfirm()` (no `window.confirm`), `Toast`/`useToast()`, `/design` gallery,
   Figma library "Nook design system" (https://www.figma.com/design/G3numOlj2x4L7kiiSlBuGT; owner's Starter plan:
   few Figma MCP calls allowed, batch work into one big `use_figma` script).
-  Next (plan doc "Nook: Games, Themes and Design System plan", https://claude.ai/artifact/Y1ay2pTtsr6T3a7pDDV24d):
-  Stage 16 Nook Games: original cultivation roguelite (Kiếm tu first; công pháp, thần thông, pháp bảo, equipment),
-  turn-based grid, ink-wash art, own Canvas engine. Don't copy names/characters/plots from existing novels or films.
+  16 Nook Games (`/games`) + Vân Lộ (`web/features/games/van-lo`: engine/ logic/ ui/; rules are pure and seeded, `act(game, action)`
+  returns Fx for the canvas; saves in localStorage + `game_saves` via `/api/games/saves/:game`, 200 KB JSON limit on that router).
+  Design doc (GDD): https://claude.ai/artifact/QM1LQ8eTLMeMeV9j6h62Tu. Plan doc: https://claude.ai/artifact/Y1ay2pTtsr6T3a7pDDV24d.
+  Next: Stage 17 (other five paths, realms past Trúc Cơ, alchemy/forging, sound), Stage 18 (balance, leaderboard).
+  Original world only: don't copy names/characters/plots from existing novels or films.
   Each stage has an explainer in `docs/stage-N.md`; write one for every new stage and update the README's stage list.
 - Apps: **Chill Corner** (focus timer, generated sounds, tips, achievements), **Music** (uploaded songs
   stored and streamed by Nook, auto genre, charts, queue/shuffle/repeat/volume), **Mini Arcade** (6 games in
