@@ -100,12 +100,18 @@ export const APPS: AppInfo[] = [
   {
     id: "habits",
     name: "Habit & Reading Tracker",
-    tagline: "Streaks, charts and reminders",
+    shortName: "Habits",
+    tagline: "Daily habits and books: streaks, charts, reminders, works offline",
     href: "/habits",
     icon: ListChecks,
     accent: "from-lime-400 to-emerald-500",
-    status: "soon",
-    phase: "Phase 3–4",
+    status: "live",
+    phase: "Stage 13",
+    links: [
+      { href: "/habits", label: "Today" },
+      { href: "/habits/reading", label: "Reading" },
+      { href: "/habits/progress", label: "Progress" },
+    ],
   },
   {
     id: "arcade-online",

@@ -33,6 +33,7 @@ worker.on("ready", () => {
 worker.on("completed", (job, result) => {
   jobsDone.add(1, { job_name: job.name, status: "completed" });
   if (job.processedOn && job.finishedOn) jobDuration.record((job.finishedOn - job.processedOn) / 1000, { job_name: job.name });
+  if (job.name === "reminders" && result?.sent === 0) return; // every minute: only log when something was sent
   console.log(`✓ ${job.name} #${job.id} in ${Date.now() - job.timestamp} ms`, JSON.stringify(result));
 });
 worker.on("failed", (job, err) => {

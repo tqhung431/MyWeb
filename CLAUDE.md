@@ -1,6 +1,6 @@
 # Nook: notes for Claude
 
-Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–12).
+Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–13).
 
 ## The project
 
@@ -12,14 +12,16 @@ Read this first in every session. It carries the context from the sessions that 
   design system · 4 guests-first accounts, LAN access · 5 Valkey cache/queue/worker · 6 Socket.IO real time ·
   7 Docker Compose + Caddy · 8 GitHub Actions + OpenTelemetry/Grafana · 9 local AI with Ollama ·
   10 Mini Arcade (canvas games, high scores) + music player controls · 11 Hobby Hub, names instead of accounts, data retention ·
-  12 WatchList (TVmaze + Jikan, no keys) + song upload fixes (Next proxy 10 MB body limit, UTF-8 file names).
+  12 WatchList (TVmaze + Jikan, no keys) + song upload fixes (Next proxy 10 MB body limit, UTF-8 file names) ·
+  13 Habit & Reading Tracker (calendar days in the user's time zone, reminder job every minute, offline queue, PWA).
   Each stage has an explainer in `docs/stage-N.md`; write one for every new stage and update the README's stage list.
 - Apps: **Chill Corner** (focus timer, generated sounds, tips, achievements), **Music** (uploaded songs
   stored and streamed by Nook, auto genre, charts, queue/shuffle/repeat/volume), **Mini Arcade** (6 games in
   `web/features/arcade/games`, rules in `logic/` with tests, scores in `game_scores`), **Free-time Companion**
   (Ollama + pgvector RAG, SSE streaming). **Hobby Hub** (groups, posts, comments, likes, live chat via Socket.IO rooms `group:<slug>`).
   **WatchList** (`api/src/watch/sources.ts`; tests use `tests/fake-watch.ts` on port 4995).
-  Planned ("soon" in `web/lib/apps.ts`): Habit & Reading Tracker, Arcade Online.
+  **Habit & Reading Tracker** (`/habits`: days are `date` strings in X-Time-Zone; `web/lib/offline.ts` queue; `public/sw.js`).
+  Planned ("soon" in `web/lib/apps.ts`): Arcade Online.
 - Phone tab bar: Home + apps with `pinned: true` + an "Apps" grid. Don't pin more than 3–4.
 - People (Stage 11): **name only, one browser** (owner's choice): no email/password, no login page. `POST /api/me {name}`
   sets the `nook_session` cookie; names unique by lower(name). Guests (X-Client-Id) still work until they pick a name.

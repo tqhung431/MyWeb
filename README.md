@@ -15,6 +15,8 @@ everyone on your network (family, roommates, classmates).
   It runs **on your PC** (Ollama), so your chats never leave your network. Optional.
 - 📺 **WatchList**: search TV shows and anime (TVmaze and MyAnimeList, free), keep your list with stars and
   notes, and see what everyone on Nook is watching.
+- ✅ **Habit & Reading Tracker**: daily habits with streaks and reminders, books with pages read, charts,
+  and it keeps working offline on your phone.
 - 💬 **Hobby Hub**: groups for what you love (Gaming, Cooking, Books…, or start your own), each with posts,
   comments, likes and a live chat.
 - 👥 **Together, live**: see who's online and what others are doing, as it happens. No sign-up: you just
@@ -261,5 +263,6 @@ stage-1-static/        Stage 1: the plain HTML/CSS/JS version
 10. Games in the browser — Mini Arcade (canvas, game loop, high scores); better music player ✅ · [docs](docs/stage-10.md)
 11. Community — Hobby Hub (groups, posts, live chat); names instead of accounts; keeping data only for a while ✅ · [docs](docs/stage-11.md)
 12. Other websites' data — WatchList (TVmaze + Jikan, caching, fallbacks); song upload fixes ✅ · [docs](docs/stage-12.md)
+13. Every day, even offline — Habit & Reading Tracker (time zones, a reminder job, offline queue, service worker) ✅ · [docs](docs/stage-13.md)
 
 Credits and licences: [CREDITS.md](CREDITS.md)

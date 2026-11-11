@@ -32,6 +32,8 @@ ENV NODE_ENV=production \
     PORT=3000
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
+# Stage 13: icons, the web app manifest's images and the service worker (sw.js)
+COPY --from=build /app/public ./public
 USER node
 EXPOSE 3000
 CMD ["node", "server.js"]

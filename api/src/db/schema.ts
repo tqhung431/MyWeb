@@ -4,6 +4,7 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  date,
   index,
   integer,
   jsonb,
@@ -346,6 +347,81 @@ export const watchEntries = pgTable(
     check("watch_status_valid", sql`${t.status} in ('want', 'watching', 'done', 'dropped')`),
     check("watch_stars_valid", sql`${t.stars} is null or ${t.stars} between 1 and 5`),
   ],
+);
+
+// --- Stage 13: Habit & Reading Tracker ---------------------------------------------------
+// Days are calendar dates in YOUR time zone ("2026-11-11"), not moments: "did I read today?"
+
+export const habits = pgTable(
+  "habits",
+  {
+    id: serial("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    emoji: text("emoji").notNull(),
+    color: text("color").notNull().default("violet"),
+    perWeek: integer("per_week").notNull().default(7), // goal: days a week (7 = every day)
+    reminderTime: text("reminder_time"), // "20:30" in timeZone, or null
+    timeZone: text("time_zone").notNull().default("UTC"),
+    lastRemindedOn: date("last_reminded_on", { mode: "string" }), // so a reminder fires once a day
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("habits_user_idx").on(t.userId),
+    index("habits_reminder_idx").on(t.reminderTime),
+    check("habit_per_week_valid", sql`${t.perWeek} between 1 and 7`),
+  ],
+);
+
+export const habitDays = pgTable(
+  "habit_days",
+  {
+    habitId: integer("habit_id")
+      .notNull()
+      .references(() => habits.id, { onDelete: "cascade" }),
+    day: date("day", { mode: "string" }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.habitId, t.day] })],
+);
+
+export const BOOK_STATUSES = ["want", "reading", "finished"] as const;
+
+export const books = pgTable(
+  "books",
+  {
+    id: serial("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    author: text("author").notNull().default(""),
+    totalPages: integer("total_pages"),
+    currentPage: integer("current_page").notNull().default(0),
+    status: text("status", { enum: BOOK_STATUSES }).notNull().default("reading"),
+    startedOn: date("started_on", { mode: "string" }),
+    finishedOn: date("finished_on", { mode: "string" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("books_user_idx").on(t.userId), check("book_status_valid", sql`${t.status} in ('want', 'reading', 'finished')`)],
+);
+
+// Pages read per book per day (adding pages twice on one day adds them up)
+export const readingLog = pgTable(
+  "reading_log",
+  {
+    bookId: integer("book_id")
+      .notNull()
+      .references(() => books.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    day: date("day", { mode: "string" }).notNull(),
+    pages: integer("pages").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.bookId, t.day] }), index("reading_log_user_day_idx").on(t.userId, t.day)],
 );
 
 export type Preferences = { timer?: { focus: number; short: number; long: number } };

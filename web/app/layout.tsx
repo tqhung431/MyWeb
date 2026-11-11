@@ -28,6 +28,9 @@ const jakarta = Plus_Jakarta_Sans({ subsets: ["latin", "vietnamese"], variable: 
 export const metadata: Metadata = {
   title: { default: "Nook", template: "%s · Nook" },
   description: "Small, calm apps for your free time: focus, games, watch-lists and more.",
+  // Stage 13: "Add to Home Screen" on iPhones uses these
+  appleWebApp: { capable: true, title: "Nook", statusBarStyle: "default" },
+  icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {

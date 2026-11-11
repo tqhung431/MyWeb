@@ -15,6 +15,7 @@ import { achievementsRouter } from "./routes/achievements.js";
 import { arcadeRouter } from "./routes/arcade.js";
 import { activityRouter } from "./routes/activity.js";
 import { companionRouter } from "./routes/companion.js";
+import { booksRouter, habitsRouter } from "./routes/habits.js";
 import { hobbyRouter } from "./routes/hobby.js";
 import { meRouter } from "./routes/me.js";
 import { musicRouter } from "./routes/music.js";
@@ -55,6 +56,8 @@ export function createApp() {
   app.use("/api/arcade", arcadeRouter);
   app.use("/api/hobby", hobbyRouter);
   app.use("/api/watch", watchRouter);
+  app.use("/api/habits", habitsRouter);
+  app.use("/api/books", booksRouter);
 
   app.use(notFound);
   app.use(errorHandler); // must be last

@@ -23,6 +23,8 @@ const LABELS: [keyof MyData["counts"], string][] = [
   ["comments", "Comments"],
   ["chatMessages", "Chat messages"],
   ["watchList", "On your WatchList"],
+  ["habits", "Habits"],
+  ["books", "Books"],
 ];
 
 export function YouPage() {

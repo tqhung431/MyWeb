@@ -17,6 +17,8 @@ export type JobData = {
   achievements: { userId: string | null; clientId: string | null; timeZone: string };
   // Stage 11: delete data older than the retention settings (daily).
   cleanup: Record<string, never>;
+  // Stage 13: habit reminders (every minute).
+  reminders: Record<string, never>;
   // Stage 9: update the Companion's knowledge (embeddings) after songs or tips changed.
   reindex: Record<string, never>;
 };
@@ -61,6 +63,8 @@ export async function enqueue<N extends JobName>(name: N, data: JobData[N]): Pro
 export async function scheduleCleanup(): Promise<void> {
   try {
     await getQueue().upsertJobScheduler("daily-cleanup", { every: 24 * 60 * 60 * 1000 }, { name: "cleanup", data: {} });
+    // Stage 13: habit reminders, every minute
+    await getQueue().upsertJobScheduler("minute-reminders", { every: 60 * 1000 }, { name: "reminders", data: {}, opts: { removeOnComplete: 50 } });
   } catch (error) {
     console.warn("Could not schedule the daily cleanup:", (error as Error).message);
   }

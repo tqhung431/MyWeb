@@ -9,6 +9,7 @@ import { displayName, notifyOwner, publishActivity } from "../realtime/emit.js";
 import { reindex } from "../ai/knowledge.js";
 import { AiUnavailable, aiEnabled } from "../ai/ollama.js";
 import { cleanup } from "./cleanup.js";
+import { sendReminders } from "./reminders.js";
 import type { JobData, JobName } from "./queue.js";
 
 // --- achievements ---------------------------------------------------------------
@@ -60,6 +61,8 @@ export async function processJob(name: JobName, data: unknown) {
       return checkAchievements(data as JobData["achievements"]);
     case "cleanup":
       return cleanup();
+    case "reminders":
+      return sendReminders();
     case "reindex":
       // Embedding needs Ollama. Off, not running or models not downloaded yet: skip, it isn't an error.
       // (GET /api/companion/status starts another reindex once the models are ready.)
