@@ -3,8 +3,8 @@
 // The cave abode (động phủ): your home between runs. Cultivate, practise methods, choose abilities,
 // refine treasures, change gear, shop, and set off for a secret realm, or face the tribulation.
 
-import { Backpack, BookOpen, Gem, Mountain, Shirt, Sparkles, Store, Sword, X, Zap } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { Backpack, BookOpen, Flame, Gem, Lock, Mountain, Shirt, Sparkles, Store, Sword, X, Zap } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useConfirm } from "@/components/ui/Dialog";
@@ -17,7 +17,11 @@ import {
   MAJOR_REALMS,
   QUALITIES,
   ROOTS,
-  SECRET_REALMS,
+  PATHS,
+  REALM_IDS,
+  realmInfo,
+  techniquesOf,
+  abilitiesOf,
   SLOTS,
   TECHNIQUES,
   TREASURE_GRADES,
@@ -37,7 +41,10 @@ import {
   gearPrice,
   gearStats,
   meditate,
-  MEDITATE_STONES,
+  meditateCost,
+  atPeak,
+  abilityQi,
+  isSlip,
   meditateGain,
   needed,
   practise,
@@ -47,7 +54,7 @@ import {
   rootSpeed,
   sellGear,
   setMain,
-  SHOP,
+  shopFor,
   skillSlots,
   stats,
   toggleBound,
@@ -57,10 +64,13 @@ import {
   usePillAtHome,
 } from "../logic/player";
 import type { Game } from "../logic/types";
-import { startRun, startTribulation } from "../logic/world";
-import { ABILITY_ICON, TREASURE_ICON } from "./RunScreen";
+import type { RealmId } from "../logic/data";
+import { startRun, startTribulation, tribulationTurns } from "../logic/world";
+import { setMusic, sfx } from "./audio";
+import { Furnace } from "./Furnace";
+import { ABILITY_ICON, TREASURE_ICON } from "./icons";
 
-type Tab = "cultivate" | "methods" | "abilities" | "treasures" | "gear" | "bag" | "realms";
+type Tab = "cultivate" | "methods" | "abilities" | "treasures" | "gear" | "furnace" | "bag" | "realms";
 type Props = { game: Game; update: <T>(change: (g: Game) => T, opts?: { saveNow?: boolean }) => T | undefined };
 
 const STAT_NAMES: Record<keyof Stats, [string, string]> = {
@@ -79,19 +89,28 @@ export function Home({ game, update }: Props) {
   const toast = useToast();
   const confirm = useConfirm();
 
+  useEffect(() => setMusic("home"), []);
+  // A gong when you come home from a breakthrough
+  useEffect(() => {
+    if (game.notice && /Độ kiếp thành công|Tribulation passed/.test(game.notice)) sfx("gong");
+  }, [game.notice]);
+
   const tabs: { id: Tab; label: string; icon: typeof Sword }[] = [
     { id: "cultivate", label: t("Tu luyện", "Cultivate"), icon: Sparkles },
     { id: "methods", label: t("Công pháp", "Methods"), icon: BookOpen },
     { id: "abilities", label: t("Thần thông", "Abilities"), icon: Zap },
     { id: "treasures", label: t("Pháp bảo", "Treasures"), icon: Gem },
     { id: "gear", label: t("Trang bị", "Gear"), icon: Shirt },
+    { id: "furnace", label: t("Lò luyện", "Furnace"), icon: Flame },
     { id: "bag", label: t("Túi & chợ", "Bag & shop"), icon: Store },
     { id: "realms", label: t("Bí cảnh", "Realms"), icon: Mountain },
   ];
 
-  const enter = () => {
-    update((g) => startRun(g), { saveNow: true });
+  const enter = (realm: RealmId = "vu-an-coc") => {
+    update((g) => startRun(g, realm), { saveNow: true });
   };
+  // From Trúc Cơ on there's more than one realm: the big button opens the list
+  const enterMain = () => (p.major >= 1 ? setTab("realms") : enter());
 
   return (
     <div className="flex flex-col gap-4">
@@ -109,7 +128,7 @@ export function Home({ game, update }: Props) {
         </div>
       )}
 
-      <Summary game={game} onEnter={enter} t={t} />
+      <Summary game={game} onEnter={enterMain} t={t} />
 
       <nav aria-label={t("Động phủ", "Cave abode")} className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
         {tabs.map((x) => (
@@ -134,6 +153,7 @@ export function Home({ game, update }: Props) {
           t={t}
           onMeditate={(n) => {
             const res = update((g) => meditate(g, n));
+            if (res?.ok) sfx(res.layers ? "gong" : "heal");
             if (!res?.ok) toast(t("Cần linh thạch để tu luyện.", "You need spirit stones to cultivate."), { tone: "error" });
             else
               toast(
@@ -146,10 +166,10 @@ export function Home({ game, update }: Props) {
           }}
           onTribulation={async () => {
             const ok = await confirm({
-              title: t("Độ kiếp Trúc Cơ?", "Face the Foundation tribulation?"),
+              title: t(`Độ kiếp ${MAJOR_REALMS[p.major + 1].vi}?`, `Face the ${MAJOR_REALMS[p.major + 1].en} tribulation?`),
               description: t(
-                "Thiên lôi sẽ đánh xuống 15 lượt: tránh những ô được đánh dấu vàng. Sau đó Tâm Ma xuất hiện; đánh bại nó để Trúc Cơ. Thất bại sẽ mất 1/4 tu vi. Mang theo Trúc Cơ Đan nếu có.",
-                "Lightning falls for 15 turns: avoid the tiles marked in gold. Then your Heart Demon appears; defeat it to reach Foundation. Failing costs a quarter of your cultivation. Bring a Foundation Pill if you have one.",
+                `Thiên lôi sẽ đánh xuống ${tribulationTurns(p.major)} lượt: tránh những ô được đánh dấu vàng. Sau đó Tâm Ma xuất hiện; đánh bại nó để lên ${MAJOR_REALMS[p.major + 1].vi}. Thất bại sẽ mất 1/4 tu vi.`,
+                `Lightning falls for ${tribulationTurns(p.major)} turns: avoid the tiles marked in gold. Then your Heart Demon appears; defeat it to reach ${MAJOR_REALMS[p.major + 1].en}. Failing costs a quarter of your cultivation.`,
               ),
               confirmLabel: t("Độ kiếp", "Begin"),
             });
@@ -161,6 +181,7 @@ export function Home({ game, update }: Props) {
       {tab === "abilities" && <Abilities game={game} t={t} update={update} toast={toast} />}
       {tab === "treasures" && <Treasures game={game} t={t} update={update} toast={toast} />}
       {tab === "gear" && <GearTab game={game} t={t} update={update} />}
+      {tab === "furnace" && <Furnace game={game} t={t} update={update} toast={toast} />}
       {tab === "bag" && <BagTab game={game} t={t} update={update} toast={toast} />}
       {tab === "realms" && <Realms game={game} t={t} onEnter={enter} />}
     </div>
@@ -193,7 +214,9 @@ function Summary({ game, onEnter, t }: { game: Game; onEnter: () => void; t: T }
         <div>
           <p className="text-sm text-muted">{t("Động phủ của", "The cave abode of")}</p>
           <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{p.name}</h2>
-          <p className="mt-1 font-semibold text-primary">{realmName(p, game.lang)}</p>
+          <p className="mt-1 font-semibold text-primary">
+            {t(PATHS[p.path].vi, PATHS[p.path].en)} · {realmName(p, game.lang)}
+          </p>
           <div className="mt-2 w-64 max-w-full">
             <div className="h-2 overflow-hidden rounded-full bg-surface-muted">
               <div className="h-full rounded-full bg-linear-to-r from-primary to-primary-2" style={{ width: `${pct}%` }} />
@@ -251,14 +274,15 @@ function Cultivate({ game, t, onMeditate, onTribulation }: { game: Game; t: T; o
   const p = game.player;
   const root = ROOTS.find((r) => r.count === p.root.length)!;
   const ready = readyForTribulation(p);
-  const max = Math.floor(p.stones / MEDITATE_STONES);
+  const max = Math.floor(p.stones / meditateCost(p));
+  const pill = MAJOR_REALMS[p.major].pill;
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Panel
         title={t("Tọa thiền", "Meditate")}
         subtitle={t(
-          `Mỗi lần tốn ${MEDITATE_STONES} linh thạch, được ${meditateGain(p)} tu vi. Đầy một tầng thì tự lên tầng.`,
-          `Each sitting costs ${MEDITATE_STONES} spirit stones for ${meditateGain(p)} cultivation. A full layer moves you up.`,
+          `Mỗi lần tốn ${meditateCost(p)} linh thạch, được ${meditateGain(p)} tu vi. Đầy một tầng thì tự lên tầng.`,
+          `Each sitting costs ${meditateCost(p)} spirit stones for ${meditateGain(p)} cultivation. A full layer moves you up.`,
         )}
       >
         <div className="flex flex-wrap gap-2">
@@ -272,12 +296,20 @@ function Cultivate({ game, t, onMeditate, onTribulation }: { game: Game; t: T; o
             {t("Bế quan", "Seclusion")} (×{max})
           </Button>
         </div>
+        {atPeak(p) && (
+          <p className="mt-4 rounded-2xl border border-primary/30 bg-primary/10 p-4 text-sm">
+            {t(
+              "Đỉnh phong Nguyên Anh! Con đường Hóa Thần sẽ mở ở chương sau.",
+              "The peak of Nascent Soul! The road to Spirit Severing opens in a later chapter.",
+            )}
+          </p>
+        )}
         {ready && (
           <div className="mt-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4">
-            <p className="font-semibold">{t("Bình cảnh Luyện Khí tầng 9!", "Qi Refining 9: the bottleneck!")}</p>
+            <p className="font-semibold">{t(`Bình cảnh ${MAJOR_REALMS[p.major].vi} tầng 9!`, `${MAJOR_REALMS[p.major].en} 9: the bottleneck!`)}</p>
             <p className="mt-1 text-sm text-muted">
-              {t("Chỉ có vượt thiên kiếp mới Trúc Cơ được.", "Only a tribulation can take you to Foundation.")}
-              {(p.bag["truc-co-dan"] ?? 0) > 0 && ` ${t("Bạn có Trúc Cơ Đan.", "You have a Foundation Pill.")}`}
+              {t(`Chỉ có vượt thiên kiếp mới lên ${MAJOR_REALMS[p.major + 1].vi} được.`, `Only a tribulation can take you to ${MAJOR_REALMS[p.major + 1].en}.`)}
+              {pill && (p.bag[pill] ?? 0) > 0 && ` ${t(`Bạn có ${ITEMS[pill].vi}.`, `You have a ${ITEMS[pill].en}.`)}`}
             </p>
             <Button variant="primary" className="mt-3" onClick={onTribulation}>
               ⚡ {t("Độ kiếp", "Face the tribulation")}
@@ -311,7 +343,7 @@ function Methods({ game, t, update, toast }: { game: Game; t: T; update: Update;
   const p = game.player;
   return (
     <div className="grid gap-4 md:grid-cols-3">
-      {(Object.keys(TECHNIQUES) as TechniqueId[]).map((id) => {
+      {techniquesOf(p.path).map((id) => {
         const info = TECHNIQUES[id];
         const known = p.techniques.find((x) => x.id === id);
         const role = p.main === id ? t("Chủ tu", "Main") : p.side.includes(id) ? t("Phụ tu (30%)", "Side (30%)") : null;
@@ -394,10 +426,13 @@ function Abilities({ game, t, update, toast }: { game: Game; t: T; update: Updat
   return (
     <Panel
       title={t(`Thần thông mang theo: ${p.skills.length}/${skillSlots(p)}`, `Abilities you carry: ${p.skills.length}/${skillSlots(p)}`)}
-      subtitle={t("Thần thông lĩnh ngộ từ các tầng công pháp. Trúc Cơ có thêm ô.", "Abilities come from method levels. Foundation gives more slots.")}
+      subtitle={t(
+        "Thần thông lĩnh ngộ từ các tầng công pháp. Mỗi đại cảnh giới có thêm ô.",
+        "Abilities come from method levels. Each major realm gives another slot.",
+      )}
     >
       <ul className="grid gap-3 sm:grid-cols-2">
-        {(Object.keys(ABILITIES) as AbilityId[]).map((id) => {
+        {abilitiesOf(p.path).map((id) => {
           const a = ABILITIES[id];
           const Icon = ABILITY_ICON[id];
           const on = p.skills.includes(id);
@@ -412,7 +447,8 @@ function Abilities({ game, t, update, toast }: { game: Game; t: T; update: Updat
                 <p className="font-semibold">{t(a.vi, a.en)}</p>
                 <p className="text-xs text-muted">{t(a.about, a.aboutEn)}</p>
                 <p className="mt-1 text-xs text-muted">
-                  {a.qi} {t("linh lực", "qi")} · {a.cooldown ? t(`hồi ${a.cooldown} lượt`, `${a.cooldown}-turn cooldown`) : t("không hồi chiêu", "no cooldown")}
+                  {abilityQi(p, id)} {t("linh lực", "qi")} ·{" "}
+                  {a.cooldown ? t(`hồi ${a.cooldown} lượt`, `${a.cooldown}-turn cooldown`) : t("không hồi chiêu", "no cooldown")}
                   {!open && ` · ${t(`cần ${TECHNIQUES[a.from[0]].vi} tầng ${a.from[1]}`, `needs ${TECHNIQUES[a.from[0]].en} level ${a.from[1]}`)}`}
                 </p>
               </div>
@@ -562,7 +598,7 @@ function GearTab({ game, t, update }: { game: Game; t: T; update: Update }) {
 function BagTab({ game, t, update, toast }: { game: Game; t: T; update: Update; toast: Toast }) {
   const p = game.player;
   const items = (Object.entries(p.bag) as [ItemId, number][]).filter(([, n]) => n > 0);
-  const usable: ItemId[] = ["hoi-xuan", "hoi-linh", "tu-khi", "ngoc-gian-xd", "ngoc-gian-ht"];
+  const usable = (id: ItemId) => isSlip(id) || ["hoi-xuan", "dai-hoi-xuan", "hoi-linh", "tu-khi", "boi-nguyen"].includes(id);
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Panel title={t("Túi đồ", "Bag")} subtitle={t("Đan dược và phù lục mang theo vào bí cảnh.", "Pills and talismans come with you into realms.")}>
@@ -579,7 +615,7 @@ function BagTab({ game, t, update, toast }: { game: Game; t: T; update: Update; 
                   </p>
                   <p className="text-xs text-muted">{t(ITEMS[id].about, ITEMS[id].aboutEn)}</p>
                 </div>
-                {usable.includes(id) && (
+                {usable(id) && (
                   <Button
                     size="sm"
                     onClick={() => {
@@ -596,7 +632,7 @@ function BagTab({ game, t, update, toast }: { game: Game; t: T; update: Update; 
       </Panel>
       <Panel title={t("Phường thị", "Market")} subtitle={`💎 ${p.stones}`}>
         <ul className="flex flex-col gap-2">
-          {SHOP.map((id) => (
+          {shopFor(p).map((id) => (
             <li key={id} className="flex items-center gap-3 rounded-2xl border border-border px-3 py-2">
               <div className="flex-1">
                 <p className="text-sm font-semibold">{t(ITEMS[id].vi, ITEMS[id].en)}</p>
@@ -613,35 +649,50 @@ function BagTab({ game, t, update, toast }: { game: Game; t: T; update: Update; 
   );
 }
 
-function Realms({ game, t, onEnter }: { game: Game; t: T; onEnter: () => void }) {
-  const realm = SECRET_REALMS["vu-an-coc"];
+function Realms({ game, t, onEnter }: { game: Game; t: T; onEnter: (realm: RealmId) => void }) {
+  const p = game.player;
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <section className="relative overflow-hidden rounded-3xl border border-border bg-surface-strong p-6 shadow-card">
-        <InkHills />
-        <div className="relative">
-          <Badge tone="primary">{t(`${realm.floors} tầng · ${MAJOR_REALMS[0].vi}`, `${realm.floors} floors · ${MAJOR_REALMS[0].en}`)}</Badge>
-          <h3 className="mt-2 text-2xl font-extrabold">{t(realm.vi, realm.en)}</h3>
-          <p className="mt-1 text-sm text-muted">{t(realm.about, realm.aboutEn)}</p>
-          <ul className="mt-3 list-disc pl-5 text-sm text-muted">
-            <li>{t("Mỗi tầng có một trận truyền tống để về nhà, giữ chiến lợi phẩm.", "Each floor has a return array: go home and keep your loot.")}</li>
-            <li>{t("Trọng thương thì mất chiến lợi phẩm chuyến đó, nhưng giữ tu vi.", "Fall, and you lose that run's loot, but keep your cultivation.")}</li>
-            <li>{t("Coi chừng sát trận ẩn từ tầng 2.", "Watch out for hidden killing arrays from floor 2.")}</li>
-          </ul>
-          <Button variant="primary" size="lg" className="mt-4" onClick={onEnter}>
-            <Mountain className="h-5 w-5" aria-hidden="true" /> {t("Vào bí cảnh", "Enter")}
-          </Button>
-        </div>
-      </section>
-      <section className="flex flex-col justify-center rounded-3xl border border-dashed border-border p-6 text-center text-muted">
-        <p className="text-4xl" aria-hidden="true">
-          🌫️
-        </p>
-        <p className="mt-2 font-semibold">{t("Thêm bí cảnh ở chương sau", "More realms in the next chapter")}</p>
-        <p className="text-sm">
-          {t("Dành cho Trúc Cơ: luyện đan, luyện khí, và sáu con đường tu luyện.", "For Foundation cultivators: alchemy, forging and six paths.")}
-        </p>
-      </section>
+      {REALM_IDS.map((id) => {
+        const realm = realmInfo(id);
+        const open = p.major >= realm.minMajor;
+        const suits = p.major === realm.minMajor;
+        return (
+          <section
+            key={id}
+            className={cn(
+              "relative overflow-hidden rounded-3xl border bg-surface-strong p-6 shadow-card",
+              suits ? "border-primary" : "border-border",
+              !open && "opacity-60",
+            )}
+          >
+            <InkHills />
+            <div className="relative">
+              <div className="flex flex-wrap gap-2">
+                <Badge tone="primary">
+                  {t(`${realm.floors} tầng · ${MAJOR_REALMS[realm.minMajor].vi}`, `${realm.floors} floors · ${MAJOR_REALMS[realm.minMajor].en}`)}
+                </Badge>
+                {suits && <Badge tone="success">{t("Hợp cảnh giới", "Your realm")}</Badge>}
+              </div>
+              <h3 className="mt-2 text-2xl font-extrabold">{t(realm.vi, realm.en)}</h3>
+              <p className="mt-1 text-sm text-muted">{t(realm.about, realm.aboutEn)}</p>
+              <p className="mt-2 text-xs text-muted">
+                {t("Linh thảo", "Herb")}: {t(ITEMS[realm.herb].vi, ITEMS[realm.herb].en)} · {t("Yêu thú cấp", "Enemy level")} {realm.firstLevel}–
+                {realm.boss.level}
+              </p>
+              {open ? (
+                <Button variant={suits ? "primary" : "secondary"} className="mt-4" onClick={() => onEnter(id)}>
+                  <Mountain className="h-4 w-4" aria-hidden="true" /> {t("Vào bí cảnh", "Enter")}
+                </Button>
+              ) : (
+                <p className="mt-4 flex items-center gap-1.5 text-sm font-semibold text-muted">
+                  <Lock className="h-4 w-4" aria-hidden="true" /> {t(`Cần ${MAJOR_REALMS[realm.minMajor].vi}`, `Needs ${MAJOR_REALMS[realm.minMajor].en}`)}
+                </p>
+              )}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }

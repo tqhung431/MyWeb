@@ -1,16 +1,22 @@
 // The cultivator: stats, cultivation, methods, abilities, treasures, gear and items.
-// Every function takes a Game and changes it in place; the caller makes a copy first (see store.ts).
+// Every function takes a Game and changes it in place; the caller makes a copy first (see ui/useGame.ts).
 
 import { makeRng, type Rng } from "../engine/rng";
 import {
   ABILITIES,
+  abilitiesOf,
   AFFIXES,
   BAG_BASE,
   GEAR_BASES,
+  gearPower,
+  gearTier,
   ITEMS,
   layerCost,
   MAJOR_REALMS,
+  MEDITATION,
   NO_STATS,
+  PATHS,
+  powerScale,
   practiseCost,
   practiseNeeds,
   QUALITIES,
@@ -18,13 +24,16 @@ import {
   refineCost,
   ROOTS,
   SLOTS,
+  slipOf,
   TECHNIQUES,
+  TOP_MAJOR,
   TREASURES,
   treasureScale,
   upgradeCost,
   type AbilityId,
   type Element,
   type ItemId,
+  type PathId,
   type Slot,
   type Stats,
   type TechniqueId,
@@ -54,11 +63,16 @@ export function rollRoot(rng: Rng): Element[] {
   return out;
 }
 
-export function newGame(name: string, seed: number, now = Date.now()): Game {
+export const newCraft = () => ({ alchemy: { level: 1, xp: 0 }, forge: { level: 1, xp: 0 }, talisman: { level: 1, xp: 0 } });
+
+export function newGame(name: string, seed: number, now = Date.now(), path: PathId = "kiem"): Game {
   const rng = makeRng(seed);
   const root = rollRoot(rng);
+  const info = PATHS[path];
+  const first = abilitiesOf(path).find((a) => ABILITIES[a].from[0] === info.start && ABILITIES[a].from[1] === 1)!;
   const player: Player = {
     name,
+    path,
     root,
     major: 0,
     layer: 1,
@@ -67,16 +81,17 @@ export function newGame(name: string, seed: number, now = Date.now()): Game {
     qi: 0,
     intent: 0,
     stones: 60,
-    techniques: [{ id: "thanh-phong", level: 1 }],
-    main: "thanh-phong",
+    techniques: [{ id: info.start, level: 1 }],
+    main: info.start,
     side: [],
-    skills: ["kiem-khi"],
-    treasures: [{ uid: "t1", kind: "thanh-hong", grade: 0, level: 1 }],
+    skills: [first],
+    treasures: [{ uid: "t1", kind: info.treasure, grade: 0, level: 1 }],
     bound: ["t1"],
     gear: [],
     equipped: {},
     bag: { "hoi-xuan": 2, "hoi-linh": 1 },
-    record: { runs: 0, deaths: 0, kills: 0, deepest: 0, tribulations: 0 },
+    craft: newCraft(),
+    record: { runs: 0, deaths: 0, kills: 0, deepest: 0, tribulations: 0, crafted: 0 },
   };
   const g: Game = { v: SAVE_VERSION, seed, rng: rng.state(), uid: 1, createdAt: now, updatedAt: now, lang: "vi", player, run: null };
   heal(g);
@@ -92,14 +107,18 @@ const add = (a: Stats, b: Partial<Stats>, k = 1) => {
   for (const s of Object.keys(b) as (keyof Stats)[]) a[s] += (b[s] ?? 0) * k;
 };
 
+// Flat bonuses from methods and treasures grow with your realm, so they still matter at Nguyên Anh
+const bonusScale = (p: Player) => (p.major === 0 ? 1 : powerScale(p.major, p.layer));
+
 export function stats(p: Player): Stats {
   const s = realmStats(p.major, p.layer);
+  const scale = bonusScale(p);
   for (const t of p.techniques) {
     const share = t.id === p.main ? 1 : p.side.includes(t.id) ? 0.3 : 0;
     if (!share) continue;
     const def = TECHNIQUES[t.id];
     const match = p.root.includes(def.element) ? 1.25 : 1; // a method of your own element works better
-    add(s, def.perLevel, t.level * share * match);
+    add(s, def.perLevel, t.level * share * match * scale);
   }
   for (const uid of Object.values(p.equipped)) {
     const gear = p.gear.find((x) => x.uid === uid);
@@ -107,8 +126,9 @@ export function stats(p: Player): Stats {
   }
   for (const uid of p.bound) {
     const t = p.treasures.find((x) => x.uid === uid);
-    if (t) add(s, TREASURES[t.kind].passive, treasureScale(t.grade, t.level));
+    if (t) add(s, TREASURES[t.kind].passive, treasureScale(t.grade, t.level) * scale);
   }
+  if (p.path === "vo") s.def *= 1 + 0.02 * p.intent; // khí huyết hardens the body
   return {
     hp: Math.round(s.hp),
     qi: Math.round(s.qi),
@@ -121,7 +141,7 @@ export function stats(p: Player): Stats {
 
 export const gearStats = (g: Gear): Partial<Stats> => {
   const out: Stats = { ...NO_STATS };
-  add(out, SLOTS[g.slot].base, 1 + g.tier);
+  add(out, SLOTS[g.slot].base, gearPower(g.level));
   add(out, g.bonus);
   return out;
 };
@@ -140,11 +160,14 @@ export const bagSize = (p: Player) => {
   const ring = p.gear.find((x) => x.uid === p.equipped.ring);
   return BAG_BASE + (ring ? 4 * (ring.tier + 1) : 0);
 };
+// Your level on the same scale as enemies (Luyện Khí 1 = 1 … Nguyên Anh 9 = 36)
+export const playerLevel = (p: Player) => p.major * 9 + p.layer;
 
 // ---- Cultivation (tu vi) ----
 export const needed = (p: Player) => layerCost(p.major, p.layer);
-// At Luyện Khí 9 with full tu vi, only a tribulation moves you on
-export const readyForTribulation = (p: Player) => p.major === 0 && p.layer === 9 && p.cultivation >= needed(p);
+// At tầng 9 with full tu vi, only a tribulation moves you on (Nguyên Anh 9 is the top, for now)
+export const readyForTribulation = (p: Player) => p.major < TOP_MAJOR && p.layer === 9 && p.cultivation >= needed(p);
+export const atPeak = (p: Player) => p.major === TOP_MAJOR && p.layer === 9 && p.cultivation >= needed(p);
 
 // Add tu vi; full layers go up by themselves (small bottlenecks). Returns the layers gained.
 export function gainCultivation(p: Player, amount: number): number {
@@ -159,16 +182,18 @@ export function gainCultivation(p: Player, amount: number): number {
   return gained;
 }
 
-export const MEDITATE_STONES = 10;
-export const meditateGain = (p: Player) => Math.round(30 * rootSpeed(p.root) * (p.major === 0 ? 1 : 3));
+export const meditateCost = (p: Player) => MEDITATION[p.major].stones;
+export const meditateGain = (p: Player) => Math.round(MEDITATION[p.major].gain * rootSpeed(p.root));
+// Kept for the screens and tests written in Stage 16
+export const MEDITATE_STONES = MEDITATION[0].stones;
 
 export function meditate(g: Game, times = 1): { ok: boolean; gained: number; layers: number } {
   const p = g.player;
   let gained = 0;
   let layers = 0;
   for (let i = 0; i < times; i++) {
-    if (p.stones < MEDITATE_STONES || readyForTribulation(p)) break;
-    p.stones -= MEDITATE_STONES;
+    if (p.stones < meditateCost(p) || readyForTribulation(p) || atPeak(p)) break;
+    p.stones -= meditateCost(p);
     const amount = meditateGain(p);
     gained += amount;
     layers += gainCultivation(p, amount);
@@ -177,10 +202,10 @@ export function meditate(g: Game, times = 1): { ok: boolean; gained: number; lay
   return { ok: gained > 0, gained, layers };
 }
 
-// Success: Trúc Cơ tầng 1
+// Success: the next major realm, tầng 1
 export function breakThrough(g: Game) {
   const p = g.player;
-  p.major = 1;
+  p.major = Math.min(TOP_MAJOR, p.major + 1);
   p.layer = 1;
   p.cultivation = 0;
   p.record.tribulations++;
@@ -221,8 +246,9 @@ export function practise(g: Game, id: TechniqueId): AbilityId[] {
   return learned;
 }
 
+// Only methods of your own path can be learned
 export function learnTechnique(p: Player, id: TechniqueId) {
-  if (p.techniques.some((x) => x.id === id)) return false;
+  if (p.techniques.some((x) => x.id === id) || TECHNIQUES[id].path !== p.path) return false;
   p.techniques.push({ id, level: 1 });
   if (p.side.length < 2) p.side.push(id);
   const first = (Object.keys(ABILITIES) as AbilityId[]).find((a) => ABILITIES[a].from[0] === id && ABILITIES[a].from[1] === 1);
@@ -257,6 +283,9 @@ export function toggleSkill(p: Player, id: AbilityId): boolean {
   p.skills.push(id);
   return true;
 }
+
+// Abilities cost more qi at higher realms (your qi pool grows too)
+export const abilityQi = (p: Player, id: AbilityId) => Math.round(ABILITIES[id].qi * (1 + 0.5 * p.major));
 
 // ---- Pháp bảo ----
 export function newTreasure(g: Game, kind: TreasureKind, grade = 0): Treasure {
@@ -300,17 +329,19 @@ export function refine(g: Game, uid: string): boolean {
 }
 
 // ---- Trang bị ----
-export function rollGear(g: Game, rng: Rng, tier: number, luck = 0): Gear {
-  const slot = rng.pick(Object.keys(SLOTS) as Slot[]);
+// level: the level of the enemy (or forge) it came from; luck pushes towards better quality
+export function rollGear(g: Game, rng: Rng, level: number, luck = 0, slot?: Slot): Gear {
+  const s = slot ?? rng.pick(Object.keys(SLOTS) as Slot[]);
   const r = rng.next() + luck;
   const quality = r > 0.97 ? 3 : r > 0.85 ? 2 : r > 0.55 ? 1 : 0;
+  const lvl = Math.max(1, Math.round(level));
   const bonus: Partial<Stats> = {};
   for (let i = 0; i < QUALITIES[quality].affixes; i++) {
     const a = rng.pick(AFFIXES);
-    bonus[a.stat] = Math.round(((bonus[a.stat] ?? 0) + a.perTier * (1 + tier) * (0.7 + rng.next() * 0.6)) * 100) / 100;
+    bonus[a.stat] = Math.round(((bonus[a.stat] ?? 0) + (a.perTier * gearPower(lvl) * (0.7 + rng.next() * 0.6)) / 1.5) * 100) / 100;
   }
-  const t = Math.max(0, Math.min(4, tier));
-  return { uid: newUid(g, "g"), slot, tier: t, quality, name: GEAR_BASES[slot][t], bonus };
+  const tier = gearTier(lvl);
+  return { uid: newUid(g, "g"), slot: s, tier, level: lvl, quality, name: GEAR_BASES[s][tier], bonus };
 }
 
 export function equip(g: Game, uid: string) {
@@ -324,7 +355,7 @@ export function equip(g: Game, uid: string) {
   p.qi = Math.min(p.qi, s.qi);
 }
 
-export const gearPrice = (x: Gear) => Math.round(8 * (1 + x.tier) * (1 + x.quality * 1.5));
+export const gearPrice = (x: Gear) => Math.round(8 * gearPower(x.level) * (1 + x.quality * 1.5));
 
 export function sellGear(g: Game, uid: string) {
   const p = g.player;
@@ -346,30 +377,52 @@ export function useItem(p: Player, id: ItemId, n = 1) {
   else p.bag[id] = have - n;
   return true;
 }
+export const isSlip = (id: string): id is `slip-${TechniqueId}` => id.startsWith("slip-");
 
 // Pills at home (in a run, see world.ts)
 export function usePillAtHome(g: Game, id: ItemId): boolean {
   const p = g.player;
   if (!(p.bag[id] ?? 0)) return false;
   const s = stats(p);
-  if (id === "hoi-xuan" && p.hp < s.hp) p.hp = Math.min(s.hp, p.hp + Math.ceil(s.hp * 0.4));
+  if (isSlip(id)) {
+    if (!learnTechnique(p, id.slice(5) as TechniqueId)) return false;
+  } else if ((id === "hoi-xuan" || id === "dai-hoi-xuan") && p.hp < s.hp) p.hp = Math.min(s.hp, p.hp + Math.ceil(s.hp * (id === "hoi-xuan" ? 0.4 : 0.75)));
   else if (id === "hoi-linh" && p.qi < s.qi) p.qi = Math.min(s.qi, p.qi + Math.ceil(s.qi * 0.5));
-  else if (id === "tu-khi" && !readyForTribulation(p)) gainCultivation(p, 60);
-  else if (id === "ngoc-gian-xd") {
-    if (!learnTechnique(p, "xich-diem")) return false;
-  } else if (id === "ngoc-gian-ht") {
-    if (!learnTechnique(p, "huyen-thuy")) return false;
-  } else return false;
+  else if (id === "tu-khi" && !readyForTribulation(p) && !atPeak(p)) gainCultivation(p, 2 * meditateGain(p));
+  else if (id === "boi-nguyen" && !readyForTribulation(p) && !atPeak(p)) gainCultivation(p, Math.round(needed(p) * 0.2));
+  else return false;
   useItem(p, id);
+  heal(g);
   return true;
 }
 
-export const SHOP: ItemId[] = ["hoi-xuan", "hoi-linh", "tu-khi", "bao-linh-phu", "truyen-tong-phu", "truc-co-dan"];
+export const SHOP: ItemId[] = [
+  "hoi-xuan",
+  "hoi-linh",
+  "tu-khi",
+  "dai-hoi-xuan",
+  "boi-nguyen",
+  "bao-linh-phu",
+  "truyen-tong-phu",
+  "phu-chi",
+  "huyen-thiet",
+  "truc-co-dan",
+  "ket-kim-dan",
+  "hoa-anh-dan",
+];
+export const shopFor = (p: Player) => SHOP.filter((id) => (ITEMS[id].minMajor ?? 0) <= p.major);
 export function buy(g: Game, id: ItemId): boolean {
   const p = g.player;
   const price = ITEMS[id].price;
-  if (p.stones < price || !SHOP.includes(id)) return false;
+  if (p.stones < price || !shopFor(p).includes(id)) return false;
   p.stones -= price;
   addItem(p.bag, id);
   return true;
+}
+
+// A jade slip for a method of your path you don't know yet (bosses and deep chests drop these)
+export function unknownSlip(p: Player): ItemId | null {
+  const known = new Set(p.techniques.map((t) => t.id));
+  const missing = (Object.keys(TECHNIQUES) as TechniqueId[]).find((t) => TECHNIQUES[t].path === p.path && !known.has(t) && !(p.bag[slipOf(t)] ?? 0));
+  return missing ? slipOf(missing) : null;
 }

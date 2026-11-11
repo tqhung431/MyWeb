@@ -1,29 +1,58 @@
-// One turn in a secret realm or a tribulation: you act, then every enemy acts, then the heavens (in a tribulation).
+// One turn in a secret realm or a tribulation: you act, your soldiers act, every enemy acts, then the sky (in a tribulation).
 // act() returns what happened as a list of effects, so the screen can animate them; the rules never draw anything.
+//
+// Stage 17: abilities and treasure powers are data (paths.ts) carried out by applyEffect(); each path's resource
+// (kiếm ý, khí huyết, chính khí, đạo vận, công đức, quân lệnh) is gained and used by the hooks marked "path:".
 
-import { canStep, clearLine, DIRS, dist, isFloor, line, same, type Grid, type Pos } from "../engine/grid";
 import { fieldOfView } from "../engine/fov";
+import { canStep, clearLine, DIRS, dist, isFloor, same, type Grid, type Pos } from "../engine/grid";
 import { findPath } from "../engine/path";
 import { makeRng, type Rng } from "../engine/rng";
 import {
   ABILITIES,
+  ALLIES,
   ENEMIES,
   enemyStats,
   ITEMS,
-  SECRET_REALMS,
+  MAJOR_REALMS,
+  MAX_RESOURCE,
+  realmInfo,
+  SPIRITS,
+  stonesFor,
   TREASURES,
+  tuviFor,
   type AbilityId,
+  type AllyKind,
+  type Effect,
   type ItemId,
   type RealmId,
   type TechniqueId,
   type TreasureKind,
 } from "./data";
 import { ARENA, makeArena, makeEnemy, makeFloor } from "./realm";
-import { addItem, bagSize, breakThrough, failTribulation, gainCultivation, heal, newTreasure, readyForTribulation, rollGear, stats, useItem } from "./player";
-import type { Enemy, Game, Run, Status, StatusKind } from "./types";
+import {
+  abilityQi,
+  addItem,
+  atPeak,
+  bagSize,
+  breakThrough,
+  failTribulation,
+  gainCultivation,
+  heal,
+  meditateGain,
+  needed,
+  newTreasure,
+  newUid,
+  readyForTribulation,
+  rollGear,
+  stats,
+  unknownSlip,
+  useItem,
+} from "./player";
+import type { Ally, Enemy, Game, Run, Status, StatusKind } from "./types";
 
 export const VIEW_RADIUS = 7;
-export const MAX_INTENT = 10;
+export const MAX_INTENT = MAX_RESOURCE;
 
 export type Fx =
   | { type: "hit"; at: Pos; amount: number; crit?: boolean; onPlayer?: boolean }
@@ -34,7 +63,8 @@ export type Fx =
   | { type: "heal"; at: Pos; amount: number; qi?: boolean }
   | { type: "die"; at: Pos }
   | { type: "text"; at: Pos; text: string; tone?: "good" | "bad" | "info" | "loot" }
-  | { type: "move"; from: Pos; to: Pos };
+  | { type: "move"; from: Pos; to: Pos }
+  | { type: "summon"; at: Pos };
 
 export type Outcome = "continue" | "dead" | "home" | "won" | "lost";
 export type Action =
@@ -49,6 +79,7 @@ export type Result = { ok: boolean; fx: Fx[]; outcome: Outcome; reason?: string 
 
 const grid = (r: Run): Grid => r.floor;
 const vi = (g: Game, a: string, b: string) => (g.lang === "vi" ? a : b);
+const alliesOf = (r: Run) => (r.floor.allies ??= []);
 
 function log(g: Game, text: string, tone?: "good" | "bad" | "info" | "loot") {
   const r = g.run!;
@@ -70,6 +101,11 @@ function tick(list: Status[]) {
   return list.filter((s) => s.turns > 0);
 }
 
+// ---- Path resources ----
+const gain = (g: Game, n: number) => {
+  g.player.intent = Math.max(0, Math.min(MAX_RESOURCE, g.player.intent + n));
+};
+
 // ---- Seeing ----
 export function visible(g: Game): Set<number> {
   const r = g.run!;
@@ -82,6 +118,7 @@ function markSeen(g: Game) {
   r.floor.seen = seen.join("");
 }
 export const enemyAt = (r: Run, p: Pos) => r.floor.enemies.find((e) => same(e.pos, p));
+export const allyAt = (r: Run, p: Pos) => alliesOf(r).find((a) => same(a.pos, p));
 
 // ---- Damage ----
 export function damage(atk: number, def: number, rng: Rng, mult = 1, crit = 0) {
@@ -102,23 +139,36 @@ function enemyAtk(g: Game, e: Enemy) {
   return ENEMIES[e.kind].boss && e.hp < e.maxHp / 2 ? a * 1.3 : a; // bosses get angry when hurt
 }
 
-function hitEnemy(g: Game, rng: Rng, e: Enemy, mult: number, fx: Fx[], opts: { fixed?: number; intent?: boolean } = {}) {
+// Your attack power: path kiếm tu adds 3% per point of sword intent
+function playerAtk(g: Game) {
   const p = g.player;
+  return stats(p).atk * (p.path === "kiem" ? 1 + 0.03 * p.intent : 1);
+}
+
+function hitEnemy(g: Game, rng: Rng, e: Enemy, mult: number, fx: Fx[], opts: { fixed?: number; resource?: boolean } = {}) {
+  const p = g.player;
+  const r = g.run!;
   const s = stats(p);
-  const times = opts.fixed === undefined && statusOf(g.run!.status, "echo") ? 2 : 1;
+  const echo = opts.fixed === undefined ? statusOf(r.status, "echo") : undefined;
+  const times = echo ? 2 : 1;
   for (let i = 0; i < times && e.hp > 0; i++) {
-    const { amount, crit } =
-      opts.fixed !== undefined ? { amount: opts.fixed, crit: false } : damage(s.atk * (1 + 0.03 * p.intent), enemyDef(e), rng, mult, s.crit);
+    let m = mult;
+    const empower = opts.fixed === undefined && i === 0 ? statusOf(r.status, "empower") : undefined;
+    if (empower) {
+      m *= empower.value;
+      r.status = r.status.filter((x) => x !== empower);
+    }
+    const { amount, crit } = opts.fixed !== undefined ? { amount: opts.fixed, crit: false } : damage(playerAtk(g), enemyDef(e), rng, m, s.crit);
     e.hp -= amount;
     e.awake = true;
     fx.push({ type: "hit", at: { ...e.pos }, amount, crit });
   }
-  if (times === 2) {
-    const echo = statusOf(g.run!.status, "echo")!;
+  if (echo) {
     echo.value--;
-    if (echo.value <= 0) echo.turns = 0;
+    if (echo.value <= 0) r.status = r.status.filter((x) => x !== echo);
   }
-  if (opts.intent !== false && opts.fixed === undefined) p.intent = Math.min(MAX_INTENT, p.intent + 1);
+  // path: kiếm ý and khí huyết grow with every hit you land
+  if (opts.resource !== false && opts.fixed === undefined && (p.path === "kiem" || p.path === "vo")) gain(g, 1);
   if (e.hp <= 0) kill(g, rng, e, fx);
 }
 
@@ -130,62 +180,72 @@ function kill(g: Game, rng: Rng, e: Enemy, fx: Fx[]) {
   fx.push({ type: "die", at: { ...e.pos } });
   r.loot.kills++;
   p.record.kills++;
+  if (p.path === "phat") gain(g, 1); // path: công đức for every evil laid to rest
   const name = vi(g, info.vi, info.en);
   if (e.kind === "tam-ma") {
     log(g, vi(g, "Tâm Ma tan biến. Đạo tâm vững như bàn thạch!", "The Heart Demon fades. Your heart is steady as rock!"), "good");
     return;
   }
-  const tuvi = 6 + 4 * e.level;
+  const tuvi = tuviFor(e.level);
   r.loot.cultivation += tuvi;
-  const layers = readyForTribulation(p) ? 0 : gainCultivation(p, tuvi);
+  const major = p.major;
+  const layers = readyForTribulation(p) || atPeak(p) ? 0 : gainCultivation(p, tuvi);
   log(g, vi(g, `Hạ ${name}. +${tuvi} tu vi.`, `Defeated ${name}. +${tuvi} cultivation.`), "good");
   if (layers) {
     heal(g);
-    log(g, vi(g, `Đột phá! Giờ là Luyện Khí tầng ${p.layer}.`, `Breakthrough! Now Qi Refining ${p.layer}.`), "good");
+    log(g, vi(g, `Đột phá! Giờ là ${MAJOR_REALMS[major].vi} tầng ${p.layer}.`, `Breakthrough! Now ${MAJOR_REALMS[major].en} ${p.layer}.`), "good");
     fx.push({ type: "text", at: { ...r.pos }, text: vi(g, "Đột phá!", "Breakthrough!"), tone: "good" });
   }
   if (rng.chance(0.4)) {
-    const n = 2 + e.level * 2;
+    const n = stonesFor(e.level);
     r.loot.stones += n;
     fx.push({ type: "text", at: { ...e.pos }, text: `+${n} 💎`, tone: "loot" });
   }
   if (info.beast && rng.chance(0.35)) addItem(r.loot.bag, "yeu-dan");
   if (rng.chance(0.12)) {
-    r.loot.gear.push(rollGear(g, rng, Math.floor((r.floor.depth - 1) / 1.2)));
+    r.loot.gear.push(rollGear(g, rng, e.level));
     log(g, vi(g, "Rơi ra một món trang bị.", "It dropped a piece of gear."), "loot");
   }
-  if (info.boss) {
-    const kinds = Object.keys(TREASURES) as TreasureKind[];
-    const owned = new Set([...p.treasures, ...r.loot.treasures].map((t) => t.kind));
-    const kind = kinds.find((k) => !owned.has(k)) ?? rng.pick(kinds);
-    r.loot.treasures.push(newTreasure(g, kind, owned.has(kind) ? 1 : 0));
-    r.loot.stones += 150;
-    addItem(r.loot.bag, "truc-co-dan");
-    addItem(r.loot.bag, "yeu-dan", 3);
-    const known = new Set(p.techniques.map((t) => t.id));
-    const slip: ItemId | null = !known.has("xich-diem") ? "ngoc-gian-xd" : !known.has("huyen-thuy") ? "ngoc-gian-ht" : null;
-    if (slip) addItem(r.loot.bag, slip);
-    r.loot.gear.push(rollGear(g, rng, 3, 0.3));
-    r.floor.things.push({ uid: `p-boss-${r.turn}`, kind: "portal", pos: { ...e.pos } });
-    log(
-      g,
-      vi(
-        g,
-        `Mãng Vương ngã xuống! Nhận ${TREASURES[kind].vi}, Trúc Cơ Đan và nhiều bảo vật. Một trận truyền tống hiện ra.`,
-        `The Python King falls! You get ${TREASURES[kind].en}, a Foundation Pill and more. A return array appears.`,
-      ),
-      "loot",
-    );
-  }
+  if (info.boss) bossLoot(g, rng, e);
 }
 
-// Damage to you: block, shield and mirror first
+function bossLoot(g: Game, rng: Rng, e: Enemy) {
+  const r = g.run!;
+  const p = g.player;
+  const realm = realmInfo(r.realm);
+  const kinds = Object.keys(TREASURES) as TreasureKind[];
+  const owned = new Set([...p.treasures, ...r.loot.treasures].map((t) => t.kind));
+  const fresh = kinds.filter((k) => !owned.has(k));
+  const kind = fresh.length ? rng.pick(fresh) : rng.pick(kinds);
+  r.loot.treasures.push(newTreasure(g, kind, Math.min(3, realm.minMajor + (owned.has(kind) ? 1 : 0))));
+  r.loot.stones += stonesFor(e.level) * 8;
+  const pill = MAJOR_REALMS[realm.minMajor].pill;
+  if (pill) addItem(r.loot.bag, pill);
+  addItem(r.loot.bag, realm.herb, 2);
+  addItem(r.loot.bag, "yeu-dan", 3);
+  addItem(r.loot.bag, "huyen-thiet", 2);
+  const slip = unknownSlip(p);
+  if (slip) addItem(r.loot.bag, slip);
+  r.loot.gear.push(rollGear(g, rng, e.level, 0.3));
+  r.floor.things.push({ uid: newUid(g, "p"), kind: "portal", pos: { ...e.pos } });
+  log(
+    g,
+    vi(
+      g,
+      `${ENEMIES[e.kind].vi} ngã xuống! Nhận ${TREASURES[kind].vi}${pill ? `, ${ITEMS[pill].vi}` : ""} và nhiều bảo vật. Một trận truyền tống hiện ra.`,
+      `The ${ENEMIES[e.kind].en} falls! You get ${TREASURES[kind].en}${pill ? `, a ${ITEMS[pill].en}` : ""} and more. A return array appears.`,
+    ),
+    "loot",
+  );
+}
+
+// Damage to you: righteous qi softens it, then block, shield, mirror and karma
 function hurtPlayer(g: Game, rng: Rng, amount: number, fx: Fx[], from?: Enemy) {
   const r = g.run!;
   const p = g.player;
+  if (p.path === "nho") amount = Math.max(1, Math.round(amount * (1 - 0.025 * p.intent))); // path: chính khí
   const block = statusOf(r.status, "block");
   if (block) {
-    block.turns = 0;
     r.status = r.status.filter((s) => s !== block);
     fx.push({ type: "text", at: { ...r.pos }, text: vi(g, "Chặn!", "Blocked!"), tone: "info" });
     return;
@@ -195,14 +255,21 @@ function hurtPlayer(g: Game, rng: Rng, amount: number, fx: Fx[], from?: Enemy) {
     const absorbed = Math.min(shield.value, amount);
     shield.value -= absorbed;
     amount -= absorbed;
-    if (shield.value <= 0) shield.turns = 0;
+    if (shield.value <= 0) r.status = r.status.filter((s) => s !== shield);
   }
-  if (from) {
-    const mirror = statusOf(r.status, "reflect");
-    if (mirror && amount > 0) hitEnemy(g, rng, from, 0, fx, { fixed: Math.max(1, Math.round((amount * mirror.value) / 100)) });
+  if (from && amount > 0) {
+    const reflect = (statusOf(r.status, "reflect")?.value ?? 0) + (p.path === "phat" ? 2 * p.intent : 0); // path: nhân quả
+    if (reflect > 0 && r.floor.enemies.includes(from)) hitEnemy(g, rng, from, 0, fx, { fixed: Math.max(1, Math.round((amount * reflect) / 100)) });
   }
   p.hp -= amount;
   fx.push({ type: "hit", at: { ...r.pos }, amount, onPlayer: true });
+  if (p.path === "vo") {
+    gain(g, 2); // path: khí huyết boils when you're hit…
+    if (from && p.hp > 0 && r.floor.enemies.includes(from) && dist(from.pos, r.pos) === 1 && rng.chance(0.2)) {
+      fx.push({ type: "text", at: { ...r.pos }, text: vi(g, "Phản đòn!", "Counter!"), tone: "good" });
+      hitEnemy(g, rng, from, 0.6, fx, { resource: false }); // …and you strike back
+    }
+  }
 }
 
 // ---- Starting and ending a run ----
@@ -223,14 +290,18 @@ export function startRun(g: Game, realm: RealmId = "vu-an-coc") {
   g.player.record.runs++;
   g.player.intent = 0;
   g.rng = rng.state();
-  log(g, vi(g, `Bước vào ${SECRET_REALMS[realm].vi}, tầng 1. Sương mù dày đặc…`, `You enter the ${SECRET_REALMS[realm].en}, floor 1. Thick mist…`), "info");
+  const info = realmInfo(realm);
+  log(g, vi(g, `Bước vào ${info.vi}, tầng 1.`, `You enter the ${info.en}, floor 1.`), "info");
   markSeen(g);
 }
 
 export const TRIBULATION_TURNS = 15;
+export const tribulationTurns = (from: number) => TRIBULATION_TURNS + 3 * from;
+
 export function startTribulation(g: Game): boolean {
   if (!readyForTribulation(g.player)) return false;
   const { floor, start } = makeArena();
+  const from = g.player.major;
   g.run = {
     kind: "tribulation",
     realm: "vu-an-coc",
@@ -241,9 +312,10 @@ export function startTribulation(g: Game): boolean {
     status: [],
     loot: { stones: 0, bag: {}, gear: [], treasures: [], cultivation: 0, kills: 0 },
     log: [],
+    from,
     strikes: [],
     survived: 0,
-    goal: TRIBULATION_TURNS,
+    goal: tribulationTurns(from),
     demon: false,
   };
   heal(g);
@@ -252,8 +324,8 @@ export function startTribulation(g: Game): boolean {
     g,
     vi(
       g,
-      `Thiên kiếp giáng xuống! Né sét ${TRIBULATION_TURNS} lượt, rồi vượt qua Tâm Ma.`,
-      `The tribulation begins! Dodge the lightning for ${TRIBULATION_TURNS} turns, then face your Heart Demon.`,
+      `Thiên kiếp ${MAJOR_REALMS[from + 1].vi} giáng xuống! Né sét ${tribulationTurns(from)} lượt, rồi vượt qua Tâm Ma.`,
+      `The ${MAJOR_REALMS[from + 1].en} tribulation begins! Dodge the lightning for ${tribulationTurns(from)} turns, then face your Heart Demon.`,
     ),
     "bad",
   );
@@ -296,8 +368,8 @@ export function finishRun(g: Game, outcome: Exclude<Outcome, "continue">) {
     breakThrough(g);
     g.notice = vi(
       g,
-      "Độ kiếp thành công! Bạn đã Trúc Cơ. Sinh lực, linh lực và số ô thần thông, pháp bảo đều tăng.",
-      "Tribulation passed! You reached Foundation. More life, qi, skill and treasure slots.",
+      `Độ kiếp thành công! Bạn đã bước vào ${MAJOR_REALMS[p.major].vi}. Sinh lực, linh lực và số ô thần thông, pháp bảo đều tăng.`,
+      `Tribulation passed! You have reached ${MAJOR_REALMS[p.major].en}. More life, qi and slots.`,
     );
   } else {
     failTribulation(g);
@@ -308,7 +380,7 @@ export function finishRun(g: Game, outcome: Exclude<Outcome, "continue">) {
     );
   }
   if (outcome !== "won" && outcome !== "lost") heal(g);
-  p.record.deepest = Math.max(p.record.deepest, r.kind === "realm" ? r.floor.depth : 0);
+  if (r.kind === "realm") p.record.deepest = Math.max(p.record.deepest, r.floor.depth);
   p.intent = 0;
   g.run = null;
 }
@@ -326,8 +398,7 @@ export function act(g: Game, action: Action): Result {
   }
   if (res.outcome) {
     g.rng = rng.state();
-    if (res.outcome !== "continue") return { ok: true, fx, outcome: res.outcome };
-    return { ok: true, fx, outcome: "continue" };
+    return { ok: true, fx, outcome: res.outcome };
   }
   const outcome = endTurn(g, rng, fx);
   g.rng = rng.state();
@@ -342,7 +413,7 @@ function playerAction(g: Game, rng: Rng, a: Action, fx: Fx[]): Step {
   const s = stats(p);
 
   if (a.type === "wait") {
-    p.qi = Math.min(s.qi, p.qi + 1); // resting gathers a little extra qi
+    p.qi = Math.min(s.qi, p.qi + Math.max(1, Math.round(s.qiRegen))); // resting gathers a little extra qi
     return { ok: true };
   }
 
@@ -355,6 +426,8 @@ function playerAction(g: Game, rng: Rng, a: Action, fx: Fx[]): Step {
       return { ok: true };
     }
     if (!canStep(grid(r), r.pos, a.dir)) return { ok: false, reason: "wall" };
+    const friend = allyAt(r, to);
+    if (friend) friend.pos = { ...r.pos }; // swap places with your own soldier
     fx.push({ type: "move", from: { ...r.pos }, to });
     r.pos = to;
     stepOn(g, rng, fx);
@@ -375,78 +448,195 @@ function playerAction(g: Game, rng: Rng, a: Action, fx: Fx[]): Step {
   }
 
   if (a.type === "item") return useItemInRun(g, rng, a.id, a.target, fx);
-  if (a.type === "treasure") return useTreasure(g, rng, a.uid, a.target, fx);
-  return useAbility(g, rng, a.id, a.target, fx);
+
+  if (a.type === "treasure") {
+    const t = p.treasures.find((x) => x.uid === a.uid);
+    if (!t || !p.bound.includes(a.uid)) return { ok: false, reason: "not bound" };
+    if ((r.cooldowns[a.uid] ?? 0) > 0) return { ok: false, reason: "cooldown" };
+    const info = TREASURES[t.kind];
+    const res = applyEffect(g, rng, info, a.target, fx, 1 + 0.35 * t.grade + 0.05 * t.level);
+    if (res.ok) r.cooldowns[a.uid] = info.cooldown + 1;
+    return res;
+  }
+
+  const ab = ABILITIES[a.id];
+  if (!p.skills.includes(a.id)) return { ok: false, reason: "not equipped" };
+  if ((r.cooldowns[a.id] ?? 0) > 0) return { ok: false, reason: "cooldown" };
+  const cost = abilityQi(p, a.id);
+  if (p.qi < cost) return { ok: false, reason: "qi" };
+  const power = p.path === "dao" ? 1 + 0.03 * p.intent : 1; // path: đạo vận strengthens abilities
+  const res = applyEffect(g, rng, ab, a.target, fx, power);
+  if (!res.ok) return res;
+  p.qi -= cost;
+  if (ab.cooldown) r.cooldowns[a.id] = ab.cooldown + 1; // +1: this turn's tick
+  if (p.path === "dao" && !ab.spendAll) gain(g, 1);
+  return res;
 }
 
-// Picking things up and springing traps
-function stepOn(g: Game, rng: Rng, fx: Fx[]) {
+// The direction from you towards a tapped tile: one of 8
+const dirTo = (from: Pos, to: Pos): Pos => ({ x: Math.sign(to.x - from.x), y: Math.sign(to.y - from.y) });
+
+// Carry out an ability or a treasure power (see Effect in paths.ts). Checks the target first; changes nothing if it's wrong.
+function applyEffect(g: Game, rng: Rng, eff: Effect, target: Pos | undefined, fx: Fx[], power: number): Step {
   const r = g.run!;
   const p = g.player;
   const s = stats(p);
-  for (const t of r.floor.things.filter((x) => same(x.pos, r.pos))) {
-    if (t.kind === "herb") {
-      const amount = Math.ceil(s.hp * 0.1);
-      p.hp = Math.min(s.hp, p.hp + amount);
-      if (!readyForTribulation(p)) gainCultivation(p, 15);
-      r.loot.cultivation += 15;
-      fx.push({ type: "heal", at: { ...r.pos }, amount });
-      log(g, vi(g, "Hái linh thảo: hồi sinh lực, +15 tu vi.", "Picked a spirit herb: some life back, +15 cultivation."), "good");
-    } else if (t.kind === "stones") {
-      r.loot.stones += t.amount ?? 5;
-      fx.push({ type: "text", at: { ...r.pos }, text: `+${t.amount} 💎`, tone: "loot" });
-    } else if (t.kind === "chest") {
-      openChest(g, rng, fx);
-    } else if (t.kind === "trap") {
-      const amount = Math.ceil(s.hp * 0.12);
-      t.hidden = false;
-      hurtPlayer(g, rng, amount, fx);
-      fx.push({ type: "area", at: { ...r.pos }, r: 1, color: "#b8432f" });
-      log(g, vi(g, "Dẫm phải sát trận!", "You stepped on a hidden killing array!"), "bad");
-      continue; // traps stay (now visible)
-    } else continue;
-    r.floor.things = r.floor.things.filter((x) => x !== t);
-  }
-}
+  let victims: Enemy[] = [];
+  let finishMult = 0;
 
-function openChest(g: Game, rng: Rng, fx: Fx[]) {
-  const r = g.run!;
-  const depth = r.floor.depth;
-  const n = 10 + depth * 8 + rng.int(0, 10);
-  r.loot.stones += n;
-  const found: string[] = [`${n} ${vi(g, "linh thạch", "spirit stones")}`];
-  const roll = rng.next();
-  if (roll < 0.45) {
-    const id = rng.pick<ItemId>(["hoi-xuan", "hoi-linh", "tu-khi", "hoi-xuan"]);
-    addItem(r.loot.bag, id);
-    found.push(vi(g, ITEMS[id].vi, ITEMS[id].en));
-  } else if (roll < 0.85) {
-    const item = rollGear(g, rng, Math.floor((depth - 1) / 1.2), 0.1);
-    r.loot.gear.push(item);
-    found.push(item.name);
-  } else {
-    const id = rng.pick<ItemId>(["bao-linh-phu", "truyen-tong-phu"]);
-    addItem(r.loot.bag, id);
-    found.push(vi(g, ITEMS[id].vi, ITEMS[id].en));
-  }
-  if (depth >= 3 && rng.chance(0.08)) {
-    const known = new Set(g.player.techniques.map((t) => t.id));
-    const slip = !known.has("xich-diem") ? "ngoc-gian-xd" : !known.has("huyen-thuy") ? "ngoc-gian-ht" : null;
-    if (slip) {
-      addItem(r.loot.bag, slip);
-      found.push(vi(g, ITEMS[slip].vi, ITEMS[slip].en));
+  // 1. Who's affected (and is the target allowed?)
+  switch (eff.target) {
+    case "self":
+      break;
+    case "around":
+      victims = r.floor.enemies.filter((e) => dist(e.pos, r.pos) <= (eff.radius ?? 1));
+      fx.push({ type: "area", at: { ...r.pos }, r: eff.radius ?? 1, color: eff.mult ? "#b08a2e" : "#7a3fa0" });
+      break;
+    case "line": {
+      if (!target || same(target, r.pos)) return { ok: false, reason: "target" };
+      const d = dirTo(r.pos, target);
+      let cur = r.pos;
+      const path: Pos[] = [];
+      for (let i = 0; i < eff.range; i++) {
+        const n = { x: cur.x + d.x, y: cur.y + d.y };
+        if (!isFloor(grid(r), n.x, n.y)) break;
+        path.push(n);
+        cur = n;
+      }
+      if (!path.length) return { ok: false, reason: "wall" };
+      fx.push({ type: "slash", from: { ...r.pos }, to: path[path.length - 1], color: "#3f7d6a" });
+      victims = path.map((q) => enemyAt(r, q)).filter((e): e is Enemy => !!e);
+      break;
+    }
+    case "dash": {
+      if (!target || same(target, r.pos)) return { ok: false, reason: "target" };
+      const d = dirTo(r.pos, target);
+      let cur = r.pos;
+      for (let i = 0; i < eff.range; i++) {
+        const n = { x: cur.x + d.x, y: cur.y + d.y };
+        if (!canStep(grid(r), cur, d) || enemyAt(r, n) || allyAt(r, n)) break;
+        cur = n;
+      }
+      const ahead = enemyAt(r, { x: cur.x + d.x, y: cur.y + d.y });
+      if (same(cur, r.pos) && !(eff.finish && ahead)) return { ok: false, reason: "blocked" };
+      if (!same(cur, r.pos)) {
+        fx.push({ type: "move", from: { ...r.pos }, to: { ...cur } });
+        fx.push({ type: "slash", from: { ...r.pos }, to: { ...cur }, color: "#7aa7c7" });
+        r.pos = cur;
+        stepOn(g, rng, fx);
+      }
+      if (eff.finish) {
+        const foe = ahead ?? r.floor.enemies.filter((e) => dist(e.pos, r.pos) === 1).sort((a, b) => dist(a.pos, target) - dist(b.pos, target))[0];
+        if (foe) {
+          victims = [foe];
+          finishMult = eff.finish;
+        }
+      }
+      break;
+    }
+    case "enemy":
+    case "adjacent": {
+      const foe = target && enemyAt(r, target);
+      if (!foe || dist(foe.pos, r.pos) > eff.range) return { ok: false, reason: "target" };
+      if (eff.target === "enemy" && !clearLine(grid(r), r.pos, foe.pos)) return { ok: false, reason: "target" };
+      fx.push({ type: "slash", from: { ...r.pos }, to: { ...foe.pos }, color: eff.enemy?.some((x) => x.kind === "burn") ? "#c4562f" : "#4f8a9a" });
+      victims = [foe];
+      break;
+    }
+    case "area": {
+      if (!target || dist(target, r.pos) > eff.range || !visible(g).has(target.y * r.floor.w + target.x)) return { ok: false, reason: "target" };
+      fx.push({ type: "area", at: { ...target }, r: eff.radius ?? 1, color: "#3f6f9a" });
+      victims = r.floor.enemies.filter((e) => dist(e.pos, target) <= (eff.radius ?? 1));
+      break;
     }
   }
-  fx.push({ type: "text", at: { ...r.pos }, text: "🎁", tone: "loot" });
-  log(g, vi(g, `Mở rương: ${found.join(", ")}.`, `Opened a chest: ${found.join(", ")}.`), "loot");
+
+  // 2. Spend the path resource, if this uses all of it
+  let spent = 0;
+  if (eff.spendAll) {
+    spent = p.intent;
+    p.intent = 0;
+  }
+
+  // 3. Damage and effects on enemies (self-only effects use perPoint for themselves, below)
+  const mult = (finishMult || (eff.mult ?? 0)) * power * (1 + (eff.self ? 0 : (eff.perPoint ?? 0) * spent));
+  for (const e of victims) {
+    if (!r.floor.enemies.includes(e)) continue;
+    if (mult > 0) hitEnemy(g, rng, e, mult * (eff.spirits && SPIRITS.includes(e.kind) ? eff.spirits : 1), fx, { resource: !eff.spendAll });
+    if (!r.floor.enemies.includes(e)) continue;
+    e.awake = true;
+    for (const st of eff.enemy ?? []) addStatus(e.status, st.kind, st.turns, st.kind === "burn" ? Math.max(1, Math.round(s.atk * (st.atk ?? 0.2) * power)) : 1);
+  }
+
+  // 4. On yourself
+  if (eff.heal) {
+    const amount = Math.ceil(s.hp * eff.heal * power);
+    p.hp = Math.min(s.hp, p.hp + amount);
+    fx.push({ type: "heal", at: { ...r.pos }, amount });
+    if (p.path === "phat") gain(g, 1); // path: công đức
+  }
+  if (eff.qi) {
+    const amount = Math.ceil(s.qi * eff.qi * power);
+    p.qi = Math.min(s.qi, p.qi + amount);
+    fx.push({ type: "heal", at: { ...r.pos }, amount, qi: true });
+  }
+  for (const st of eff.self ?? []) {
+    const value =
+      st.kind === "shield"
+        ? Math.round((2 * s.def + 10 + 0.1 * s.hp) * st.value * power)
+        : st.kind === "reflect"
+          ? Math.round(st.value * power + (eff.perPoint ?? 0) * spent)
+          : st.value;
+    addStatus(r.status, st.kind, st.turns, value);
+    fx.push({ type: "area", at: { ...r.pos }, r: 0, color: st.kind === "shield" || st.kind === "block" ? "#7aa7c7" : "#b08a2e" });
+  }
+  if (eff.summon) summon(g, eff.summon.kind, eff.summon.count, power, fx);
+  if (eff.gain) gain(g, eff.gain);
+  return { ok: true };
 }
 
-// ---- Thần thông ----
-export function abilityTargets(g: Game, kind: "line" | "dash" | "enemy" | "area" | "adjacent" | "self", range: number): Pos[] {
+// ---- Binh gia: soldiers ----
+function summon(g: Game, kind: AllyKind, count: number, power: number, fx: Fx[]) {
+  const r = g.run!;
+  const p = g.player;
+  const s = stats(p);
+  const info = ALLIES[kind];
+  const spots = DIRS.map((d) => ({ x: r.pos.x + d.x, y: r.pos.y + d.y })).filter((q) => isFloor(grid(r), q.x, q.y) && !enemyAt(r, q) && !allyAt(r, q));
+  for (const pos of spots.slice(0, count)) {
+    const hp = Math.round(s.hp * info.hp * power);
+    alliesOf(r).push({ uid: newUid(g, "a"), kind, pos, hp, maxHp: hp, atk: s.atk * info.atk * power, def: s.def * 0.5, turns: info.turns });
+    fx.push({ type: "summon", at: pos });
+  }
+  if (!spots.length) fx.push({ type: "text", at: { ...r.pos }, text: vi(g, "Không còn chỗ!", "No room!"), tone: "info" });
+}
+
+function allyAct(g: Game, rng: Rng, a: Ally, fx: Fx[]) {
+  const r = g.run!;
+  const p = g.player;
+  const info = ALLIES[a.kind];
+  const bonus = p.path === "binh" ? 1 + 0.05 * p.intent : 1; // path: quân lệnh
+  const foes = r.floor.enemies
+    .filter((e) => dist(e.pos, a.pos) <= 8 && clearLine(grid(r), a.pos, e.pos))
+    .sort((x, y) => dist(x.pos, a.pos) - dist(y.pos, a.pos));
+  const foe = foes[0];
+  if (foe && dist(foe.pos, a.pos) <= info.range) {
+    if (info.range > 1) fx.push({ type: "slash", from: { ...a.pos }, to: { ...foe.pos }, color: "#8a6a3f" });
+    hitEnemy(g, rng, foe, 0, fx, { fixed: damage(a.atk * bonus, enemyDef(foe), rng).amount });
+    return;
+  }
+  const occupied = (q: Pos) => same(q, r.pos) || !!enemyAt(r, q) || alliesOf(r).some((x) => x !== a && same(x.pos, q));
+  const goal = foe?.pos ?? (dist(a.pos, r.pos) > 2 ? r.pos : null);
+  if (!goal) return;
+  const next = findPath(grid(r), a.pos, goal, { blocked: occupied, maxSteps: 400 })?.[0];
+  if (next && !occupied(next)) a.pos = next;
+}
+
+// ---- Targets (for the screen: which tiles light up when aiming) ----
+export function abilityTargets(g: Game, kind: Effect["target"], range: number): Pos[] {
   const r = g.run!;
   const seen = visible(g);
   const out: Pos[] = [];
-  if (kind === "self") return [r.pos];
+  if (kind === "self" || kind === "around") return [r.pos];
   if (kind === "enemy" || kind === "adjacent") {
     for (const e of r.floor.enemies) {
       const d = dist(e.pos, r.pos);
@@ -464,138 +654,91 @@ export function abilityTargets(g: Game, kind: "line" | "dash" | "enemy" | "area"
   return out;
 }
 
-// The direction from you towards a tapped tile: one of 8
-const dirTo = (from: Pos, to: Pos): Pos => ({ x: Math.sign(to.x - from.x), y: Math.sign(to.y - from.y) });
-
-function useAbility(g: Game, rng: Rng, id: AbilityId, target: Pos | undefined, fx: Fx[]): Step {
+// Picking things up, springing traps, stepping into hazards
+function stepOn(g: Game, rng: Rng, fx: Fx[]) {
   const r = g.run!;
   const p = g.player;
-  const a = ABILITIES[id];
   const s = stats(p);
-  if (!p.skills.includes(id)) return { ok: false, reason: "not equipped" };
-  if ((r.cooldowns[id] ?? 0) > 0) return { ok: false, reason: "cooldown" };
-  if (p.qi < a.qi) return { ok: false, reason: "qi" };
-
-  switch (id) {
-    case "kiem-khi": {
-      if (!target || same(target, r.pos)) return { ok: false, reason: "target" };
-      const d = dirTo(r.pos, target);
-      let cur = r.pos;
-      const path: Pos[] = [];
-      for (let i = 0; i < a.range; i++) {
-        const n = { x: cur.x + d.x, y: cur.y + d.y };
-        if (!isFloor(grid(r), n.x, n.y)) break;
-        path.push(n);
-        cur = n;
-      }
-      if (!path.length) return { ok: false, reason: "wall" };
-      fx.push({ type: "slash", from: { ...r.pos }, to: path[path.length - 1], color: "#3f7d6a" });
-      for (const pos of path) {
-        const e = enemyAt(r, pos);
-        if (e) hitEnemy(g, rng, e, 1.3, fx);
-      }
-      break;
-    }
-    case "ngu-kiem": {
-      if (!target || same(target, r.pos)) return { ok: false, reason: "target" };
-      const d = dirTo(r.pos, target);
-      let cur = r.pos;
-      for (let i = 0; i < a.range; i++) {
-        const n = { x: cur.x + d.x, y: cur.y + d.y };
-        if (!canStep(grid(r), cur, d) || enemyAt(r, n)) break;
-        cur = n;
-      }
-      if (same(cur, r.pos)) return { ok: false, reason: "blocked" };
-      fx.push({ type: "move", from: { ...r.pos }, to: { ...cur } });
-      fx.push({ type: "slash", from: { ...r.pos }, to: { ...cur }, color: "#7aa7c7" });
-      r.pos = cur;
-      stepOn(g, rng, fx);
-      break;
-    }
-    case "kiem-vu": {
-      if (!target || dist(target, r.pos) > a.range || !visible(g).has(target.y * r.floor.w + target.x)) return { ok: false, reason: "target" };
-      fx.push({ type: "area", at: { ...target }, r: 1, color: "#3f6f9a" });
-      for (const e of [...r.floor.enemies]) if (dist(e.pos, target) <= 1) hitEnemy(g, rng, e, 0.9, fx);
-      break;
-    }
-    case "luu-quang":
-      addStatus(r.status, "echo", 12, 3);
-      fx.push({ type: "text", at: { ...r.pos }, text: vi(g, "Kiếm ảnh!", "Afterimage!"), tone: "good" });
-      break;
-    case "liet-diem":
-    case "boc-phat": {
-      const e = target && enemyAt(r, target);
-      if (!e || dist(e.pos, r.pos) > 1) return { ok: false, reason: "target" };
-      fx.push({ type: "slash", from: { ...r.pos }, to: { ...e.pos }, color: id === "liet-diem" ? "#c4562f" : "#a8231b" });
-      if (id === "liet-diem") {
-        addStatus(e.status, "burn", 3, Math.max(1, Math.round(s.atk * 0.25)));
-        hitEnemy(g, rng, e, 1.2, fx);
-      } else {
-        const power = 1 + 0.25 * p.intent;
-        p.intent = 0;
-        hitEnemy(g, rng, e, power, fx, { intent: false });
-      }
-      break;
-    }
-    case "ho-the":
-      addStatus(r.status, "shield", 3, Math.round(s.def * 2 + 10 + s.hp * 0.1));
-      fx.push({ type: "area", at: { ...r.pos }, r: 0, color: "#7aa7c7" });
-      break;
-    case "bang-tam": {
-      const amount = Math.ceil(s.hp * 0.25);
+  const realm = realmInfo(r.realm);
+  const level = realm.firstLevel + (r.floor.depth - 1) * 2;
+  for (const t of r.floor.things.filter((x) => same(x.pos, r.pos))) {
+    if (t.kind === "herb") {
+      const amount = Math.ceil(s.hp * 0.08);
+      const tuvi = Math.round(tuviFor(level) * 0.6);
       p.hp = Math.min(s.hp, p.hp + amount);
+      if (!readyForTribulation(p) && !atPeak(p)) gainCultivation(p, tuvi);
+      r.loot.cultivation += tuvi;
+      addItem(r.loot.bag, realm.herb);
       fx.push({ type: "heal", at: { ...r.pos }, amount });
-      break;
-    }
+      log(
+        g,
+        vi(g, `Hái ${ITEMS[realm.herb].vi}: hồi sinh lực, +${tuvi} tu vi.`, `Picked a ${ITEMS[realm.herb].en}: some life back, +${tuvi} cultivation.`),
+        "good",
+      );
+    } else if (t.kind === "stones") {
+      r.loot.stones += t.amount ?? 5;
+      fx.push({ type: "text", at: { ...r.pos }, text: `+${t.amount} 💎`, tone: "loot" });
+    } else if (t.kind === "chest") {
+      openChest(g, rng, fx, level);
+    } else if (t.kind === "trap") {
+      t.hidden = false;
+      hurtPlayer(g, rng, Math.ceil(s.hp * 0.12), fx);
+      fx.push({ type: "area", at: { ...r.pos }, r: 1, color: "#b8432f" });
+      log(g, vi(g, "Dẫm phải sát trận!", "You stepped on a hidden killing array!"), "bad");
+      continue; // traps stay (now visible)
+    } else if (t.kind === "hazard") {
+      if (t.hazard === "lava") {
+        hurtPlayer(g, rng, Math.ceil(s.hp * 0.08), fx);
+        addStatus(r.status, "burn", 2, Math.max(1, Math.round(s.hp * 0.02)));
+        log(g, vi(g, "Dung nham bỏng rát!", "The lava burns!"), "bad");
+      } else if (t.hazard === "miasma") {
+        p.qi = Math.max(0, p.qi - Math.ceil(s.qi * 0.15));
+        fx.push({ type: "text", at: { ...r.pos }, text: vi(g, "Oán khí!", "Miasma!"), tone: "bad" });
+        log(g, vi(g, "Oán khí hút mất linh lực.", "Grudge miasma drains your qi."), "bad");
+      } else if (t.hazard === "whirlpool") {
+        const tiles: Pos[] = [];
+        const open = (x: number, y: number) => isFloor(grid(r), x, y) && !enemyAt(r, { x, y }) && !allyAt(r, { x, y });
+        for (const far of [8, 3]) {
+          for (let y = 1; y < r.floor.h - 1; y++) for (let x = 1; x < r.floor.w - 1; x++) if (open(x, y) && dist({ x, y }, r.pos) > far) tiles.push({ x, y });
+          if (tiles.length) break; // far away if there's room, otherwise just somewhere else
+        }
+        if (tiles.length) {
+          fx.push({ type: "area", at: { ...r.pos }, r: 1, color: "#3f6f9a" });
+          r.pos = rng.pick(tiles);
+          log(g, vi(g, "Xoáy nước cuốn bạn đi!", "A whirlpool sweeps you away!"), "info");
+        }
+      }
+      continue; // hazards stay
+    } else continue;
+    r.floor.things = r.floor.things.filter((x) => x !== t);
   }
-  p.qi -= a.qi;
-  if (a.cooldown) r.cooldowns[id] = a.cooldown + 1; // +1: this turn's tick
-  return { ok: true };
 }
 
-// ---- Pháp bảo ----
-function useTreasure(g: Game, rng: Rng, uid: string, target: Pos | undefined, fx: Fx[]): Step {
+function openChest(g: Game, rng: Rng, fx: Fx[], level: number) {
   const r = g.run!;
-  const p = g.player;
-  const t = p.treasures.find((x) => x.uid === uid);
-  if (!t || !p.bound.includes(uid)) return { ok: false, reason: "not bound" };
-  if ((r.cooldowns[uid] ?? 0) > 0) return { ok: false, reason: "cooldown" };
-  const info = TREASURES[t.kind];
-  const s = stats(p);
-  const power = 1 + 0.35 * t.grade + 0.05 * t.level;
-  switch (t.kind) {
-    case "thanh-hong": {
-      const e = target && enemyAt(r, target);
-      if (!e || dist(e.pos, r.pos) > info.range || !clearLine(grid(r), r.pos, e.pos)) return { ok: false, reason: "target" };
-      fx.push({ type: "slash", from: { ...r.pos }, to: { ...e.pos }, color: "#4f8a9a" });
-      hitEnemy(g, rng, e, 1.2 * power, fx);
-      break;
-    }
-    case "tran-hon":
-      fx.push({ type: "area", at: { ...r.pos }, r: info.range, color: "#b59a4a" });
-      for (const e of r.floor.enemies) if (dist(e.pos, r.pos) <= info.range) addStatus(e.status, "stun", 1 + Math.floor(t.grade / 2), 1);
-      break;
-    case "tu-kim": {
-      const amount = Math.ceil(s.qi * 0.3 * power);
-      p.qi = Math.min(s.qi, p.qi + amount);
-      fx.push({ type: "heal", at: { ...r.pos }, amount, qi: true });
-      break;
-    }
-    case "bat-quai":
-      addStatus(r.status, "reflect", 3, Math.round(40 * power));
-      fx.push({ type: "area", at: { ...r.pos }, r: 0, color: "#b59a4a" });
-      break;
-    case "hoan-linh":
-      fx.push({ type: "area", at: { ...r.pos }, r: info.range, color: "#7a3fa0" });
-      for (const e of r.floor.enemies) if (dist(e.pos, r.pos) <= info.range) addStatus(e.status, "weak", 3, 1);
-      break;
-    case "huyen-quy":
-      addStatus(r.status, "block", 99, 1);
-      fx.push({ type: "area", at: { ...r.pos }, r: 0, color: "#3f6f5a" });
-      break;
+  const depth = r.floor.depth;
+  const n = stonesFor(level) * 3 + rng.int(0, stonesFor(level));
+  r.loot.stones += n;
+  const found: string[] = [`${n} ${vi(g, "linh thạch", "spirit stones")}`];
+  const add = (id: ItemId) => {
+    addItem(r.loot.bag, id);
+    found.push(vi(g, ITEMS[id].vi, ITEMS[id].en));
+  };
+  const roll = rng.next();
+  if (roll < 0.4) add(rng.pick<ItemId>(["hoi-xuan", "hoi-linh", "tu-khi", g.player.major >= 1 ? "dai-hoi-xuan" : "hoi-xuan"]));
+  else if (roll < 0.8) {
+    const item = rollGear(g, rng, level, 0.1);
+    r.loot.gear.push(item);
+    found.push(item.name);
+  } else add(rng.pick<ItemId>(["bao-linh-phu", "truyen-tong-phu"]));
+  if (rng.chance(0.3)) add("huyen-thiet");
+  if (rng.chance(0.15)) add("phu-chi");
+  if (depth >= 3 && rng.chance(0.08)) {
+    const slip = unknownSlip(g.player);
+    if (slip && !(r.loot.bag[slip] ?? 0)) add(slip);
   }
-  r.cooldowns[uid] = info.cooldown + 1;
-  return { ok: true };
+  fx.push({ type: "text", at: { ...r.pos }, text: "🎁", tone: "loot" });
+  log(g, vi(g, `Mở rương: ${found.join(", ")}.`, `Opened a chest: ${found.join(", ")}.`), "loot");
 }
 
 // ---- Items in a run (from the bag you brought, or found in this run) ----
@@ -611,6 +754,7 @@ function takeItem(g: Game, id: ItemId) {
   }
   return useItem(g.player, id);
 }
+export const tribulationPill = (r: Run): ItemId | null => (r.kind === "tribulation" ? MAJOR_REALMS[r.from ?? 0].pill : null);
 
 function useItemInRun(g: Game, rng: Rng, id: ItemId, target: Pos | undefined, fx: Fx[]): Step {
   const r = g.run!;
@@ -618,8 +762,9 @@ function useItemInRun(g: Game, rng: Rng, id: ItemId, target: Pos | undefined, fx
   const s = stats(p);
   if (runBagCount(g, id) < 1) return { ok: false, reason: "none" };
   switch (id) {
-    case "hoi-xuan": {
-      const amount = Math.ceil(s.hp * 0.4);
+    case "hoi-xuan":
+    case "dai-hoi-xuan": {
+      const amount = Math.ceil(s.hp * (id === "hoi-xuan" ? 0.4 : 0.75));
       p.hp = Math.min(s.hp, p.hp + amount);
       fx.push({ type: "heal", at: { ...r.pos }, amount });
       break;
@@ -631,23 +776,28 @@ function useItemInRun(g: Game, rng: Rng, id: ItemId, target: Pos | undefined, fx
       break;
     }
     case "tu-khi":
-      if (readyForTribulation(p)) return { ok: false, reason: "full" };
-      gainCultivation(p, 60);
-      r.loot.cultivation += 60;
-      fx.push({ type: "text", at: { ...r.pos }, text: "+60", tone: "good" });
+    case "boi-nguyen": {
+      if (readyForTribulation(p) || atPeak(p)) return { ok: false, reason: "full" };
+      const amount = id === "tu-khi" ? 2 * meditateGain(p) : Math.round(needed(p) * 0.2);
+      gainCultivation(p, amount);
+      r.loot.cultivation += amount;
+      fx.push({ type: "text", at: { ...r.pos }, text: `+${amount}`, tone: "good" });
       break;
+    }
     case "truc-co-dan":
-      if (r.kind !== "tribulation" || r.pill) return { ok: false, reason: "only in tribulation" };
+    case "ket-kim-dan":
+    case "hoa-anh-dan":
+      if (tribulationPill(r) !== id || r.pill) return { ok: false, reason: "only in tribulation" };
       r.pill = true;
       addStatus(r.status, "shield", 10, Math.round(s.hp * 0.3));
       p.hp = Math.min(s.hp, p.hp + Math.round(s.hp * 0.3));
       fx.push({ type: "area", at: { ...r.pos }, r: 0, color: "#b59a4a" });
-      log(g, vi(g, "Nuốt Trúc Cơ Đan: linh lực cuồn cuộn bảo vệ thân thể.", "You swallow the Foundation Pill: qi surges to guard you."), "good");
+      log(g, vi(g, `Nuốt ${ITEMS[id].vi}: linh lực cuồn cuộn bảo vệ thân thể.`, `You swallow the ${ITEMS[id].en}: qi surges to guard you.`), "good");
       break;
     case "bao-linh-phu": {
       const e = target && enemyAt(r, target);
       if (!e || dist(e.pos, r.pos) > 6) return { ok: false, reason: "target" };
-      const fixed = Math.round(25 + 4 * (p.major * 9 + p.layer) + r.floor.depth * 6);
+      const fixed = Math.round(s.atk * 2.2);
       fx.push({ type: "area", at: { ...e.pos }, r: 1, color: "#c4562f" });
       for (const x of [...r.floor.enemies]) if (dist(x.pos, e.pos) <= 1) hitEnemy(g, rng, x, 0, fx, { fixed });
       break;
@@ -674,10 +824,27 @@ function endTurn(g: Game, rng: Rng, fx: Fx[]): Outcome {
     if (!r.cooldowns[k]) delete r.cooldowns[k];
   }
   if (r.turn % 2 === 0) p.qi = Math.min(s.qi, p.qi + Math.max(1, Math.round(s.qiRegen * 2)));
+  if (p.path === "nho") gain(g, 1); // path: chính khí gathers by itself
+  if (p.path === "binh" && r.turn % 2 === 0) gain(g, 1); // path: quân lệnh
+  const burning = statusOf(r.status, "burn");
+  if (burning) {
+    p.hp -= burning.value;
+    fx.push({ type: "hit", at: { ...r.pos }, amount: burning.value, onPlayer: true });
+  }
+
+  // Your soldiers
+  for (const a of [...alliesOf(r)]) {
+    a.turns--;
+    if (a.turns <= 0 || a.hp <= 0) {
+      r.floor.allies = alliesOf(r).filter((x) => x !== a);
+      fx.push({ type: "die", at: { ...a.pos } });
+      continue;
+    }
+    allyAct(g, rng, a, fx);
+  }
 
   for (const e of [...r.floor.enemies]) {
     if (!r.floor.enemies.includes(e)) continue;
-    // Burning
     const burn = statusOf(e.status, "burn");
     if (burn) {
       e.hp -= burn.value;
@@ -709,8 +876,13 @@ function endTurn(g: Game, rng: Rng, fx: Fx[]): Outcome {
 function enemyAct(g: Game, rng: Rng, e: Enemy, fx: Fx[]) {
   const r = g.run!;
   const info = ENEMIES[e.kind];
-  const d = dist(e.pos, r.pos);
-  const sees = d <= 8 && (info.ghost || clearLine(grid(r), e.pos, r.pos));
+  // Who to go for: you, or one of your soldiers if it's closer
+  const allies = alliesOf(r);
+  const nearestAlly = allies.reduce<Ally | null>((best, a) => (!best || dist(a.pos, e.pos) < dist(best.pos, e.pos) ? a : best), null);
+  const targetAlly = nearestAlly && dist(nearestAlly.pos, e.pos) < dist(r.pos, e.pos) ? nearestAlly : null;
+  const goal = targetAlly?.pos ?? r.pos;
+  const d = dist(e.pos, goal);
+  const sees = d <= 8 && (info.ghost || clearLine(grid(r), e.pos, goal));
   if (!e.awake) {
     if (sees && rng.chance(0.8)) {
       e.awake = true;
@@ -718,43 +890,44 @@ function enemyAct(g: Game, rng: Rng, e: Enemy, fx: Fx[]) {
     } else if (rng.chance(0.25)) wander(g, rng, e);
     return;
   }
-  const occupied = (p: Pos) => same(p, r.pos) || r.floor.enemies.some((x) => x !== e && same(x.pos, p));
+  const occupied = (q: Pos) => same(q, r.pos) || r.floor.enemies.some((x) => x !== e && same(x.pos, q)) || allies.some((a) => same(a.pos, q));
   // Hurt rogue cultivators run away
-  if (info.flees && e.hp < e.maxHp * 0.3 && d <= 4) {
+  if (info.flees && e.hp < e.maxHp * 0.3 && dist(e.pos, r.pos) <= 4) {
     const away = DIRS.map((dir) => ({ dir, to: { x: e.pos.x + dir.x, y: e.pos.y + dir.y } }))
       .filter(({ dir, to }) => canStep(grid(r), e.pos, dir) && !occupied(to))
       .sort((a, b) => dist(b.to, r.pos) - dist(a.to, r.pos))[0];
-    if (away && dist(away.to, r.pos) > d) {
+    if (away && dist(away.to, r.pos) > dist(e.pos, r.pos)) {
       e.pos = away.to;
       return;
     }
   }
-  if (d <= info.range && (d === 1 || clearLine(grid(r), e.pos, r.pos))) {
-    attackPlayer(g, rng, e, fx, d > 1);
+  if (d <= info.range && (d === 1 || clearLine(grid(r), e.pos, goal))) {
+    if (targetAlly) attackAlly(g, rng, e, targetAlly, fx, d > 1);
+    else attackPlayer(g, rng, e, fx, d > 1);
     return;
   }
   if (!sees && d > 12) return; // lost you
   let next: Pos | undefined;
   if (info.ghost) {
-    const step = dirTo(e.pos, r.pos);
+    const step = dirTo(e.pos, goal);
     const to = { x: e.pos.x + step.x, y: e.pos.y + step.y };
     if (to.x > 0 && to.y > 0 && to.x < r.floor.w - 1 && to.y < r.floor.h - 1 && !occupied(to)) next = to;
-  } else next = findPath(grid(r), e.pos, r.pos, { blocked: occupied, maxSteps: 600 })?.[0];
-  if (next && !same(next, r.pos) && !occupied(next)) e.pos = next;
+  } else next = findPath(grid(r), e.pos, goal, { blocked: occupied, maxSteps: 600 })?.[0];
+  if (next && !occupied(next)) e.pos = next;
 }
 
 function wander(g: Game, rng: Rng, e: Enemy) {
   const r = g.run!;
   const dir = rng.pick(DIRS);
   const to = { x: e.pos.x + dir.x, y: e.pos.y + dir.y };
-  if (canStep(grid(r), e.pos, dir) && !same(to, r.pos) && !r.floor.enemies.some((x) => same(x.pos, to))) e.pos = to;
+  if (canStep(grid(r), e.pos, dir) && !same(to, r.pos) && !r.floor.enemies.some((x) => same(x.pos, to)) && !allyAt(r, to)) e.pos = to;
 }
 
 function attackPlayer(g: Game, rng: Rng, e: Enemy, fx: Fx[], ranged: boolean) {
   const r = g.run!;
   const p = g.player;
   const s = stats(p);
-  if (ranged) fx.push({ type: "slash", from: { ...e.pos }, to: { ...r.pos }, color: "#6b5a7a" });
+  if (ranged) fx.push({ type: "slash", from: { ...e.pos }, to: { ...r.pos }, color: ENEMIES[e.kind].tint ?? "#6b5a7a" });
   // A little chance to dodge, better at higher realms
   if (rng.chance(0.06 + p.major * 0.04)) {
     fx.push({ type: "miss", at: { ...r.pos } });
@@ -762,20 +935,34 @@ function attackPlayer(g: Game, rng: Rng, e: Enemy, fx: Fx[], ranged: boolean) {
   }
   const { amount } = damage(enemyAtk(g, e), s.def, rng, ranged ? 0.85 : 1, 5);
   hurtPlayer(g, rng, amount, fx, e);
-  if (ENEMIES[e.kind].drains) p.qi = Math.max(0, p.qi - 3);
+  if (ENEMIES[e.kind].drains) p.qi = Math.max(0, p.qi - Math.ceil(s.qi * 0.04));
+  if (ENEMIES[e.kind].burns) addStatus(r.status, "burn", 2, Math.max(1, Math.round(enemyAtk(g, e) * 0.15)));
   if (p.hp <= 0) log(g, vi(g, `${ENEMIES[e.kind].vi} đánh gục bạn…`, `The ${ENEMIES[e.kind].en} strikes you down…`), "bad");
+}
+
+function attackAlly(g: Game, rng: Rng, e: Enemy, a: Ally, fx: Fx[], ranged: boolean) {
+  const r = g.run!;
+  if (ranged) fx.push({ type: "slash", from: { ...e.pos }, to: { ...a.pos }, color: ENEMIES[e.kind].tint ?? "#6b5a7a" });
+  const { amount } = damage(enemyAtk(g, e), a.def, rng, ranged ? 0.85 : 1);
+  a.hp -= amount;
+  fx.push({ type: "hit", at: { ...a.pos }, amount });
+  if (a.hp <= 0) {
+    r.floor.allies = alliesOf(r).filter((x) => x !== a);
+    fx.push({ type: "die", at: { ...a.pos } });
+  }
 }
 
 // ---- The tribulation (thiên kiếp) ----
 function planStrikes(g: Game, rng: Rng) {
   const r = g.run!;
+  const from = r.from ?? 0;
   const wave = Math.floor((r.survived ?? 0) / 5);
-  const count = r.demon ? 4 : 9 + wave * 4;
+  const count = r.demon ? 4 + from : 9 + 3 * from + wave * 4;
   const out: Pos[] = [];
   if (!r.demon || rng.chance(0.5)) {
     if (rng.chance(0.65)) out.push({ ...r.pos }); // the sky aims at you: move!
   }
-  for (let tries = 0; out.length < count && tries < 200; tries++) {
+  for (let tries = 0; out.length < count && tries < 300; tries++) {
     const p = { x: rng.int(1, ARENA - 2), y: rng.int(1, ARENA - 2) };
     if (isFloor(grid(r), p.x, p.y) && !out.some((o) => same(o, p))) out.push(p);
   }
@@ -794,11 +981,13 @@ function tribulationTurn(g: Game, rng: Rng, fx: Fx[]) {
     }
     const e = enemyAt(r, pos);
     if (e) hitEnemy(g, rng, e, 0, fx, { fixed: Math.ceil(e.maxHp * 0.15) });
+    const a = allyAt(r, pos);
+    if (a) a.hp -= Math.ceil(a.maxHp * 0.3);
   }
   r.survived = (r.survived ?? 0) + 1;
   if (!r.demon && r.survived >= (r.goal ?? TRIBULATION_TURNS)) {
     r.demon = true;
-    const spot = DIRS.map((d) => ({ x: r.pos.x + d.x * 3, y: r.pos.y + d.y * 3 })).find((q) => isFloor(grid(r), q.x, q.y)) ?? { x: 2, y: 6 };
+    const spot = DIRS.map((d) => ({ x: r.pos.x + d.x * 3, y: r.pos.y + d.y * 3 })).find((q) => isFloor(grid(r), q.x, q.y) && !allyAt(r, q)) ?? { x: 2, y: 6 };
     const demon = makeEnemy(g, "tam-ma", 1, spot);
     demon.maxHp = demon.hp = Math.round(s.hp * 0.75);
     demon.awake = true;

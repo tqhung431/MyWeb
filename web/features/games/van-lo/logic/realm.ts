@@ -4,7 +4,7 @@
 import { FLOOR, WALL, type Pos } from "../engine/grid";
 import { distances } from "../engine/path";
 import type { Rng } from "../engine/rng";
-import { enemyStats, SECRET_REALMS, type EnemyKind, type RealmId } from "./data";
+import { enemyStats, realmInfo, type EnemyKind, type RealmId } from "./data";
 import { newUid } from "./player";
 import type { Enemy, Floor, Game, Thing } from "./types";
 
@@ -53,7 +53,7 @@ export function makeEnemy(g: Game, kind: EnemyKind, level: number, pos: Pos): En
 }
 
 export function makeFloor(g: Game, rng: Rng, realm: RealmId, depth: number): { floor: Floor; start: Pos } {
-  const info = SECRET_REALMS[realm];
+  const info = realmInfo(realm);
   const { tiles, rooms } = carveRooms(rng);
   const grid = { w: MAP_W, h: MAP_H, tiles: tiles.join("") };
   const startRoom = rooms[0];
@@ -83,7 +83,7 @@ export function makeFloor(g: Game, rng: Rng, realm: RealmId, depth: number): { f
   // Stairs down, or the boss on the last floor
   const goal = place(farthest) ?? center(farthest);
   if (last) {
-    const boss = makeEnemy(g, "mang-vuong", 10, goal);
+    const boss = makeEnemy(g, info.boss.kind, info.boss.level, goal);
     enemies.push(boss);
   } else things.push({ uid: newUid(g, "s"), kind: "stairs", pos: goal });
 
@@ -93,10 +93,11 @@ export function makeFloor(g: Game, rng: Rng, realm: RealmId, depth: number): { f
   if (portal && !last) things.push({ uid: newUid(g, "p"), kind: "portal", pos: portal });
 
   const kinds = info.enemies[Math.min(depth, info.enemies.length) - 1];
+  const level = (bonus: number) => info.firstLevel + (depth - 1) * 2 + bonus;
   const count = 4 + depth * 2;
   for (let i = 0; i < count && others.length; i++) {
     const p = place(rng.pick(others), 5);
-    if (p) enemies.push(makeEnemy(g, rng.pick(kinds), 1 + (depth - 1) * 2 + rng.int(0, 1), p));
+    if (p) enemies.push(makeEnemy(g, rng.pick(kinds), level(rng.int(0, 1)), p));
   }
   for (let i = 0; i < rng.int(2, 3); i++) {
     const p = place(rng.pick(rooms));
@@ -114,6 +115,14 @@ export function makeFloor(g: Game, rng: Rng, realm: RealmId, depth: number): { f
   for (let i = 0; i < depth - 1; i++) {
     const p = place(rng.pick(others), 3);
     if (p) things.push({ uid: newUid(g, "x"), kind: "trap", pos: p, hidden: true });
+  }
+
+  // Stage 17: each deeper realm has its own danger on the ground (lava, whirlpools, grudge miasma)
+  if (info.hazard) {
+    for (let i = 0; i < 3 + depth; i++) {
+      const p = place(rng.pick(others), 2);
+      if (p) things.push({ uid: newUid(g, "z"), kind: "hazard", hazard: info.hazard, pos: p });
+    }
   }
 
   const floor: Floor = { depth, w: MAP_W, h: MAP_H, tiles: grid.tiles, seen: "0".repeat(MAP_W * MAP_H), things, enemies };

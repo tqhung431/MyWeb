@@ -1,25 +1,28 @@
 // The whole game state. It's plain data (no classes), so it can be saved as JSON and loaded back.
 
 import type { Pos } from "../engine/grid";
-import type { AbilityId, Element, EnemyKind, ItemId, RealmId, Slot, Stats, TechniqueId, TreasureKind } from "./data";
+import type { AbilityId, AllyKind, Element, EnemyKind, Hazard, ItemId, PathId, RealmId, Slot, Stats, TechniqueId, TreasureKind } from "./data";
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2; // Stage 17: paths, crafting, realms up to Nguyên Anh (v1 saves are upgraded in save.ts)
 
 export type Lang = "vi" | "en";
 
-export type Gear = { uid: string; slot: Slot; tier: number; quality: number; name: string; bonus: Partial<Stats> };
+export type Gear = { uid: string; slot: Slot; tier: number; level: number; quality: number; name: string; bonus: Partial<Stats> };
 export type Treasure = { uid: string; kind: TreasureKind; grade: number; level: number };
 export type Bag = Partial<Record<ItemId, number>>;
 
+export type Craft = { level: number; xp: number };
+
 export type Player = {
   name: string;
+  path: PathId; // Stage 17: kiếm tu, võ giả, nho gia, đạo gia, phật gia or binh gia
   root: Element[]; // spiritual root: 1–4 elements
   major: number; // 0 = Luyện Khí, 1 = Trúc Cơ
   layer: number; // 1–9
   cultivation: number; // tu vi gathered towards the next layer
   hp: number;
   qi: number;
-  intent: number; // kiếm ý, 0–10
+  intent: number; // the path's resource (kiếm ý, khí huyết, chính khí…), 0–10
   stones: number; // linh thạch (spirit stones)
   techniques: { id: TechniqueId; level: number }[];
   main: TechniqueId;
@@ -30,10 +33,11 @@ export type Player = {
   gear: Gear[];
   equipped: Partial<Record<Slot, string>>;
   bag: Bag;
-  record: { runs: number; deaths: number; kills: number; deepest: number; tribulations: number };
+  craft: { alchemy: Craft; forge: Craft; talisman: Craft }; // luyện đan, luyện khí, chế phù
+  record: { runs: number; deaths: number; kills: number; deepest: number; tribulations: number; crafted: number };
 };
 
-export type StatusKind = "burn" | "stun" | "weak" | "shield" | "reflect" | "block" | "echo";
+export type StatusKind = "burn" | "stun" | "weak" | "shield" | "reflect" | "block" | "echo" | "empower";
 export type Status = { kind: StatusKind; turns: number; value: number };
 
 export type Enemy = {
@@ -48,8 +52,11 @@ export type Enemy = {
   cooldown: number;
 };
 
-export type ThingKind = "herb" | "chest" | "stairs" | "portal" | "trap" | "stones";
-export type Thing = { uid: string; kind: ThingKind; pos: Pos; hidden?: boolean; amount?: number };
+export type ThingKind = "herb" | "chest" | "stairs" | "portal" | "trap" | "stones" | "hazard";
+export type Thing = { uid: string; kind: ThingKind; pos: Pos; hidden?: boolean; amount?: number; hazard?: Hazard };
+
+// Stage 17: soldiers and archers summoned by Binh gia
+export type Ally = { uid: string; kind: AllyKind; pos: Pos; hp: number; maxHp: number; atk: number; def: number; turns: number };
 
 export type Floor = {
   depth: number;
@@ -59,6 +66,7 @@ export type Floor = {
   seen: string; // "1" = you've seen this tile
   things: Thing[];
   enemies: Enemy[];
+  allies?: Ally[];
 };
 
 export type LogLine = { turn: number; text: string; tone?: "good" | "bad" | "info" | "loot" };
@@ -73,7 +81,8 @@ export type Run = {
   status: Status[];
   loot: { stones: number; bag: Bag; gear: Gear[]; treasures: Treasure[]; cultivation: number; kills: number };
   log: LogLine[];
-  // Tribulation only: tiles about to be struck, turns survived, waves
+  // Tribulation only: which breakthrough, tiles about to be struck, turns survived
+  from?: number; // the major realm you're breaking out of
   strikes?: Pos[];
   survived?: number;
   goal?: number;

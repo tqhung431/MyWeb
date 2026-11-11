@@ -1,6 +1,6 @@
 # Nook: notes for Claude
 
-Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–16).
+Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–17).
 
 ## The project
 
@@ -22,7 +22,10 @@ Read this first in every session. It carries the context from the sessions that 
   16 Nook Games (`/games`) + Vân Lộ (`web/features/games/van-lo`: engine/ logic/ ui/; rules are pure and seeded, `act(game, action)`
   returns Fx for the canvas; saves in localStorage + `game_saves` via `/api/games/saves/:game`, 200 KB JSON limit on that router).
   Design doc (GDD): https://claude.ai/artifact/QM1LQ8eTLMeMeV9j6h62Tu. Plan doc: https://claude.ai/artifact/Y1ay2pTtsr6T3a7pDDV24d.
-  Next: Stage 17 (other five paths, realms past Trúc Cơ, alchemy/forging, sound), Stage 18 (balance, leaderboard).
+  17: six paths (`logic/paths.ts`: abilities/treasures are `Effect` data run by `applyEffect()`), Binh gia allies on `floor.allies`,
+  realms to Nguyên Anh (shared `curve()`), 4 secret realms with hazards, furnace (`logic/craft.ts`), Web Audio music/sfx (`ui/audio.ts`),
+  save v2 (`upgradeFromV1`). Balance with a throwaway bot script (tsx from api/node_modules) before changing numbers.
+  Next: Stage 18 (balance between paths, cultivation leaderboard, performance on older phones).
   Original world only: don't copy names/characters/plots from existing novels or films.
   Each stage has an explainer in `docs/stage-N.md`; write one for every new stage and update the README's stage list.
 - Apps: **Chill Corner** (focus timer, generated sounds, tips, achievements), **Music** (uploaded songs

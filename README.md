@@ -269,5 +269,6 @@ stage-1-static/        Stage 1: the plain HTML/CSS/JS version
 14. Multiplayer — Arcade Online: Quiz Party, a game the server runs (rooms, state machine, fair play) ✅ · [docs](docs/stage-14.md)
 15. Design system — 6 colour themes, Nook's own dropdowns and dialogs, a /design page, a Figma library ✅ · [docs](docs/stage-15.md)
 16. A real game — Nook Games and Vân Lộ, a cultivation roguelite (own engine: field of view, A*, map generation, seeded saves) ✅ · [docs](docs/stage-16.md)
+17. Vân Lộ grows — six paths, abilities as data, realms up to Nguyên Anh, alchemy and forging, music made with Web Audio ✅ · [docs](docs/stage-17.md)
 
 Credits and licences: [CREDITS.md](CREDITS.md)

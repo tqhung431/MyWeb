@@ -4,9 +4,8 @@
 
 import { makeRng } from "../engine/rng";
 import type { Pos } from "../engine/grid";
-import type { EnemyKind } from "../logic/data";
-import { ENEMIES } from "../logic/data";
-import type { Enemy, Floor, Thing } from "../logic/types";
+import { ALLIES, ENEMIES, PATHS, type PathId } from "../logic/data";
+import type { Ally, Enemy, Floor, Thing } from "../logic/types";
 
 export type Ink = { paper: string; paperDeep: string; ink: string; inkSoft: string; seal: string; mist: string; text: string; gold: string; jade: string };
 export const LIGHT: Ink = {
@@ -35,13 +34,13 @@ export const DARK: Ink = {
 const hash = (x: number, y: number, z: number) => ((x * 73856093) ^ (y * 19349663) ^ (z * 83492791)) >>> 0;
 
 // ---- The floor, painted once ----
-export function paintFloor(floor: Floor, tile: number, ink: Ink, dpr: number, tribulation = false): HTMLCanvasElement {
+export function paintFloor(floor: Floor, tile: number, ink: Ink, dpr: number, tribulation = false, paper = ink.paper): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = Math.ceil(floor.w * tile * dpr);
   c.height = Math.ceil(floor.h * tile * dpr);
   const g = c.getContext("2d")!;
   g.scale(dpr, dpr);
-  g.fillStyle = tribulation ? (ink === DARK ? "#15141c" : "#d9d4cc") : ink.paper;
+  g.fillStyle = tribulation ? (ink === DARK ? "#15141c" : "#d9d4cc") : paper;
   g.fillRect(0, 0, floor.w * tile, floor.h * tile);
   const wall = (x: number, y: number) => x < 0 || y < 0 || x >= floor.w || y >= floor.h || floor.tiles[y * floor.w + x] === "#";
   const rgba = (a: number) => (ink === DARK ? `rgba(233,225,207,${a})` : `rgba(29,26,22,${a})`);
@@ -128,8 +127,18 @@ function drawPine(g: CanvasRenderingContext2D, x: number, y: number, s: number, 
 }
 
 // ---- Characters ----
-export function drawPlayer(g: CanvasRenderingContext2D, x: number, y: number, t: number, ink: Ink, opts: { shield?: boolean; echo?: boolean } = {}) {
+// Each path looks a little different: robe colour, headwear and what they carry
+export function drawPlayer(
+  g: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  t: number,
+  ink: Ink,
+  opts: { shield?: boolean; echo?: boolean; path?: PathId } = {},
+) {
   const s = t;
+  const path = opts.path ?? "kiem";
+  const dark = ink === DARK;
   const bob = Math.sin(performance.now() / 500) * s * 0.015;
   g.save();
   g.translate(x, y + bob);
@@ -145,50 +154,179 @@ export function drawPlayer(g: CanvasRenderingContext2D, x: number, y: number, t:
     g.arc(0, 0, s * 0.48, 0, Math.PI * 2);
     g.stroke();
   }
-  // robe: a brushy triangle
-  g.fillStyle = ink === DARK ? "#d9d1bf" : "#2b2722";
+  const robes: Record<PathId, [string, string]> = {
+    kiem: ["#2b2722", "#d9d1bf"],
+    vo: ["#5a3a22", "#c9a27a"],
+    nho: ["#2f4a3a", "#bcd6c3"],
+    dao: ["#3a2f55", "#c7b8e6"],
+    phat: ["#a8651e", "#e6b366"],
+    binh: ["#5a1f1a", "#d98a7f"],
+  };
+  // robe: a brushy triangle (martial artists wear short trousers instead)
+  g.fillStyle = robes[path][dark ? 1 : 0];
   g.beginPath();
   g.moveTo(0, -s * 0.18);
   g.quadraticCurveTo(s * 0.3, s * 0.1, s * 0.24, s * 0.38);
   g.lineTo(-s * 0.24, s * 0.38);
   g.quadraticCurveTo(-s * 0.3, s * 0.1, 0, -s * 0.18);
   g.fill();
-  // white inner robe
-  g.fillStyle = ink === DARK ? "#1b1915" : "#f3ecdc";
+  // inner robe
+  g.fillStyle = dark ? "#1b1915" : "#f3ecdc";
   g.beginPath();
   g.moveTo(0, -s * 0.12);
   g.lineTo(s * 0.06, s * 0.38);
   g.lineTo(-s * 0.06, s * 0.38);
   g.fill();
-  // sash
-  g.strokeStyle = ink.seal;
+  // sash in the path's colour
+  g.strokeStyle = path === "kiem" ? ink.seal : PATHS[path].color;
   g.lineWidth = s * 0.05;
   g.beginPath();
   g.moveTo(-s * 0.16, s * 0.1);
   g.lineTo(s * 0.16, s * 0.08);
   g.stroke();
-  // head + hair bun
-  g.fillStyle = ink === DARK ? "#e9e1cf" : "#1d1a16";
+  // head
+  const skin = dark ? "#e9e1cf" : "#1d1a16";
+  g.fillStyle = skin;
   g.beginPath();
   g.arc(0, -s * 0.26, s * 0.1, 0, Math.PI * 2);
   g.fill();
+  g.lineCap = "round";
+  switch (path) {
+    case "kiem": // hair bun and a sword on the back
+      g.beginPath();
+      g.arc(0, -s * 0.37, s * 0.05, 0, Math.PI * 2);
+      g.fill();
+      g.strokeStyle = opts.echo ? "#9fd3e6" : "#4f8a9a";
+      g.lineWidth = s * 0.035;
+      g.beginPath();
+      g.moveTo(-s * 0.22, s * 0.22);
+      g.lineTo(s * 0.26, -s * 0.36);
+      g.stroke();
+      break;
+    case "vo": // red headband, bare fists
+      g.strokeStyle = ink.seal;
+      g.lineWidth = s * 0.035;
+      g.beginPath();
+      g.moveTo(-s * 0.1, -s * 0.29);
+      g.lineTo(s * 0.1, -s * 0.29);
+      g.lineTo(s * 0.2, -s * 0.24);
+      g.stroke();
+      g.fillStyle = skin;
+      for (const k of [-1, 1]) {
+        g.beginPath();
+        g.arc(k * s * 0.27, s * 0.05, s * 0.055, 0, Math.PI * 2);
+        g.fill();
+      }
+      break;
+    case "nho": // scholar's cap and a brush
+      g.fillRect(-s * 0.09, -s * 0.42, s * 0.18, s * 0.08);
+      g.strokeStyle = "#8a6a3f";
+      g.lineWidth = s * 0.03;
+      g.beginPath();
+      g.moveTo(s * 0.2, s * 0.15);
+      g.lineTo(s * 0.32, -s * 0.12);
+      g.stroke();
+      g.fillStyle = skin;
+      g.beginPath();
+      g.arc(s * 0.33, -s * 0.15, s * 0.03, 0, Math.PI * 2);
+      g.fill();
+      break;
+    case "dao": // lotus crown and a horsetail whisk
+      g.fillStyle = ink.gold;
+      g.beginPath();
+      g.moveTo(-s * 0.06, -s * 0.34);
+      g.lineTo(0, -s * 0.44);
+      g.lineTo(s * 0.06, -s * 0.34);
+      g.fill();
+      g.strokeStyle = dark ? "#e9e1cf" : "#6b5a7a";
+      g.lineWidth = s * 0.02;
+      g.beginPath();
+      g.moveTo(-s * 0.2, s * 0.12);
+      g.lineTo(-s * 0.28, -s * 0.08);
+      for (let i = -2; i <= 2; i++) {
+        g.moveTo(-s * 0.28, -s * 0.08);
+        g.lineTo(-s * 0.36 + i * s * 0.02, s * 0.06);
+      }
+      g.stroke();
+      break;
+    case "phat": // shaved head and prayer beads
+      g.fillStyle = dark ? "#f0e6cf" : "#c48a52";
+      g.beginPath();
+      g.arc(0, -s * 0.26, s * 0.1, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = "#7a3f1e";
+      for (let i = 0; i < 7; i++) {
+        const a = Math.PI * (0.15 + (i / 6) * 0.7);
+        g.beginPath();
+        g.arc(Math.cos(a) * s * 0.12, -s * 0.12 + Math.sin(a) * s * 0.08, s * 0.025, 0, Math.PI * 2);
+        g.fill();
+      }
+      break;
+    case "binh": // helmet with a plume and a spear
+      g.beginPath();
+      g.arc(0, -s * 0.28, s * 0.12, Math.PI, 0);
+      g.fill();
+      g.fillStyle = ink.seal;
+      g.beginPath();
+      g.ellipse(0, -s * 0.42, s * 0.04, s * 0.06, 0, 0, Math.PI * 2);
+      g.fill();
+      g.strokeStyle = dark ? "#cfc6b2" : "#3a3129";
+      g.lineWidth = s * 0.03;
+      g.beginPath();
+      g.moveTo(s * 0.26, s * 0.36);
+      g.lineTo(s * 0.26, -s * 0.42);
+      g.stroke();
+      g.fillStyle = "#9aa4ad";
+      g.beginPath();
+      g.moveTo(s * 0.26, -s * 0.5);
+      g.lineTo(s * 0.22, -s * 0.4);
+      g.lineTo(s * 0.3, -s * 0.4);
+      g.fill();
+      break;
+  }
+  g.restore();
+}
+
+// A summoned soldier or archer: small, in the strategist's red, with a life bar
+export function drawAlly(g: CanvasRenderingContext2D, a: Ally, x: number, y: number, s: number, ink: Ink) {
+  const dark = ink === DARK;
+  g.save();
+  g.translate(x, y + s * 0.04);
+  g.globalAlpha = 0.92;
+  g.fillStyle = dark ? "#d98a7f" : "#7a2a22";
   g.beginPath();
-  g.arc(0, -s * 0.37, s * 0.05, 0, Math.PI * 2);
+  g.moveTo(0, -s * 0.12);
+  g.lineTo(s * 0.2, s * 0.32);
+  g.lineTo(-s * 0.2, s * 0.32);
   g.fill();
-  // the sword on the back, jade-blue
-  g.strokeStyle = opts.echo ? "#9fd3e6" : "#4f8a9a";
-  g.lineWidth = s * 0.035;
+  g.fillStyle = dark ? "#e9e1cf" : "#1d1a16";
+  g.beginPath();
+  g.arc(0, -s * 0.2, s * 0.085, Math.PI, 0);
+  g.arc(0, -s * 0.18, s * 0.075, 0, Math.PI * 2);
+  g.fill();
+  g.strokeStyle = dark ? "#cfc6b2" : "#3a3129";
+  g.lineWidth = s * 0.03;
   g.lineCap = "round";
   g.beginPath();
-  g.moveTo(-s * 0.22, s * 0.22);
-  g.lineTo(s * 0.26, -s * 0.36);
+  if (ALLIES[a.kind].range > 1) {
+    g.arc(s * 0.22, 0, s * 0.18, -Math.PI / 2.4, Math.PI / 2.4); // a bow
+  } else {
+    g.moveTo(s * 0.22, s * 0.3);
+    g.lineTo(s * 0.22, -s * 0.34); // a spear
+  }
   g.stroke();
   g.restore();
+  const w = s * 0.6;
+  g.fillStyle = "rgba(0,0,0,0.25)";
+  g.fillRect(x - w / 2, y + s * 0.42, w, 3);
+  g.fillStyle = "#3f7d4b";
+  g.fillRect(x - w / 2, y + s * 0.42, (w * Math.max(0, a.hp)) / a.maxHp, 3);
 }
 
 export function drawEnemy(g: CanvasRenderingContext2D, e: Enemy, x: number, y: number, s: number, ink: Ink) {
   const dark = ink === DARK;
-  const body = dark ? "#cfc6b2" : "#2b2722";
+  const info = ENEMIES[e.kind];
+  const body = info.tint ? (dark ? lighten(info.tint) : info.tint) : dark ? "#cfc6b2" : "#2b2722";
   const t = performance.now() / 1000;
   g.save();
   g.translate(x, y);
@@ -196,7 +334,8 @@ export function drawEnemy(g: CanvasRenderingContext2D, e: Enemy, x: number, y: n
   g.beginPath();
   g.ellipse(0, s * 0.36, s * 0.3, s * 0.07, 0, 0, Math.PI * 2);
   g.fill();
-  const kind: EnemyKind = e.kind;
+  const kind = info.shape;
+  if (info.boss && kind !== "mang") g.scale(1.45, 1.45); // bosses are big
   g.fillStyle = body;
   g.strokeStyle = body;
   g.lineCap = "round";
@@ -271,7 +410,7 @@ export function drawEnemy(g: CanvasRenderingContext2D, e: Enemy, x: number, y: n
     }
     case "hon": {
       g.globalAlpha = 0.55 + Math.sin(t * 2) * 0.15;
-      g.fillStyle = dark ? "#9fc3d9" : "#5d7f99";
+      g.fillStyle = info.tint ? body : dark ? "#9fc3d9" : "#5d7f99";
       g.beginPath();
       g.moveTo(0, -s * 0.35);
       g.bezierCurveTo(s * 0.32, -s * 0.2, s * 0.25, s * 0.25, s * 0.1 * Math.sin(t * 4), s * 0.38);
@@ -282,9 +421,9 @@ export function drawEnemy(g: CanvasRenderingContext2D, e: Enemy, x: number, y: n
       eye(g, s * 0.07, -s * 0.12, s, "#e8f4ff");
       break;
     }
-    case "ta-tu":
-    case "tam-ma": {
-      const robe = kind === "tam-ma" ? (dark ? "#7a1f1a" : "#5a0f0c") : dark ? "#8f7fa6" : "#3d3350";
+    case "tu": {
+      const demon = e.kind === "tam-ma";
+      const robe = body;
       g.fillStyle = robe;
       g.beginPath();
       g.moveTo(0, -s * 0.18);
@@ -292,18 +431,18 @@ export function drawEnemy(g: CanvasRenderingContext2D, e: Enemy, x: number, y: n
       g.lineTo(-s * 0.25, s * 0.38);
       g.quadraticCurveTo(-s * 0.3, s * 0.1, 0, -s * 0.18);
       g.fill();
-      g.fillStyle = kind === "tam-ma" ? "#1a0a08" : body;
+      g.fillStyle = demon ? "#1a0a08" : body;
       g.beginPath();
       g.arc(0, -s * 0.26, s * 0.1, 0, Math.PI * 2);
       g.fill();
-      if (kind === "tam-ma") {
+      if (demon) {
         g.shadowColor = "#ff3b2f";
         g.shadowBlur = 10;
       }
       eye(g, -s * 0.04, -s * 0.27, s, "#ff4b3a");
       eye(g, s * 0.04, -s * 0.27, s, "#ff4b3a");
       g.shadowBlur = 0;
-      g.strokeStyle = kind === "tam-ma" ? "#ff4b3a" : "#6b5a7a";
+      g.strokeStyle = demon ? "#ff4b3a" : "#6b5a7a";
       g.lineWidth = s * 0.035;
       g.beginPath();
       g.moveTo(s * 0.22, s * 0.22);
@@ -327,7 +466,7 @@ export function drawEnemy(g: CanvasRenderingContext2D, e: Enemy, x: number, y: n
       eye(g, s * 0.03, 0, s, "#ff4b3a");
       break;
     }
-    case "mang-vuong": {
+    case "mang": {
       const big = s * 1.5;
       g.strokeStyle = dark ? "#c9bfa9" : "#241f1a";
       g.lineWidth = big * 0.13;
@@ -372,6 +511,13 @@ export function drawEnemy(g: CanvasRenderingContext2D, e: Enemy, x: number, y: n
     g.fillStyle = ink.seal;
     g.fillRect(x - w / 2, y + s * 0.42, (w * Math.max(0, e.hp)) / e.maxHp, 3);
   }
+}
+
+// A lighter version of a colour, for dark mode
+function lighten(hex: string) {
+  const n = parseInt(hex.slice(1), 16);
+  const mix = (c: number) => Math.round(c + (235 - c) * 0.55);
+  return `rgb(${mix(n >> 16)}, ${mix((n >> 8) & 255)}, ${mix(n & 255)})`;
 }
 
 function eye(g: CanvasRenderingContext2D, x: number, y: number, s: number, color: string) {
@@ -463,6 +609,40 @@ export function drawThing(g: CanvasRenderingContext2D, th: Thing, x: number, y: 
         g.stroke();
       }
       g.shadowBlur = 0;
+      break;
+    }
+    case "hazard": {
+      if (th.hazard === "lava") {
+        const glow = 0.75 + Math.sin(t * 3 + th.pos.x) * 0.15;
+        g.fillStyle = `rgba(214,92,36,${glow})`;
+        g.beginPath();
+        g.ellipse(0, s * 0.05, s * 0.4, s * 0.28, 0.2, 0, Math.PI * 2);
+        g.fill();
+        g.fillStyle = "rgba(255,210,90,0.8)";
+        g.beginPath();
+        g.ellipse(s * 0.05, s * 0.02, s * 0.16, s * 0.09, 0.2, 0, Math.PI * 2);
+        g.fill();
+      } else if (th.hazard === "whirlpool") {
+        g.strokeStyle = "rgba(47,111,154,0.8)";
+        g.lineWidth = 1.6;
+        g.beginPath();
+        for (let a = 0; a < Math.PI * 6; a += 0.25) {
+          const rr = s * 0.03 * a;
+          g.lineTo(Math.cos(a - t * 2) * rr, Math.sin(a - t * 2) * rr * 0.7);
+        }
+        g.stroke();
+      } else {
+        g.fillStyle = `rgba(90,63,122,${0.35 + Math.sin(t * 2 + th.pos.y) * 0.1})`;
+        for (const [dx, dy, rr] of [
+          [-0.15, 0, 0.22],
+          [0.15, -0.05, 0.2],
+          [0, 0.12, 0.25],
+        ]) {
+          g.beginPath();
+          g.arc(dx * s, dy * s, rr * s, 0, Math.PI * 2);
+          g.fill();
+        }
+      }
       break;
     }
     case "trap": {

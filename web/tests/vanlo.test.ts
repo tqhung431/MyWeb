@@ -135,8 +135,8 @@ describe("cultivation", () => {
     expect(stats(wood.player).atk).toBeGreaterThan(stats(metal.player).atk);
   });
 
-  it("each of the 8 abilities comes from a method level", () => {
-    expect(Object.keys(ABILITIES)).toHaveLength(8);
+  it("each of the 28 abilities comes from a method level", () => {
+    expect(Object.keys(ABILITIES)).toHaveLength(28);
     for (const a of Object.values(ABILITIES)) expect(a.from[1]).toBeLessThanOrEqual(TECHNIQUES[a.from[0]].maxLevel);
   });
 });

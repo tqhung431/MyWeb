@@ -2,8 +2,8 @@
 
 // Vân Lộ: the root. No save yet → the title screen. A run going on → the map. Otherwise → the cave abode.
 
-import { Cloud, CloudOff, Loader2, RotateCcw } from "lucide-react";
-import { useState, useSyncExternalStore } from "react";
+import { Cloud, CloudOff, Loader2, Music, RotateCcw, Volume2, VolumeX } from "lucide-react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/Button";
 import { useConfirm } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
@@ -11,11 +11,12 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useMe } from "@/features/me/MeProvider";
 import { subscribeTheme } from "@/features/theme/theme";
 import { seedFrom } from "../engine/rng";
-import { ELEMENTS, ROOTS } from "../logic/data";
+import { ELEMENTS, PATHS, ROOTS, TECHNIQUES, TREASURES, type PathId } from "../logic/data";
 import { newGame, rootSpeed } from "../logic/player";
 import type { Game, Lang } from "../logic/types";
 import { Home } from "./Home";
 import { RunScreen } from "./RunScreen";
+import { getSound, setMusic, setSound, subscribeSound } from "./audio";
 import { useGame, type CloudState } from "./useGame";
 
 function useDark() {
@@ -30,6 +31,7 @@ export function VanLo() {
   const { game, loading, cloud, update, start, reset } = useGame();
   const dark = useDark();
   const confirm = useConfirm();
+  useEffect(() => () => setMusic(null), []); // stop the music when you leave the game
 
   if (loading)
     return (
@@ -47,6 +49,7 @@ export function VanLo() {
         <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4 text-sm text-muted">
           <CloudNote state={cloud} t={t} />
           <div className="flex flex-wrap items-center gap-2">
+            <SoundToggles t={t} />
             <SegmentedControl<Lang>
               label={t("Ngôn ngữ", "Language")}
               options={[
@@ -78,6 +81,31 @@ export function VanLo() {
   );
 }
 
+function SoundToggles({ t }: { t: (vi: string, en: string) => string }) {
+  const sound = useSyncExternalStore(subscribeSound, getSound, getSound);
+  const btn = "inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border border-border px-3 text-sm font-semibold transition";
+  return (
+    <>
+      <button
+        type="button"
+        aria-pressed={sound.music}
+        onClick={() => setSound({ music: !sound.music })}
+        className={`${btn} ${sound.music ? "bg-surface-strong text-text" : "text-muted"}`}
+      >
+        <Music className="h-4 w-4" aria-hidden="true" /> {t("Nhạc", "Music")}
+      </button>
+      <button
+        type="button"
+        aria-pressed={sound.sfx}
+        onClick={() => setSound({ sfx: !sound.sfx })}
+        className={`${btn} ${sound.sfx ? "bg-surface-strong text-text" : "text-muted"}`}
+      >
+        {sound.sfx ? <Volume2 className="h-4 w-4" aria-hidden="true" /> : <VolumeX className="h-4 w-4" aria-hidden="true" />} {t("Âm thanh", "Sound")}
+      </button>
+    </>
+  );
+}
+
 function CloudNote({ state, t }: { state: CloudState; t: (vi: string, en: string) => string }) {
   if (state === "guest")
     return (
@@ -102,6 +130,7 @@ function Title({ onStart }: { onStart: (g: Game) => void }) {
   const { user } = useMe();
   const [name, setName] = useState(user?.name ?? "");
   const [lang, setLang] = useState<Lang>("vi");
+  const [path, setPath] = useState<PathId>("kiem");
   const [rolled, setRolled] = useState<Game | null>(null);
   const t = (vi: string, en: string) => (lang === "vi" ? vi : en);
 
@@ -131,10 +160,15 @@ function Title({ onStart }: { onStart: (g: Game) => void }) {
               : t("Một khởi đầu tốt.", "A good start.")}
         </p>
         <p className="text-sm text-muted">
-          {t(
-            "Bạn nhận được Thanh Phong Kiếm Quyết, phi kiếm Thanh Hồng Kiếm và vài viên đan dược. Con đường kiếm tu bắt đầu.",
-            "You receive the Clear Wind Sword Art, the flying sword Azure Rainbow and a few pills. The sword path begins.",
-          )}
+          {(() => {
+            const info = PATHS[rolled.player.path];
+            const m = TECHNIQUES[info.start];
+            const tr = TREASURES[info.treasure];
+            return t(
+              `Bạn nhận được ${m.vi}, pháp bảo ${tr.vi} và vài viên đan dược. Con đường ${info.vi} bắt đầu.`,
+              `You receive the ${m.en}, the treasure ${tr.en} and a few pills. The path of the ${info.en.toLowerCase()} begins.`,
+            );
+          })()}
         </p>
         <Button variant="primary" size="lg" onClick={() => onStart(rolled)}>
           {t("Vào động phủ", "Enter your cave abode")}
@@ -155,8 +189,8 @@ function Title({ onStart }: { onStart: (g: Game) => void }) {
       </div>
       <p className="text-muted">
         {t(
-          "Bạn là một kiếm tu mới nhập đạo. Tu luyện trong động phủ, vào bí cảnh tìm cơ duyên, vượt thiên kiếp để Trúc Cơ. Mỗi chuyến đi là một bản đồ mới.",
-          "You are a new sword cultivator. Cultivate in your cave abode, seek fortune in secret realms, and survive the tribulation to reach Foundation. Every run is a new map.",
+          "Bạn mới bước lên con đường tu tiên. Tu luyện trong động phủ, vào bí cảnh tìm cơ duyên, vượt thiên kiếp từ Luyện Khí tới Nguyên Anh. Mỗi chuyến đi là một bản đồ mới.",
+          "You have just set foot on the path of cultivation. Train in your cave abode, seek fortune in secret realms, and survive the tribulations from Qi Refining to Nascent Soul. Every run is a new map.",
         )}
       </p>
       <SegmentedControl<Lang>
@@ -168,11 +202,39 @@ function Title({ onStart }: { onStart: (g: Game) => void }) {
         value={lang}
         onChange={setLang}
       />
+      <fieldset>
+        <legend className="mb-2 text-sm font-semibold">{t("Chọn con đường tu luyện", "Choose your path")}</legend>
+        <div role="radiogroup" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {(Object.keys(PATHS) as PathId[]).map((id) => {
+            const info = PATHS[id];
+            const on = id === path;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                onClick={() => setPath(id)}
+                className={`flex cursor-pointer flex-col gap-1 rounded-2xl border p-3 text-left transition focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${on ? "border-primary bg-primary/10" : "border-border hover:bg-surface-muted"}`}
+              >
+                <span className="flex items-center gap-2 font-bold">
+                  <span className="h-3 w-3 rounded-full" style={{ background: info.color }} aria-hidden="true" />
+                  {t(info.vi, info.en)}
+                </span>
+                <span className="text-xs text-muted">{t(info.about, info.aboutEn)}</span>
+                <span className="text-xs font-semibold" style={{ color: info.color }}>
+                  {t(info.resource.vi, info.resource.en)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
       <form
         className="flex flex-col gap-3 sm:flex-row sm:items-end"
         onSubmit={(e) => {
           e.preventDefault();
-          const g = newGame(name.trim() || t("Vô Danh", "Nameless"), seedFrom());
+          const g = newGame(name.trim() || t("Vô Danh", "Nameless"), seedFrom(), Date.now(), path);
           g.lang = lang;
           setRolled(g);
         }}

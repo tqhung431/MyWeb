@@ -6,12 +6,14 @@
 
 import { useEffect, useRef } from "react";
 import type { Pos } from "../engine/grid";
+import { realmInfo, type PathId } from "../logic/data";
 import type { Run } from "../logic/types";
 import type { Fx } from "../logic/world";
-import { ANIM_MS, DARK, drawAnim, drawEnemy, drawPlayer, drawThing, LIGHT, paintFloor, type Anim } from "./draw";
+import { ANIM_MS, DARK, drawAlly, drawAnim, drawEnemy, drawPlayer, drawThing, LIGHT, paintFloor, type Anim } from "./draw";
 
 type Props = {
   run: Run;
+  path: PathId;
   seen: Set<number>; // visible now
   dark: boolean;
   fx: { id: number; list: Fx[] } | null;
@@ -20,10 +22,10 @@ type Props = {
   className?: string;
 };
 
-export function Board({ run, seen, dark, fx, targets, onTap, className }: Props) {
+export function Board({ run, path, seen, dark, fx, targets, onTap, className }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const props = useRef({ run, seen, dark, targets });
-  props.current = { run, seen, dark, targets };
+  const props = useRef({ run, seen, dark, targets, path });
+  props.current = { run, seen, dark, targets, path };
   const anims = useRef<Anim[]>([]);
   const shown = useRef<{ player: Pos | null; enemies: Map<string, Pos> }>({ player: null, enemies: new Map() });
   const view = useRef({ tile: 32, cam: { x: 0, y: 0 }, w: 0, h: 0 });
@@ -51,6 +53,7 @@ export function Board({ run, seen, dark, fx, targets, onTap, className }: Props)
       else if (f.type === "area") add({ kind: "ring", at: f.at, r: f.r, color: f.color ?? ink.gold, start: now });
       else if (f.type === "heal") add({ kind: "number", at: f.at, text: `+${f.amount}`, color: f.qi ? "#3f6f9a" : "#3f7d4b", start: now });
       else if (f.type === "die") add({ kind: "splash", at: f.at, start: now + 80 });
+      else if (f.type === "summon") add({ kind: "ring", at: f.at, r: 0, color: "#a8231b", start: now });
       else if (f.type === "text")
         add({
           kind: "number",
@@ -91,7 +94,7 @@ export function Board({ run, seen, dark, fx, targets, onTap, className }: Props)
       frame = requestAnimationFrame(draw);
       const dt = Math.min(64, now - last);
       last = now;
-      const { run: r, seen: vis, dark: isDark, targets: tg } = props.current;
+      const { run: r, seen: vis, dark: isDark, targets: tg, path: who } = props.current;
       const ink = isDark ? DARK : LIGHT;
       const { tile, w, h } = view.current;
       if (!w) return;
@@ -105,7 +108,7 @@ export function Board({ run, seen, dark, fx, targets, onTap, className }: Props)
       if (!sp.player || Math.abs(sp.player.x - r.pos.x) + Math.abs(sp.player.y - r.pos.y) > 6) sp.player = { ...r.pos };
       sp.player = { x: sp.player.x + (r.pos.x - sp.player.x) * ease, y: sp.player.y + (r.pos.y - sp.player.y) * ease };
       const alive = new Set<string>();
-      for (const e of f.enemies) {
+      for (const e of [...f.enemies, ...(f.allies ?? [])]) {
         alive.add(e.uid);
         const old = sp.enemies.get(e.uid);
         if (!old || Math.abs(old.x - e.pos.x) + Math.abs(old.y - e.pos.y) > 4) sp.enemies.set(e.uid, { ...e.pos });
@@ -122,11 +125,12 @@ export function Board({ run, seen, dark, fx, targets, onTap, className }: Props)
       const toScreen = (p: Pos) => ({ x: (p.x - camX) * tile + tile / 2, y: (p.y - camY) * tile + tile / 2 });
 
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      g.fillStyle = tribulation ? (isDark ? "#0f0e14" : "#cfc9c0") : ink.paper;
+      const paper = realmInfo(r.realm).paper[isDark ? "dark" : "light"];
+      g.fillStyle = tribulation ? (isDark ? "#0f0e14" : "#cfc9c0") : paper;
       g.fillRect(0, 0, w, h);
 
-      const key = `${f.tiles}|${f.depth}|${tile}|${isDark}|${dpr}`;
-      if (texture.current?.key !== key) texture.current = { key, canvas: paintFloor(f, tile, ink, dpr, tribulation) };
+      const key = `${f.tiles}|${f.depth}|${tile}|${isDark}|${dpr}|${r.realm}`;
+      if (texture.current?.key !== key) texture.current = { key, canvas: paintFloor(f, tile, ink, dpr, tribulation, paper) };
       g.drawImage(texture.current.canvas, -camX * tile, -camY * tile, f.w * tile, f.h * tile);
 
       const x0 = Math.max(0, Math.floor(camX));
@@ -167,7 +171,7 @@ export function Board({ run, seen, dark, fx, targets, onTap, className }: Props)
           const i = idx(x, y);
           const a = vis.has(i) ? 0 : f.seen[i] === "1" ? 0.5 : 1;
           if (!a) continue;
-          g.fillStyle = `${ink.mist}${a})`;
+          g.fillStyle = hexA(paper, a);
           g.fillRect((x - camX) * tile - 0.5, (y - camY) * tile - 0.5, tile + 1, tile + 1);
         }
 
@@ -190,10 +194,15 @@ export function Board({ run, seen, dark, fx, targets, onTap, className }: Props)
         const p = toScreen(sp.enemies.get(e.uid) ?? e.pos);
         drawEnemy(g, e, p.x, p.y, tile, ink);
       }
+      for (const a of f.allies ?? []) {
+        const q = toScreen(sp.enemies.get(a.uid) ?? a.pos);
+        drawAlly(g, a, q.x, q.y, tile, ink);
+      }
       const me = toScreen(sp.player);
       drawPlayer(g, me.x, me.y, tile, ink, {
         shield: r.status.some((s) => s.kind === "shield" || s.kind === "block"),
         echo: r.status.some((s) => s.kind === "echo"),
+        path: who,
       });
 
       // Effects
@@ -217,6 +226,12 @@ export function Board({ run, seen, dark, fx, targets, onTap, className }: Props)
       role="img"
     />
   );
+}
+
+// "#rrggbb" + alpha → rgba(), for the mist in the realm's own paper colour
+function hexA(hex: string, a: number) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${n >> 16}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
 }
 
 export const FX_DONE_MS = Math.max(...Object.values(ANIM_MS));
