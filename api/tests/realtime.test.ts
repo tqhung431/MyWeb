@@ -12,7 +12,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { createApp } from "../src/app.js";
 import { config } from "../src/config.js";
 import { processJob } from "../src/jobs/handlers.js";
-import { setRealtimeServer } from "../src/realtime/emit.js";
+import { CHANNEL_KEY, setRealtimeServer } from "../src/realtime/emit.js";
 import { attachRealtime } from "../src/realtime/server.js";
 import { closeAll, resetDatabase } from "./helpers.js";
 
@@ -186,7 +186,7 @@ describe("many servers, one Valkey", () => {
     const guest = randomUUID();
     const owner = tab({ clientId: guest });
     await next(owner, "presence");
-    const emitter = new Emitter(new Redis(config.VALKEY_URL)); // exactly what the worker uses
+    const emitter = new Emitter(new Redis(config.VALKEY_URL), { key: CHANNEL_KEY }); // exactly what the worker uses
     const got = next<{ hello: string }>(owner, "achievement");
     emitter.to(`client:${guest}`).emit("achievement", { hello: "from the worker" });
     expect(await got).toEqual({ hello: "from the worker" });

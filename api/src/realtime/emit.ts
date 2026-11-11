@@ -24,6 +24,11 @@ let io: Server | null = null;
 let emitter: Emitter | null = null;
 
 // Called by the API process once its Socket.IO server exists.
+// Valkey's publish/subscribe channels are shared by ALL its numbered databases, so two MyWeb setups
+// on one Valkey (e.g. your dev server and the tests) would hear each other. A per-setup channel
+// name keeps them apart: "myweb-socket.io" in dev, "myweb-test-socket.io" in tests.
+export const CHANNEL_KEY = `${config.QUEUE_NAME}-socket.io`;
+
 export function setRealtimeServer(server: Server | null) {
   io = server;
 }
@@ -37,7 +42,7 @@ function target(): Sender | null {
   if (!emitter) {
     const connection = new Redis(config.VALKEY_URL, { maxRetriesPerRequest: 1, commandTimeout: 1500 });
     connection.on("error", () => {});
-    emitter = new Emitter(connection);
+    emitter = new Emitter(connection, { key: CHANNEL_KEY });
   }
   return emitter;
 }

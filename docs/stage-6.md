@@ -81,6 +81,9 @@ flowchart LR
 - **Emitter** (`@socket.io/redis-emitter`): the worker has no WebSocket server, but it can still publish events into Valkey.
 - Tested: a browser on server 1 sees presence and activity from server 2, and the worker reaches a browser through Valkey.
 - Without Valkey, real-time still works for the browsers on one server.
+- **Gotcha (found by a failing test):** Valkey's publish/subscribe channels are shared by *all* its numbered databases.
+  The tests use database 1, but they still heard the running dev server's events. Each setup now uses its own
+  channel name (`myweb-socket.io` in dev, `myweb-test-socket.io` in tests), set from `QUEUE_NAME`.
 
 ## 4. Safety
 

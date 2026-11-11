@@ -19,7 +19,7 @@ import { COOKIE_NAME, userFromToken } from "../auth/sessions.js";
 import { config } from "../config.js";
 import { isAllowedOrigin } from "../middleware/security.js";
 import { waitForValkey } from "../valkey/client.js";
-import { ownerRoom, recentActivity, setRealtimeServer, type Owner } from "./emit.js";
+import { CHANNEL_KEY, ownerRoom, recentActivity, setRealtimeServer, type Owner } from "./emit.js";
 
 export type Presence = { online: number; focusing: number };
 
@@ -48,7 +48,7 @@ export async function attachRealtime(http: HttpServer): Promise<Server> {
     const sub = pub.duplicate();
     pub.on("error", () => {});
     sub.on("error", () => {});
-    io.adapter(createAdapter(pub, sub, { requestsTimeout: 2000 }));
+    io.adapter(createAdapter(pub, sub, { key: CHANNEL_KEY, requestsTimeout: 2000 }));
   } else {
     console.warn("Real-time: Valkey unavailable, running on this server only.");
   }
