@@ -13,7 +13,7 @@ export function BottomNav() {
   const { user } = useAuth();
   const items = [
     { href: "/", label: "Home", icon: House },
-    ...LIVE_APPS.map((app) => ({ href: app.href, label: app.name.split(" ")[0], icon: app.icon })),
+    ...LIVE_APPS.map((app) => ({ href: app.href, label: app.shortName ?? app.name.split(" ")[0], icon: app.icon })),
     user ? { href: "/account", label: "Account", icon: UserRound } : { href: "/login", label: "Sign in", icon: LogIn },
   ];
 

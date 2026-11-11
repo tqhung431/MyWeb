@@ -178,6 +178,27 @@ export const knowledge = pgTable(
   ],
 );
 
+// --- Stage 10: Mini Arcade high scores ---------------------------------------------
+// One row per finished game. The leaderboards take each person's best row.
+
+export const gameScores = pgTable(
+  "game_scores",
+  {
+    id: serial("id").primaryKey(),
+    game: text("game").notNull(), // "worm", "pairs"… (rules in src/arcade/games.ts)
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    clientId: uuid("client_id"),
+    score: integer("score").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check("game_score_has_owner", sql`${t.userId} is not null or ${t.clientId} is not null`),
+    index("game_scores_game_time_idx").on(t.game, t.createdAt),
+    index("game_scores_user_idx").on(t.userId, t.game),
+    index("game_scores_client_idx").on(t.clientId, t.game),
+  ],
+);
+
 export type Preferences = { timer?: { focus: number; short: number; long: number } };
 export type Song = typeof songs.$inferSelect;
 export type Tip = typeof tips.$inferSelect;

@@ -9,7 +9,7 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 import type { CookieOptions, Response } from "express";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
-import { achievements, authSessions, focusSessions, users, type User } from "../db/schema.js";
+import { achievements, authSessions, focusSessions, gameScores, users, type User } from "../db/schema.js";
 import { valkey, valkeyReady } from "../valkey/client.js";
 
 export const COOKIE_NAME = "nook_session";
@@ -110,7 +110,7 @@ export async function userFromToken(token: string | undefined, res?: Response): 
   return row.user;
 }
 
-// After sign-up or login: move this browser's guest focus sessions into the account.
+// After sign-up or login: move this browser's guest focus sessions (and arcade scores) into the account.
 // The guest's badges are removed; the worker re-checks badges for the account from the merged history.
 export async function claimAnonymousSessions(userId: string, clientId: string | undefined): Promise<void> {
   if (!clientId || !/^[0-9a-f-]{36}$/i.test(clientId)) return;
@@ -119,4 +119,6 @@ export async function claimAnonymousSessions(userId: string, clientId: string | 
     .set({ userId })
     .where(and(eq(focusSessions.clientId, clientId), isNull(focusSessions.userId)));
   await db.delete(achievements).where(and(eq(achievements.clientId, clientId), isNull(achievements.userId)));
+  // Stage 10: guest high scores join the account too
+  await db.update(gameScores).set({ userId }).where(and(eq(gameScores.clientId, clientId), isNull(gameScores.userId)));
 }

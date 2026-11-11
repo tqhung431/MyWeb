@@ -12,6 +12,7 @@ import { loadUser } from "./middleware/auth.js";
 import { errorHandler, notFound } from "./middleware/errors.js";
 import { sameOrigin } from "./middleware/security.js";
 import { achievementsRouter } from "./routes/achievements.js";
+import { arcadeRouter } from "./routes/arcade.js";
 import { activityRouter } from "./routes/activity.js";
 import { authRouter } from "./routes/auth.js";
 import { companionRouter } from "./routes/companion.js";
@@ -51,6 +52,7 @@ export function createApp() {
   app.use("/api/me", meRouter);
   app.use("/api/songs", musicRouter);
   app.use("/api/companion", companionRouter);
+  app.use("/api/arcade", arcadeRouter);
 
   app.use(notFound);
   app.use(errorHandler); // must be last

@@ -13,3 +13,4 @@ export const cacheLookups = meter.createCounter("nook.cache_lookups", { descript
 export const jobsDone = meter.createCounter("nook.jobs", { description: "Background jobs, by name and status" });
 export const jobDuration = meter.createHistogram("nook.job.duration", { description: "How long background jobs take", unit: "s" });
 export const liveConnections = meter.createUpDownCounter("nook.realtime.connections", { description: "Open real-time connections" });
+export const arcadeScores = meter.createCounter("nook.arcade_scores", { description: "Mini Arcade games finished, by game" });

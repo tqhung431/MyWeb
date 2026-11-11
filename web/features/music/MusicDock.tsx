@@ -1,26 +1,58 @@
 "use client";
 
-// The music player (Stage 8): a plain <audio> element playing files from Nook itself.
+// The music player (Stage 8, improved in Stage 10): a plain <audio> element playing files from Nook itself.
 // No SoundCloud / YouTube player, so nothing for a firewall to block and no app to open.
-// Desktop: bottom-right corner. Phone: a bar above the tab bar.
-// Phones also show it on the lock screen (Media Session), with play / pause / next.
+//
+// Desktop: a full player in the bottom-right corner.
+// Phone:   a slim bar above the tab bar; tap the arrow to open the full player.
+// Full player: seek, shuffle, previous / play / next, repeat (off → all → one), volume, the queue.
+// Phones also show it on the lock screen (Media Session), with play / pause / next / seek.
 
-import { Info, Loader2, Pause, Play, SkipBack, SkipForward, X } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Info,
+  ListMusic,
+  Loader2,
+  Pause,
+  Play,
+  Repeat,
+  Repeat1,
+  Shuffle,
+  SkipBack,
+  SkipForward,
+  Volume1,
+  Volume2,
+  VolumeX,
+  X,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Equalizer } from "@/features/ambient/Equalizer";
+import { cn } from "@/lib/cn";
 import { genreOf } from "./genres";
-import { useMusic } from "./MusicProvider";
+import { useMusic, type Song } from "./MusicProvider";
+import { formatTime } from "./queue";
 
-const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+const REPEAT_LABEL = { off: "Repeat is off", all: "Repeating the queue", one: "Repeating this song" } as const;
 
 export function MusicDock() {
-  const { current, queue, next, previous, close } = useMusic();
+  const music = useMusic();
+  const { current, queue, index, repeat, shuffle, volume, muted } = music;
   const audio = useRef<HTMLAudioElement>(null);
   const [paused, setPaused] = useState(true);
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [expanded, setExpanded] = useState(false);
+  const [showQueue, setShowQueue] = useState(false);
+  const [canSetVolume, setCanSetVolume] = useState(true);
+
+  // Desktop starts with the full player; phones with the slim bar.
+  useEffect(() => {
+    setExpanded(window.matchMedia("(min-width: 1024px)").matches);
+  }, []);
 
   // A new song: load it and start playing (you just pressed play, so the browser allows it).
   useEffect(() => {
@@ -33,7 +65,24 @@ export function MusicDock() {
     el.play().catch(() => setPaused(true));
   }, [current]);
 
+  // iPhones and iPads ignore audio.volume (only the hardware buttons change it), so hide the slider there.
+  const showsPlayer = current !== null;
+  useEffect(() => {
+    const el = audio.current;
+    if (!el) return;
+    el.volume = 0.5;
+    setCanSetVolume(el.volume === 0.5);
+  }, [showsPlayer]);
+
+  useEffect(() => {
+    const el = audio.current;
+    if (!el) return;
+    el.volume = volume;
+    el.muted = muted;
+  }, [volume, muted, showsPlayer]);
+
   // Lock screen / headphone buttons
+  const { next, previous, hasNext } = music;
   useEffect(() => {
     if (!current || !("mediaSession" in navigator)) return;
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -51,18 +100,55 @@ export function MusicDock() {
     };
     set("play", () => void audio.current?.play());
     set("pause", () => audio.current?.pause());
-    set("nexttrack", queue.length > 1 ? next : null);
-    set("previoustrack", queue.length > 1 ? previous : null);
-    return () => (["play", "pause", "nexttrack", "previoustrack"] as const).forEach((a) => set(a, null));
-  }, [current, queue.length, next, previous]);
+    set("nexttrack", hasNext ? () => next() : null);
+    set("previoustrack", () => previous());
+    set("seekto", (d) => {
+      if (audio.current && d.seekTime !== undefined) audio.current.currentTime = d.seekTime;
+    });
+    return () => (["play", "pause", "nexttrack", "previoustrack", "seekto"] as const).forEach((a) => set(a, null));
+  }, [current, hasNext, next, previous]);
 
   if (!current) return null;
   const g = genreOf(current.genre);
+  const el = () => audio.current;
+
+  const togglePlay = () => (paused ? void el()?.play() : el()?.pause());
+  // Like most players: Previous restarts the song if it's been playing for more than 3 seconds.
+  const goBack = () => {
+    const a = el();
+    if (a && (a.currentTime > 3 || !music.hasPrevious)) a.currentTime = 0;
+    else music.previous();
+  };
+  const onEnded = () => {
+    const a = el();
+    if (repeat === "one" && a) {
+      a.currentTime = 0;
+      void a.play();
+    } else if (!music.next(true)) {
+      setPaused(true);
+    }
+  };
+
+  const VolumeIcon = muted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
+  const progress = duration > 0 ? Math.min(100, (time / duration) * 100) : 0;
+  const credits = [current.credit, current.license].filter(Boolean).join(" · ");
+
+  const playButton = (big: boolean) => (
+    <Button variant="primary" size="icon" className={big ? "h-12 w-12" : "h-10 w-10"} onClick={togglePlay} aria-label={paused ? "Play" : "Pause"}>
+      {loading && !paused ? (
+        <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+      ) : paused ? (
+        <Play className="h-5 w-5" aria-hidden="true" />
+      ) : (
+        <Pause className="h-5 w-5" aria-hidden="true" />
+      )}
+    </Button>
+  );
 
   return (
     <section
       aria-label="Music player"
-      className="fixed inset-x-3 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-30 rounded-2xl border border-border bg-surface-strong/95 p-3 shadow-card backdrop-blur-xl lg:inset-x-auto lg:right-6 lg:bottom-6 lg:w-96"
+      className="fixed inset-x-3 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-30 overflow-hidden rounded-2xl border border-border bg-surface-strong/95 shadow-card backdrop-blur-xl lg:inset-x-auto lg:right-6 lg:bottom-6 lg:w-96"
     >
       <audio
         ref={audio}
@@ -73,82 +159,226 @@ export function MusicDock() {
         onPlaying={() => setLoading(false)}
         onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-        onEnded={() => (queue.length > 1 ? next() : setPaused(true))}
+        onEnded={onEnded}
         onError={() => {
           setLoading(false);
           setError("This song couldn't be played.");
         }}
       />
 
-      <div className="flex items-center gap-3">
-        {current.artworkUrl ? (
-          <img src={current.artworkUrl} alt="" className="h-11 w-11 shrink-0 rounded-xl object-cover" />
-        ) : (
-          <span className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-linear-to-br text-white ${g.accent}`}>
-            <g.icon className="h-5 w-5" aria-hidden="true" />
-          </span>
-        )}
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{current.title}</p>
-          <p className="truncate text-xs text-muted">{error || current.artist}</p>
-        </div>
-        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={close} aria-label="Close player">
-          <X className="h-4 w-4" aria-hidden="true" />
-        </Button>
-      </div>
+      {expanded && showQueue && <QueueList queue={queue} index={index} paused={paused} onJump={music.jumpTo} onRemove={music.remove} />}
 
-      <div className="mt-2 flex items-center gap-2 text-[11px] text-muted tabular-nums">
-        <span className="w-9 text-right">{fmt(time)}</span>
-        <input
-          type="range"
-          min={0}
-          max={Math.max(1, Math.floor(duration))}
-          step={1}
-          value={Math.floor(time)}
-          onChange={(e) => {
-            if (audio.current) audio.current.currentTime = Number(e.target.value);
-          }}
-          aria-label="Position in the song"
-          className="h-1 flex-1 cursor-pointer"
-        />
-        <span className="w-9">{fmt(duration)}</span>
-      </div>
-
-      <div className="mt-1 flex items-center justify-center gap-2">
-        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={previous} disabled={queue.length < 2} aria-label="Previous song">
-          <SkipBack className="h-4 w-4" aria-hidden="true" />
-        </Button>
-        <Button
-          variant="primary"
-          size="icon"
-          className="h-11 w-11"
-          onClick={() => (paused ? void audio.current?.play() : audio.current?.pause())}
-          aria-label={paused ? "Play" : "Pause"}
-        >
-          {loading && !paused ? (
-            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-          ) : paused ? (
-            <Play className="h-5 w-5" aria-hidden="true" />
-          ) : (
-            <Pause className="h-5 w-5" aria-hidden="true" />
+      <div className="p-3">
+        <div className="flex items-center gap-3">
+          <Artwork song={current} accent={g.accent} Icon={g.icon} size={expanded ? "h-12 w-12" : "h-10 w-10"} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{current.title}</p>
+            <p className={cn("truncate text-xs", error ? "text-rose-500" : "text-muted")}>{error || current.artist}</p>
+          </div>
+          {!expanded && (
+            <>
+              {playButton(false)}
+              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => music.next()} disabled={!music.hasNext} aria-label="Next song">
+                <SkipForward className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </>
           )}
-        </Button>
-        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={next} disabled={queue.length < 2} aria-label="Next song">
-          <SkipForward className="h-4 w-4" aria-hidden="true" />
-        </Button>
-        {(current.credit || current.sourceUrl) && (
-          <a
-            href={current.sourceUrl ?? undefined}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={[current.credit, current.license].filter(Boolean).join(" · ")}
-            aria-label={`Credits: ${[current.credit, current.license].filter(Boolean).join(", ")}`}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-surface-muted hover:text-text"
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9"
+            onClick={() => setExpanded((x) => !x)}
+            aria-expanded={expanded}
+            aria-label={expanded ? "Show less" : "Show the full player"}
           >
-            <Info className="h-4 w-4" aria-hidden="true" />
-          </a>
-        )}
+            {expanded ? <ChevronDown className="h-4 w-4" aria-hidden="true" /> : <ChevronUp className="h-4 w-4" aria-hidden="true" />}
+          </Button>
+          {expanded && (
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={music.close} aria-label="Close player">
+              <X className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          )}
+        </div>
+
+        {expanded ? (
+          <>
+            <div className="mt-3 flex items-center gap-2 text-[11px] text-muted tabular-nums">
+              <span className="w-9 text-right">{formatTime(time)}</span>
+              <input
+                type="range"
+                min={0}
+                max={Math.max(1, Math.floor(duration))}
+                step={1}
+                value={Math.floor(time)}
+                onChange={(e) => {
+                  const a = el();
+                  if (a) a.currentTime = Number(e.target.value);
+                }}
+                aria-label="Position in the song"
+                aria-valuetext={`${formatTime(time)} of ${formatTime(duration)}`}
+                className="h-1 flex-1 cursor-pointer"
+              />
+              <span className="w-9">{formatTime(duration)}</span>
+            </div>
+
+            <div className="mt-1 flex items-center justify-between px-1">
+              <ToggleButton active={shuffle} onClick={music.toggleShuffle} label={shuffle ? "Shuffle is on" : "Shuffle is off"}>
+                <Shuffle className="h-4 w-4" aria-hidden="true" />
+              </ToggleButton>
+              <Button variant="ghost" size="icon" className="h-10 w-10" onClick={goBack} aria-label="Previous song">
+                <SkipBack className="h-5 w-5" aria-hidden="true" />
+              </Button>
+              {playButton(true)}
+              <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => music.next()} disabled={!music.hasNext} aria-label="Next song">
+                <SkipForward className="h-5 w-5" aria-hidden="true" />
+              </Button>
+              <ToggleButton active={repeat !== "off"} onClick={music.cycleRepeat} label={`${REPEAT_LABEL[repeat]}. Change repeat`}>
+                {repeat === "one" ? <Repeat1 className="h-4 w-4" aria-hidden="true" /> : <Repeat className="h-4 w-4" aria-hidden="true" />}
+              </ToggleButton>
+            </div>
+
+            <div className="mt-2 flex items-center gap-1 border-t border-border pt-2">
+              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={music.toggleMute} aria-label={muted ? "Unmute" : "Mute"} aria-pressed={muted}>
+                <VolumeIcon className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              {canSetVolume ? (
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={muted ? 0 : Math.round(volume * 100)}
+                  onChange={(e) => music.setVolume(Number(e.target.value) / 100)}
+                  aria-label="Volume"
+                  aria-valuetext={`${muted ? 0 : Math.round(volume * 100)}%`}
+                  className="h-1 w-24 cursor-pointer"
+                />
+              ) : (
+                <span className="text-xs text-muted">Use your device&apos;s volume buttons</span>
+              )}
+              <span className="flex-1" />
+              {(current.credit || current.sourceUrl) && (
+                <a
+                  href={current.sourceUrl ?? undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={credits}
+                  aria-label={`Credits: ${credits}`}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-surface-muted hover:text-text"
+                >
+                  <Info className="h-4 w-4" aria-hidden="true" />
+                </a>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn("h-9 px-3", showQueue && "bg-primary/10 text-primary")}
+                onClick={() => setShowQueue((x) => !x)}
+                aria-expanded={showQueue}
+                aria-label={`Queue, ${queue.length} ${queue.length === 1 ? "song" : "songs"}`}
+              >
+                <ListMusic className="h-4 w-4" aria-hidden="true" />
+                <span className="tabular-nums">{queue.length}</span>
+              </Button>
+            </div>
+          </>
+        ) : null}
       </div>
+
+      {/* The slim bar's progress line */}
+      {!expanded && (
+        <div className="h-1 bg-surface-muted" aria-hidden="true">
+          <div className="h-full bg-linear-to-r from-primary to-primary-2 transition-[width] duration-300" style={{ width: `${progress}%` }} />
+        </div>
+      )}
     </section>
+  );
+}
+
+function Artwork({ song, accent, Icon, size }: { song: Song; accent: string; Icon: React.ComponentType<{ className?: string }>; size: string }) {
+  return song.artworkUrl ? (
+    <img src={song.artworkUrl} alt="" className={cn("shrink-0 rounded-xl object-cover", size)} />
+  ) : (
+    <span className={cn("inline-flex shrink-0 items-center justify-center rounded-xl bg-linear-to-br text-white", accent, size)}>
+      <Icon className="h-5 w-5" aria-hidden="true" />
+    </span>
+  );
+}
+
+function ToggleButton({ active, onClick, label, children }: { active: boolean; onClick: () => void; label: string; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      aria-label={label}
+      title={label}
+      className={cn(
+        "relative inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+        active ? "text-primary" : "text-muted hover:bg-surface-muted hover:text-text",
+      )}
+    >
+      {children}
+      {active && <span className="absolute bottom-1 h-1 w-1 rounded-full bg-primary" aria-hidden="true" />}
+    </button>
+  );
+}
+
+type QueueProps = { queue: Song[]; index: number | null; paused: boolean; onJump: (i: number) => void; onRemove: (i: number) => void };
+
+function QueueList({ queue, index, paused, onJump, onRemove }: QueueProps) {
+  const playingRow = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    playingRow.current?.scrollIntoView({ block: "nearest" });
+  }, [index]);
+
+  return (
+    <div className="border-b border-border bg-surface-muted/50">
+      <p className="px-4 pt-3 pb-1 text-xs font-semibold tracking-wider text-muted uppercase">Up next</p>
+      <ol className="max-h-56 overflow-y-auto px-2 pb-2" aria-label="Queue">
+        {queue.map((song, i) => {
+          const playing = i === index;
+          return (
+            <li
+              key={`${song.id}-${i}`}
+              ref={playing ? playingRow : undefined}
+              className={cn("group flex items-center gap-1 rounded-xl", playing && "bg-primary/10")}
+            >
+              <button
+                type="button"
+                onClick={() => onJump(i)}
+                aria-current={playing ? "true" : undefined}
+                className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl px-2 py-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <span className="flex w-5 shrink-0 justify-center text-xs text-muted tabular-nums">
+                  {playing && !paused ? (
+                    <span className="text-primary">
+                      <Equalizer />
+                    </span>
+                  ) : (
+                    i + 1
+                  )}
+                </span>
+                <span className="min-w-0">
+                  <span className={cn("block truncate text-sm font-medium", playing && "text-primary")}>{song.title}</span>
+                  <span className="block truncate text-xs text-muted">{song.artist}</span>
+                </span>
+              </button>
+              {queue.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => onRemove(i)}
+                  aria-label={`Remove ${song.title} from the queue`}
+                  className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted opacity-100 hover:bg-surface-muted hover:text-text focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                >
+                  <X className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }

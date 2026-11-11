@@ -9,7 +9,7 @@ import { AppIcon } from "@/components/ui/AppIcon";
 import { getApp } from "@/lib/apps";
 import { cn } from "@/lib/cn";
 
-export function AppHeader({ appId }: { appId: string }) {
+export function AppHeader({ appId, className }: { appId: string; className?: string }) {
   const app = getApp(appId);
   const pathname = usePathname();
 
@@ -19,7 +19,7 @@ export function AppHeader({ appId }: { appId: string }) {
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
-    <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <header className={cn("mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between", className)}>
       <div className="flex items-center gap-4">
         <AppIcon icon={app.icon} accent={app.accent} size="lg" />
         <div>
