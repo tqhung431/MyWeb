@@ -9,9 +9,9 @@
     }
   ],
   "title": "Nook",
-  "uid": "myweb",
+  "uid": "nook",
   "tags": [
-    "myweb"
+    "nook"
   ],
   "timezone": "browser",
   "schemaVersion": 39,
@@ -39,7 +39,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(increase(myweb_focus_sessions_total[24h]))",
+          "expr": "sum(increase(nook_focus_sessions_total[24h]))",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -79,7 +79,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(increase(myweb_song_plays_total[24h]))",
+          "expr": "sum(increase(nook_song_plays_total[24h]))",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -119,7 +119,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(myweb_realtime_connections)",
+          "expr": "sum(nook_realtime_connections)",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -159,7 +159,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(increase(myweb_cache_lookups_total{result=\"hit\"}[1h])) / sum(increase(myweb_cache_lookups_total[1h]))",
+          "expr": "sum(increase(nook_cache_lookups_total{result=\"hit\"}[1h])) / sum(increase(nook_cache_lookups_total[1h]))",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -199,7 +199,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (http_route) (rate(http_server_request_duration_seconds_count{job=\"myweb-api\"}[5m]))",
+          "expr": "sum by (http_route) (rate(http_server_request_duration_seconds_count{job=\"nook-api\"}[5m]))",
           "legendFormat": "{{http_route}}",
           "datasource": {
             "type": "prometheus",
@@ -237,7 +237,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{job=\"myweb-api\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{job=\"nook-api\"}[5m])))",
           "legendFormat": "{{http_route}}",
           "datasource": {
             "type": "prometheus",
@@ -275,7 +275,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (http_route) (rate(http_server_request_duration_seconds_count{job=\"myweb-api\",http_response_status_code=~\"5..\"}[5m]))",
+          "expr": "sum by (http_route) (rate(http_server_request_duration_seconds_count{job=\"nook-api\",http_response_status_code=~\"5..\"}[5m]))",
           "legendFormat": "{{http_route}}",
           "datasource": {
             "type": "prometheus",
@@ -313,7 +313,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (job_name, status) (rate(myweb_jobs_total[5m])) * 60",
+          "expr": "sum by (job_name, status) (rate(nook_jobs_total[5m])) * 60",
           "legendFormat": "{{job_name}} {{status}}",
           "datasource": {
             "type": "prometheus",
@@ -351,7 +351,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le, job_name) (rate(myweb_job_duration_seconds_bucket[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, job_name) (rate(nook_job_duration_seconds_bucket[5m])))",
           "legendFormat": "{{job_name}}",
           "datasource": {
             "type": "prometheus",
@@ -389,7 +389,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (http_route) (rate(http_server_request_duration_seconds_count{job=\"myweb-web\"}[5m]))",
+          "expr": "sum by (http_route) (rate(http_server_request_duration_seconds_count{job=\"nook-web\"}[5m]))",
           "legendFormat": "{{http_route}}",
           "datasource": {
             "type": "prometheus",

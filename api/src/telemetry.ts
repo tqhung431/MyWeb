@@ -17,7 +17,7 @@ if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT && process.env.OTEL_SDK_DISABLED !==
   const { getNodeAutoInstrumentations } = await import("@opentelemetry/auto-instrumentations-node");
 
   const sdk = new NodeSDK({
-    serviceName: process.env.OTEL_SERVICE_NAME ?? "myweb-api",
+    serviceName: process.env.OTEL_SERVICE_NAME ?? "nook-api",
     // HTTP, Express, PostgreSQL (pg), Valkey (ioredis), Socket.IO… are traced automatically.
     // Turn off the very chatty low-level ones: they'd bury the useful spans.
     instrumentations: [

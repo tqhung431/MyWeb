@@ -1,16 +1,16 @@
-# Nook with Docker Compose (Stage 7).
+# Nook with Docker Compose.
 #
-#   docker compose up -d                       database, Valkey and Mailpit only, for `npm run dev`
-#   docker compose --profile app up -d --build EVERYTHING: + API, worker, website and Caddy
-#   docker compose --profile app down          stop (your data stays in the volumes)
+# Settings come from the .env file next to this one (copy .env.example to .env).
+# Which parts start is set by COMPOSE_PROFILES in .env:
+#   app         API, worker, website and Caddy: the whole Nook (default in .env.example)
+#   ai          + the local AI for the Free-time Companion (Ollama and its models)
+#   monitoring  + Grafana with traces and metrics (http://localhost:3001)
 #
-# With the app profile, open https://localhost on this PC, or http://<this PC's IP> on other PCs.
+#   docker compose up -d --build              start (or update) what COMPOSE_PROFILES says
+#   docker compose down                       stop (your data stays in the volumes)
+#   docker compose up -d db valkey mailpit    only the services `npm run dev` needs (developers)
 #
-#   ... --profile app --profile monitoring up -d   + Grafana with traces and metrics (Stage 8):
-#                                                    http://localhost:3001 (see docs/stage-8.md)
-#   ... --profile app --profile ai up -d           + the local AI for the Free-time Companion (Stage 9):
-#                                                    Ollama, and its two models (~1.5 GB, first time only)
-# Settings (passwords, ports) come from the .env file next to this one; see .env.example.
+# With "app", open https://localhost on this PC, or http://<this PC's IP> on other PCs.
 
 # Shared OpenTelemetry settings (Stage 8). Telemetry is off until OTEL_EXPORTER_OTLP_ENDPOINT is
 # set in .env (to http://otel-lgtm:4318 with the monitoring profile).
@@ -20,9 +20,14 @@ x-otel: &otel
   OTEL_LOGS_EXPORTER: none
   OTEL_SEMCONV_STABILITY_OPT_IN: http # current names for HTTP metrics (http.server.request.duration)
 
-# The project name stays "myweb" (the old name): it's the prefix of the data volumes
-# (myweb_db-data, ...), so your data survives renaming the folder or the repo.
-name: myweb
+# The project name is the prefix of the data volumes (nook_db-data, ...). Fixed here, so your
+# data stays the same whatever the folder is called. Coming from MyWeb? See README.md.
+name: nook
+
+# The database account. Change POSTGRES_PASSWORD only before the first start (see .env.example).
+x-db: &db-account
+  POSTGRES_USER: ${POSTGRES_USER:-nook}
+  POSTGRES_DB: ${POSTGRES_DB:-nook}
 
 services:
   # --- Data ---------------------------------------------------------------------
@@ -30,15 +35,14 @@ services:
   db:
     image: pgvector/pgvector:pg16 # PostgreSQL 16 + the pgvector extension (Stage 9: embeddings)
     environment:
-      POSTGRES_USER: myweb
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-myweb}
-      POSTGRES_DB: myweb
+      <<: *db-account
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nook}
     ports:
       - "127.0.0.1:5432:5432" # this PC only (for npm run dev and tools)
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U myweb"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       retries: 10
     restart: unless-stopped
@@ -68,17 +72,19 @@ services:
   api:
     profiles: [app]
     build: ./api
-    image: myweb-api
+    image: nook-api
     environment: &api-env
       <<: *otel
-      OTEL_SERVICE_NAME: myweb-api
-      DATABASE_URL: postgres://myweb:${POSTGRES_PASSWORD:-myweb}@db:5432/myweb
+      OTEL_SERVICE_NAME: nook-api
+      # The password is passed separately (PGPASSWORD), so characters like @ : / # in it are fine
+      DATABASE_URL: postgres://${POSTGRES_USER:-nook}@db:5432/${POSTGRES_DB:-nook}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-nook}
       VALKEY_URL: redis://valkey:6379
       HOST: 0.0.0.0 # inside Docker's private network; only Caddy can reach it
       PORT: "4000"
       TRUST_PROXY: "1" # Caddy is one trusted hop in front: real visitor IPs, HTTPS detection
       SMTP_URL: ${SMTP_URL:-smtp://mailpit:1025}
-      MAIL_FROM: ${MAIL_FROM:-Nook <hello@myweb.local>}
+      MAIL_FROM: ${MAIL_FROM:-Nook <hello@nook.local>}
       MEDIA_DIR: /app/media
       # Stage 9: where Ollama is. Without the ai profile it isn't running, and the Companion says so.
       # Set OLLAMA_URL= (empty) in .env to switch the AI off completely.
@@ -101,11 +107,11 @@ services:
   worker:
     profiles: [app]
     build: ./api
-    image: myweb-api # same code as the API...
+    image: nook-api # same code as the API...
     command: ["node", "--import", "./dist/telemetry.js", "dist/worker.js"] # ...started as the background worker
     environment:
       <<: *api-env
-      OTEL_SERVICE_NAME: myweb-worker
+      OTEL_SERVICE_NAME: nook-worker
     depends_on:
       api: { condition: service_healthy } # the API runs the database migrations first
     restart: unless-stopped
@@ -119,7 +125,7 @@ services:
         NEXT_PUBLIC_REALTIME_WEBSOCKET: "1"
     environment:
       <<: *otel
-      OTEL_SERVICE_NAME: myweb-web
+      OTEL_SERVICE_NAME: nook-web
       API_URL: http://api:4000
     depends_on:
       api: { condition: service_healthy }
@@ -160,6 +166,8 @@ services:
   ollama:
     profiles: [ai]
     image: ollama/ollama:latest # pin a version once you've tried it
+    ports:
+      - "127.0.0.1:11434:11434" # this PC only: lets `npm run dev` use it too (OLLAMA_URL in api/.env)
     volumes:
       - ollama-models:/root/.ollama # downloaded models stay here
     environment:

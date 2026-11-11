@@ -83,7 +83,7 @@ flowchart LR
 - Without Valkey, real-time still works for the browsers on one server.
 - **Gotcha (found by a failing test):** Valkey's publish/subscribe channels are shared by *all* its numbered databases.
   The tests use database 1, but they still heard the running dev server's events. Each setup now uses its own
-  channel name (`myweb-socket.io` in dev, `myweb-test-socket.io` in tests), set from `QUEUE_NAME`.
+  channel name (`nook-socket.io` in dev, `nook-test-socket.io` in tests), set from `QUEUE_NAME`.
 
 ## 4. Safety
 

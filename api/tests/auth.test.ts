@@ -15,7 +15,7 @@ afterAll(closeAll);
 
 function sessionCookie(res: request.Response): string | undefined {
   const cookies = ([] as string[]).concat(res.headers["set-cookie"] ?? []);
-  return cookies.find((c) => c.startsWith("myweb_session="));
+  return cookies.find((c) => c.startsWith("nook_session="));
 }
 
 describe("register", () => {
