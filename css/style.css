@@ -1,0 +1,208 @@
+/* Chill Corner — mobile-first styles.
+   Base rules are for phones; the @media (min-width) block adds the wide layout. */
+
+/* 1. Design tokens: change colours in one place */
+:root {
+  --bg: #f4f1ec;
+  --bg-accent: #e7e0f5;
+  --card: #ffffffcc;
+  --text: #2b2a33;
+  --muted: #6b6878;
+  --primary: #6c5ce7;
+  --primary-text: #ffffff;
+  --border: #00000014;
+  --radius: 16px;
+  --shadow: 0 8px 24px #0000000f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15141c;
+    --bg-accent: #231f36;
+    --card: #1f1d29cc;
+    --text: #ece9f5;
+    --muted: #a19db3;
+    --primary: #a29bfe;
+    --primary-text: #15141c;
+    --border: #ffffff1a;
+    --shadow: 0 8px 24px #00000059;
+  }
+}
+
+/* 2. Base */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+  color: var(--text);
+  background: linear-gradient(160deg, var(--bg) 0%, var(--bg-accent) 100%);
+}
+
+a { color: var(--primary); }
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+}
+.skip-link:focus {
+  left: 16px;
+  top: 16px;
+  padding: 8px 12px;
+  background: var(--card);
+  border-radius: 8px;
+}
+
+/* 3. Header and footer */
+.site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+}
+.brand {
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--text);
+}
+.site-header nav { display: flex; gap: 16px; }
+.site-header nav a { text-decoration: none; color: var(--muted); }
+.site-header nav a[aria-current="page"] { color: var(--text); font-weight: 600; }
+
+.site-footer {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* 4. Main content */
+main {
+  flex: 1;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.intro { text-align: center; margin: 24px 0 32px; }
+.intro h1 { font-size: clamp(2rem, 7vw, 3rem); margin: 0 0 8px; }
+.intro p { margin: 0; color: var(--muted); }
+
+.cards {
+  display: grid;
+  gap: 16px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  backdrop-filter: blur(8px);
+}
+.card h2 { margin: 0 0 4px; font-size: 1.25rem; }
+
+.hint { color: var(--muted); font-size: 0.9rem; margin: 0 0 16px; }
+
+/* Pill buttons used by tracks and modes */
+.tracks,
+.modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.track,
+.mode,
+.controls button {
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  transition: background 0.2s, transform 0.1s;
+}
+.track:hover,
+.mode:hover,
+.controls button:hover { background: var(--border); }
+.track:active,
+.mode:active,
+.controls button:active { transform: scale(0.97); }
+
+.track[aria-pressed="true"],
+.mode[aria-pressed="true"] {
+  background: var(--primary);
+  color: var(--primary-text);
+  border-color: transparent;
+}
+
+.volume {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+}
+.volume input { flex: 1; accent-color: var(--primary); }
+
+.now-playing { margin: 16px 0 0; font-weight: 600; }
+
+/* Timer */
+.time {
+  font-size: clamp(3.5rem, 18vw, 5.5rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums; /* digits keep the same width while counting */
+  text-align: center;
+  margin: 8px 0 16px;
+  letter-spacing: 0.02em;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.controls .primary {
+  min-width: 120px;
+  background: var(--primary);
+  color: var(--primary-text);
+  border-color: transparent;
+  font-weight: 600;
+}
+.controls .primary:hover { filter: brightness(1.08); background: var(--primary); }
+
+#sessions { text-align: center; margin: 0; }
+
+/* About page */
+.prose { max-width: 680px; }
+.prose li { margin-bottom: 8px; }
+
+/* 5. Wider screens: two cards side by side */
+@media (min-width: 720px) {
+  .cards { grid-template-columns: 1fr 1fr; }
+  .site-header { padding: 24px 32px; }
+}
+
+/* 6. Respect people who turn off animations */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
