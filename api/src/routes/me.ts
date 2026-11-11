@@ -15,7 +15,7 @@ import { z } from "zod";
 import { claimGuestData, COOKIE_NAME, endSession, publicUser, refreshCachedSession, startSession } from "../auth/sessions.js";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
-import { achievements, chatMessages, focusSessions, gameScores, postComments, posts, songLikes, songs, users } from "../db/schema.js";
+import { achievements, chatMessages, focusSessions, gameScores, postComments, posts, songLikes, songs, users, watchEntries } from "../db/schema.js";
 import { enqueue } from "../jobs/queue.js";
 import { deletePerson } from "../people.js";
 import { requireUser } from "../middleware/auth.js";
@@ -119,6 +119,7 @@ meRouter.get("/data", requireUser, async (req, res) => {
       posts: await n(db.select({ n: count() }).from(posts).where(eq(posts.authorId, id))),
       comments: await n(db.select({ n: count() }).from(postComments).where(eq(postComments.authorId, id))),
       chatMessages: await n(db.select({ n: count() }).from(chatMessages).where(eq(chatMessages.authorId, id))),
+      watchList: await n(db.select({ n: count() }).from(watchEntries).where(eq(watchEntries.userId, id))),
     },
   });
 });

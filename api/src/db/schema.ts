@@ -296,6 +296,58 @@ export const chatMessages = pgTable(
   (t) => [index("chat_messages_group_time_idx").on(t.groupId, t.createdAt), index("chat_messages_time_idx").on(t.createdAt)],
 );
 
+// --- Stage 12: WatchList --------------------------------------------------------------
+// A local copy of each show or anime that someone saved (from TVmaze or Jikan), so lists keep working
+// even when those websites are slow or down, and one entry per person per title.
+
+export const watchTitles = pgTable(
+  "watch_titles",
+  {
+    id: serial("id").primaryKey(),
+    source: text("source", { enum: ["tv", "anime"] }).notNull(), // tv = TVmaze, anime = Jikan (MyAnimeList)
+    externalId: text("external_id").notNull(),
+    title: text("title").notNull(),
+    originalTitle: text("original_title"),
+    year: integer("year"),
+    kind: text("kind").notNull(), // "TV show", "Anime series", "Anime movie"…
+    imageUrl: text("image_url"),
+    summary: text("summary").notNull().default(""),
+    genres: text("genres").array().notNull().default(sql`'{}'::text[]`),
+    rating: integer("rating"), // the source's score × 10 (8.5 → 85), null if unknown
+    episodes: integer("episodes"),
+    url: text("url"),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("watch_titles_source_ext_idx").on(t.source, t.externalId)],
+);
+
+export const WATCH_STATUSES = ["want", "watching", "done", "dropped"] as const;
+
+export const watchEntries = pgTable(
+  "watch_entries",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    titleId: integer("title_id")
+      .notNull()
+      .references(() => watchTitles.id, { onDelete: "cascade" }),
+    status: text("status", { enum: WATCH_STATUSES }).notNull(),
+    stars: integer("stars"), // your rating, 1–5
+    note: text("note").notNull().default(""),
+    episodesSeen: integer("episodes_seen"),
+    addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.titleId] }),
+    index("watch_entries_title_idx").on(t.titleId),
+    index("watch_entries_updated_idx").on(t.updatedAt),
+    check("watch_status_valid", sql`${t.status} in ('want', 'watching', 'done', 'dropped')`),
+    check("watch_stars_valid", sql`${t.stars} is null or ${t.stars} between 1 and 5`),
+  ],
+);
+
 export type Preferences = { timer?: { focus: number; short: number; long: number } };
 export type Song = typeof songs.$inferSelect;
 export type Tip = typeof tips.$inferSelect;

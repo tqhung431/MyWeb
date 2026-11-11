@@ -78,6 +78,13 @@
       "when": 1794404304277,
       "tag": "0010_hobby_hub",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794408661486,
+      "tag": "0011_watchlist",
+      "breakpoints": true
     }
   ]
 }

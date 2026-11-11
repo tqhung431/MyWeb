@@ -19,7 +19,15 @@ import { STARTER_PACK } from "./starter-pack";
 
 type Rights = "own" | "cc" | "permission";
 // skip: an error that trying again won't fix (too big, not audio, already in Nook)
-type Item = { id: string; file: File; progress: number; status: "waiting" | "uploading" | "done" | "error"; song?: UploadedSong; error?: string; skip?: boolean };
+type Item = {
+  id: string;
+  file: File;
+  progress: number;
+  status: "waiting" | "uploading" | "done" | "error";
+  song?: UploadedSong;
+  error?: string;
+  skip?: boolean;
+};
 
 const mb = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(bytes < 10 * 1024 * 1024 ? 1 : 0)} MB`;
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -41,7 +49,10 @@ export function AddSongForm() {
   const [stopped, setStopped] = useState("");
 
   useEffect(() => {
-    getUploadLimits().then((l) => setMaxMb(l.maxMb), () => {});
+    getUploadLimits().then(
+      (l) => setMaxMb(l.maxMb),
+      () => {},
+    );
   }, []);
 
   function addFiles(files: FileList | File[]) {
@@ -137,7 +148,14 @@ export function AddSongForm() {
           <p className="text-sm text-muted">
             MP3, M4A, OGG, FLAC or WAV, up to {maxMb} MB each. Title, artist, genre and cover are read from each file. Any file name works.
           </p>
-          <input ref={picker} type="file" accept="audio/*,.mp3,.m4a,.ogg,.opus,.flac,.wav" multiple hidden onChange={(e) => e.target.files && addFiles(e.target.files)} />
+          <input
+            ref={picker}
+            type="file"
+            accept="audio/*,.mp3,.m4a,.ogg,.opus,.flac,.wav"
+            multiple
+            hidden
+            onChange={(e) => e.target.files && addFiles(e.target.files)}
+          />
           <Button variant="secondary" onClick={() => picker.current?.click()}>
             <Music className="h-4 w-4" aria-hidden="true" /> Choose files
           </Button>
@@ -202,7 +220,13 @@ export function AddSongForm() {
               ["permission", "I have permission", "The artist said you may share them here"],
             ] as const
           ).map(([value, label, hint]) => (
-            <label key={value} className={cn("flex cursor-pointer items-start gap-3 rounded-2xl border p-3", rights === value ? "border-primary/50 bg-primary/8" : "border-border")}>
+            <label
+              key={value}
+              className={cn(
+                "flex cursor-pointer items-start gap-3 rounded-2xl border p-3",
+                rights === value ? "border-primary/50 bg-primary/8" : "border-border",
+              )}
+            >
               <input type="radio" name="rights" value={value} checked={rights === value} onChange={() => setRights(value)} className="mt-1" />
               <span>
                 <span className="block text-sm font-semibold">{label}</span>
@@ -214,7 +238,14 @@ export function AddSongForm() {
             <div className="grid gap-3 sm:grid-cols-2">
               <Input label="Licence" value={license} onChange={(e) => setLicense(e.target.value)} hint="e.g. CC BY 4.0, CC BY-NC 3.0" />
               <Input label="Credit (optional)" value={credit} onChange={(e) => setCredit(e.target.value)} hint="feat. …, original artists" />
-              <Input className="sm:col-span-2" label="Where it's from (optional)" type="url" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://…" />
+              <Input
+                className="sm:col-span-2"
+                label="Where it's from (optional)"
+                type="url"
+                value={sourceUrl}
+                onChange={(e) => setSourceUrl(e.target.value)}
+                placeholder="https://…"
+              />
             </div>
           )}
           <p className="text-xs text-muted">Starter-pack songs are recognised by file name; their licence and credit are filled in for you.</p>
@@ -234,8 +265,8 @@ export function AddSongForm() {
       <Card>
         <h2 className="text-lg font-bold">Starter pack: 12 free songs with vocals</h2>
         <p className="mt-1 text-sm text-muted">
-          Picked by listener ratings on ccMixter, 3 per genre, all under Creative Commons licences that allow sharing them here.
-          Open each page, press <strong className="text-text">Download</strong>, then drop the files on the left.
+          Picked by listener ratings on ccMixter, 3 per genre, all under Creative Commons licences that allow sharing them here. Open each page, press{" "}
+          <strong className="text-text">Download</strong>, then drop the files on the left.
         </p>
         <ul className="mt-4 flex flex-col divide-y divide-border">
           {STARTER_PACK.map((s) => (

@@ -13,6 +13,7 @@ export type AppInfo = {
   id: string;
   name: string;
   shortName?: string; // for the phone tab bar (default: the first word of the name)
+  pinned?: boolean; // Stage 12: on the phone tab bar; the others are under "Apps"
   tagline: string;
   href: string;
   icon: LucideIcon;
@@ -25,6 +26,7 @@ export type AppInfo = {
 export const APPS: AppInfo[] = [
   {
     id: "chill",
+    pinned: true,
     name: "Chill Corner",
     tagline: "Ambient sounds, a focus timer and tips",
     href: "/chill",
@@ -39,6 +41,7 @@ export const APPS: AppInfo[] = [
   },
   {
     id: "music",
+    pinned: true,
     name: "Music",
     tagline: "Songs with vocals, played by Nook itself: community charts",
     href: "/music",
@@ -69,15 +72,22 @@ export const APPS: AppInfo[] = [
   {
     id: "watchlist",
     name: "WatchList",
-    tagline: "Find, rate and save movies and anime",
+    shortName: "Watch",
+    tagline: "TV shows and anime: your list, and what others watch",
     href: "/watchlist",
     icon: Clapperboard,
     accent: "from-sky-400 to-indigo-500",
-    status: "soon",
-    phase: "Phase 2",
+    status: "live",
+    phase: "Stage 12",
+    links: [
+      { href: "/watchlist", label: "My list" },
+      { href: "/watchlist/search", label: "Find" },
+      { href: "/watchlist/popular", label: "On Nook" },
+    ],
   },
   {
     id: "hobby-hub",
+    pinned: true,
     name: "Hobby Hub",
     shortName: "Hobbies",
     tagline: "Post and chat in hobby groups, live",

@@ -67,6 +67,10 @@ export const configSchema = z.object({
   AI_CHAT_MODEL: z.string().default("qwen2.5:1.5b"),
   AI_EMBED_MODEL: z.string().default("paraphrase-multilingual"),
 
+  // --- Stage 12: WatchList's sources (free, no key). Tests point these at a fake server. ---
+  TVMAZE_URL: z.url().default("https://api.tvmaze.com"),
+  JIKAN_URL: z.url().default("https://api.jikan.moe/v4"),
+
   // OpenTelemetry: where traces and metrics go (Grafana's all-in-one "otel-lgtm" in docker-compose).
   // Not set → telemetry off. Read by the OpenTelemetry SDK itself; listed here so it's documented.
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().optional(),

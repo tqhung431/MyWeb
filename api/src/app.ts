@@ -20,6 +20,7 @@ import { meRouter } from "./routes/me.js";
 import { musicRouter } from "./routes/music.js";
 import { sessionsRouter } from "./routes/sessions.js";
 import { tipsRouter } from "./routes/tips.js";
+import { watchRouter } from "./routes/watch.js";
 import { valkey, valkeyReady } from "./valkey/client.js";
 
 export function createApp() {
@@ -53,6 +54,7 @@ export function createApp() {
   app.use("/api/companion", companionRouter);
   app.use("/api/arcade", arcadeRouter);
   app.use("/api/hobby", hobbyRouter);
+  app.use("/api/watch", watchRouter);
 
   app.use(notFound);
   app.use(errorHandler); // must be last

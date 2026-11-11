@@ -13,6 +13,8 @@ everyone on your network (family, roommates, classmates).
   Odd Emoji Out) with high scores and live leaderboards for everyone on your Nook.
 - ✨ **Free-time Companion**: an AI buddy that suggests songs and tips from Nook, in English or Vietnamese.
   It runs **on your PC** (Ollama), so your chats never leave your network. Optional.
+- 📺 **WatchList**: search TV shows and anime (TVmaze and MyAnimeList, free), keep your list with stars and
+  notes, and see what everyone on Nook is watching.
 - 💬 **Hobby Hub**: groups for what you love (Gaming, Cooking, Books…, or start your own), each with posts,
   comments, likes and a live chat.
 - 👥 **Together, live**: see who's online and what others are doing, as it happens. No sign-up: you just
@@ -258,5 +260,6 @@ stage-1-static/        Stage 1: the plain HTML/CSS/JS version
 9. Local AI — Ollama, embeddings in pgvector, streamed answers ✅ · [docs](docs/stage-9.md)
 10. Games in the browser — Mini Arcade (canvas, game loop, high scores); better music player ✅ · [docs](docs/stage-10.md)
 11. Community — Hobby Hub (groups, posts, live chat); names instead of accounts; keeping data only for a while ✅ · [docs](docs/stage-11.md)
+12. Other websites' data — WatchList (TVmaze + Jikan, caching, fallbacks); song upload fixes ✅ · [docs](docs/stage-12.md)
 
 Credits and licences: [CREDITS.md](CREDITS.md)

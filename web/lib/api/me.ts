@@ -14,7 +14,7 @@ export type MyData = {
   lastSeenAt: string;
   keptForDays: number;
   chatKeptForDays: number;
-  counts: Record<"focusSessions" | "badges" | "gameScores" | "songsAdded" | "songLikes" | "posts" | "comments" | "chatMessages", number>;
+  counts: Record<"focusSessions" | "badges" | "gameScores" | "songsAdded" | "songLikes" | "posts" | "comments" | "chatMessages" | "watchList", number>;
 };
 
 // X-Client-Id lets the API make what this browser did as a guest yours.
