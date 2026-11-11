@@ -1,6 +1,6 @@
 # Nook: notes for Claude
 
-Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–13).
+Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–14).
 
 ## The project
 
@@ -13,7 +13,9 @@ Read this first in every session. It carries the context from the sessions that 
   7 Docker Compose + Caddy · 8 GitHub Actions + OpenTelemetry/Grafana · 9 local AI with Ollama ·
   10 Mini Arcade (canvas games, high scores) + music player controls · 11 Hobby Hub, names instead of accounts, data retention ·
   12 WatchList (TVmaze + Jikan, no keys) + song upload fixes (Next proxy 10 MB body limit, UTF-8 file names) ·
-  13 Habit & Reading Tracker (calendar days in the user's time zone, reminder job every minute, offline queue, PWA).
+  13 Habit & Reading Tracker (calendar days in the user's time zone, reminder job every minute, offline queue, PWA) ·
+  14 Arcade Online: Quiz Party (server-run game state machine in memory, Socket.IO rooms `ao:<code>`, results in DB).
+  Every app in the plan is now live; what's left in the plan is weeks 51–52: portfolio polish (README, CREDITS, case studies).
   Each stage has an explainer in `docs/stage-N.md`; write one for every new stage and update the README's stage list.
 - Apps: **Chill Corner** (focus timer, generated sounds, tips, achievements), **Music** (uploaded songs
   stored and streamed by Nook, auto genre, charts, queue/shuffle/repeat/volume), **Mini Arcade** (6 games in
@@ -21,7 +23,7 @@ Read this first in every session. It carries the context from the sessions that 
   (Ollama + pgvector RAG, SSE streaming). **Hobby Hub** (groups, posts, comments, likes, live chat via Socket.IO rooms `group:<slug>`).
   **WatchList** (`api/src/watch/sources.ts`; tests use `tests/fake-watch.ts` on port 4995).
   **Habit & Reading Tracker** (`/habits`: days are `date` strings in X-Time-Zone; `web/lib/offline.ts` queue; `public/sw.js`).
-  Planned ("soon" in `web/lib/apps.ts`): Arcade Online.
+  **Arcade Online** (`api/src/arcade-online/`: game.ts has no network code; tests use a fake clock).
 - Phone tab bar: Home + apps with `pinned: true` + an "Apps" grid. Don't pin more than 3–4.
 - People (Stage 11): **name only, one browser** (owner's choice): no email/password, no login page. `POST /api/me {name}`
   sets the `nook_session` cookie; names unique by lower(name). Guests (X-Client-Id) still work until they pick a name.

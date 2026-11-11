@@ -13,6 +13,8 @@ everyone on your network (family, roommates, classmates).
   Odd Emoji Out) with high scores and live leaderboards for everyone on your Nook.
 - ✨ **Free-time Companion**: an AI buddy that suggests songs and tips from Nook, in English or Vietnamese.
   It runs **on your PC** (Ollama), so your chats never leave your network. Optional.
+- 🎉 **Arcade Online**: Quiz Party, a live quiz for up to 8 people on Nook. The server runs the game, so
+  nobody can cheat; a leaderboard of wins.
 - 📺 **WatchList**: search TV shows and anime (TVmaze and MyAnimeList, free), keep your list with stars and
   notes, and see what everyone on Nook is watching.
 - ✅ **Habit & Reading Tracker**: daily habits with streaks and reminders, books with pages read, charts,
@@ -264,5 +266,6 @@ stage-1-static/        Stage 1: the plain HTML/CSS/JS version
 11. Community — Hobby Hub (groups, posts, live chat); names instead of accounts; keeping data only for a while ✅ · [docs](docs/stage-11.md)
 12. Other websites' data — WatchList (TVmaze + Jikan, caching, fallbacks); song upload fixes ✅ · [docs](docs/stage-12.md)
 13. Every day, even offline — Habit & Reading Tracker (time zones, a reminder job, offline queue, service worker) ✅ · [docs](docs/stage-13.md)
+14. Multiplayer — Arcade Online: Quiz Party, a game the server runs (rooms, state machine, fair play) ✅ · [docs](docs/stage-14.md)
 
 Credits and licences: [CREDITS.md](CREDITS.md)

@@ -10,7 +10,7 @@
 import { and, isNull, like, lt, notExists, sql } from "drizzle-orm";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
-import { achievements, authSessions, chatMessages, focusSessions, gameScores, songLikes, songPlays, users, watchEntries, watchTitles } from "../db/schema.js";
+import { achievements, authSessions, chatMessages, focusSessions, gameScores, songLikes, songPlays, users, watchEntries, watchTitles, onlineGames, onlineGamePlayers } from "../db/schema.js";
 import { deletePerson } from "../people.js";
 import { broadcast } from "../realtime/emit.js";
 
@@ -52,6 +52,10 @@ export async function cleanup(now = new Date()) {
     .delete(watchTitles)
     .where(notExists(db.select({ one: sql`1` }).from(watchEntries).where(sql`watch_entries.title_id = watch_titles.id`)))
     .returning({ id: watchTitles.id });
+  // Stage 14: Quiz Party games whose players have all been deleted
+  await db
+    .delete(onlineGames)
+    .where(notExists(db.select({ one: sql`1` }).from(onlineGamePlayers).where(sql`online_game_players.game_id = online_games.id`)));
 
   if (inactive.length) broadcast("people:changed");
   return {

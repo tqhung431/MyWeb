@@ -13,6 +13,7 @@ import { errorHandler, notFound } from "./middleware/errors.js";
 import { sameOrigin } from "./middleware/security.js";
 import { achievementsRouter } from "./routes/achievements.js";
 import { arcadeRouter } from "./routes/arcade.js";
+import { arcadeOnlineRouter } from "./routes/arcadeOnline.js";
 import { activityRouter } from "./routes/activity.js";
 import { companionRouter } from "./routes/companion.js";
 import { booksRouter, habitsRouter } from "./routes/habits.js";
@@ -54,6 +55,7 @@ export function createApp() {
   app.use("/api/songs", musicRouter);
   app.use("/api/companion", companionRouter);
   app.use("/api/arcade", arcadeRouter);
+  app.use("/api/arcade-online", arcadeOnlineRouter);
   app.use("/api/hobby", hobbyRouter);
   app.use("/api/watch", watchRouter);
   app.use("/api/habits", habitsRouter);

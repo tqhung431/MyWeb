@@ -424,6 +424,34 @@ export const readingLog = pgTable(
   (t) => [primaryKey({ columns: [t.bookId, t.day] }), index("reading_log_user_day_idx").on(t.userId, t.day)],
 );
 
+// --- Stage 14: Arcade Online (Quiz Party) results -------------------------------------------
+// Games are played in the API's memory; when one ends, its result is saved here for the leaderboard.
+
+export const onlineGames = pgTable("online_games", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull(),
+  category: text("category").notNull(),
+  rounds: integer("rounds").notNull(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const onlineGamePlayers = pgTable(
+  "online_game_players",
+  {
+    gameId: integer("game_id")
+      .notNull()
+      .references(() => onlineGames.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    score: integer("score").notNull(),
+    correct: integer("correct").notNull(),
+    place: integer("place").notNull(), // 1 = won
+    players: integer("players").notNull(), // how many played (a win against 3 people means more)
+  },
+  (t) => [primaryKey({ columns: [t.gameId, t.userId] }), index("online_game_players_user_idx").on(t.userId)],
+);
+
 export type Preferences = { timer?: { focus: number; short: number; long: number } };
 export type Song = typeof songs.$inferSelect;
 export type Tip = typeof tips.$inferSelect;

@@ -116,12 +116,17 @@ export const APPS: AppInfo[] = [
   {
     id: "arcade-online",
     name: "Arcade Online",
-    tagline: "Real-time multiplayer games",
+    shortName: "Quiz",
+    tagline: "Quiz Party: play live against everyone on Nook",
     href: "/arcade-online",
     icon: Swords,
     accent: "from-rose-400 to-red-500",
-    status: "soon",
-    phase: "Phase 4",
+    status: "live",
+    phase: "Stage 14",
+    links: [
+      { href: "/arcade-online", label: "Play" },
+      { href: "/arcade-online/leaderboard", label: "Leaderboard" },
+    ],
   },
   {
     id: "companion",

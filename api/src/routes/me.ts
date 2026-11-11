@@ -15,7 +15,7 @@ import { z } from "zod";
 import { claimGuestData, COOKIE_NAME, endSession, publicUser, refreshCachedSession, startSession } from "../auth/sessions.js";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
-import { achievements, chatMessages, focusSessions, gameScores, postComments, posts, songLikes, songs, users, watchEntries, habits, books } from "../db/schema.js";
+import { achievements, chatMessages, focusSessions, gameScores, postComments, posts, songLikes, songs, users, watchEntries, habits, books, onlineGamePlayers } from "../db/schema.js";
 import { enqueue } from "../jobs/queue.js";
 import { deletePerson } from "../people.js";
 import { requireUser } from "../middleware/auth.js";
@@ -122,6 +122,7 @@ meRouter.get("/data", requireUser, async (req, res) => {
       watchList: await n(db.select({ n: count() }).from(watchEntries).where(eq(watchEntries.userId, id))),
       habits: await n(db.select({ n: count() }).from(habits).where(eq(habits.userId, id))),
       books: await n(db.select({ n: count() }).from(books).where(eq(books.userId, id))),
+      quizGames: await n(db.select({ n: count() }).from(onlineGamePlayers).where(eq(onlineGamePlayers.userId, id))),
     },
   });
 });

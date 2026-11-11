@@ -20,6 +20,7 @@ import { config } from "../config.js";
 import { liveConnections } from "../metrics.js";
 import { isAllowedOrigin } from "../middleware/security.js";
 import { waitForValkey } from "../valkey/client.js";
+import { attachArcadeOnline, setArcadeServer } from "../arcade-online/rooms.js";
 import { CHANNEL_KEY, groupRoom, ownerRoom, recentActivity, setRealtimeServer, type Owner } from "./emit.js";
 
 export type Presence = { online: number; focusing: number };
@@ -108,6 +109,9 @@ export async function attachRealtime(http: HttpServer): Promise<Server> {
       socket.to(room).emit("hobby:typing", { slug: parsed.data!.slug, name: data.name });
     });
 
+    // Stage 14: Quiz Party (Arcade Online)
+    attachArcadeOnline(socket);
+
     liveConnections.add(1);
     socket.on("disconnect", () => {
       liveConnections.add(-1);
@@ -116,6 +120,7 @@ export async function attachRealtime(http: HttpServer): Promise<Server> {
   });
 
   setRealtimeServer(io);
+  setArcadeServer(io);
   return io;
 }
 
