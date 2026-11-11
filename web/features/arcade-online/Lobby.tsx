@@ -79,7 +79,7 @@ export function Lobby() {
               size="md"
               buttonClassName="bg-white/20 text-white backdrop-blur focus-visible:ring-white"
             />
-            <Button size="md" className="bg-white text-slate-900 hover:bg-white/90" onClick={() => go("ao:create", { category })} disabled={!connected || busy}>
+            <Button variant="light" size="md" onClick={() => go("ao:create", { category })} disabled={!connected || busy}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />} Start a room
             </Button>
           </div>

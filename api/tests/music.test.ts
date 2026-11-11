@@ -192,6 +192,25 @@ describe("charts", () => {
   });
 });
 
+describe("big libraries (Stage 18 fix)", () => {
+  it("lists every song in pages, not just the first 50, and can search", async () => {
+    await pool.query(
+      `insert into songs (file_name, sha256, mime_type, size_bytes, title, artist, genre, license)
+       select 'f' || i || '.mp3', 'sha' || i, 'audio/mpeg', 1000, 'Song ' || i, case when i % 10 = 0 then 'Mai Lan' else 'Someone' end, 'pop', 'Own work'
+       from generate_series(1, 130) as i`,
+    );
+    const first = await request(app).get("/api/songs?period=all&limit=100");
+    expect(first.body).toHaveLength(100);
+    expect(first.headers["x-total-count"]).toBe(String(130 + (await pool.query("select count(*)::int - 130 as n from songs")).rows[0].n));
+    const rest = await request(app).get("/api/songs?period=all&limit=100&offset=100");
+    const ids = new Set([...first.body, ...rest.body].map((s: { id: number }) => s.id));
+    expect(ids.size).toBe(first.body.length + rest.body.length); // no song twice
+    const found = await request(app).get("/api/songs?period=all&q=mai%20lan");
+    expect(found.body).toHaveLength(13);
+    expect((await request(app).get("/api/songs?q=100%25")).body).toHaveLength(0); // % is not a wildcard
+  });
+});
+
 describe("timer preferences (signed in)", () => {
   it("saves timer lengths to the account and checks them", async () => {
     const browser = request.agent(app);

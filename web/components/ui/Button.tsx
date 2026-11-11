@@ -10,6 +10,7 @@ const variants = {
   secondary: "border border-border bg-surface-strong/70 text-text hover:bg-surface-muted",
   ghost: "text-muted hover:bg-surface-muted hover:text-text",
   danger: "bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700", // Stage 15: delete for good
+  light: "bg-white text-slate-900 shadow-lg hover:bg-white/90", // Stage 18: on a coloured banner, in any theme
 } as const;
 
 const sizes = {

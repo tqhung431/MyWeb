@@ -14,7 +14,7 @@
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { and, eq, gte, sql } from "drizzle-orm";
+import { and, eq, gte, ilike, or, sql } from "drizzle-orm";
 import { Router, type Request } from "express";
 import multer from "multer";
 import { z } from "zod";
@@ -65,10 +65,14 @@ export function publicSong(song: Song) {
 const chartQuery = z.object({
   period: z.enum(["week", "month", "all"]).default("week"),
   genre: z.enum(["all", ...GENRES]).default("all"),
+  // Stage 18 fix: the chart used to stop at 50 songs. Now it comes in pages, and can be searched.
+  q: z.string().trim().max(80).optional(),
+  limit: z.coerce.number().int().min(1).max(500).default(100),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 musicRouter.get("/", async (req, res) => {
-  const { period, genre } = chartQuery.parse(req.query);
+  const { period, genre, q, limit, offset } = chartQuery.parse(req.query);
   const me = ownerKey(req, false);
   const span = PERIODS[period];
   const since = span ? new Date(Date.now() - span) : new Date(0);
@@ -104,9 +108,25 @@ musicRouter.get("/", async (req, res) => {
     .leftJoin(plays, eq(plays.songId, songs.id))
     .leftJoin(likes, eq(likes.songId, songs.id))
     .leftJoin(totalLikes, eq(totalLikes.songId, songs.id))
-    .where(genre === "all" ? undefined : eq(songs.genre, genre))
-    .orderBy(sql`${score} desc`, sql`${songs.createdAt} desc`)
-    .limit(50);
+    .where(
+      and(
+        genre === "all" ? undefined : eq(songs.genre, genre),
+        q ? or(ilike(songs.title, `%${likeSafe(q)}%`), ilike(songs.artist, `%${likeSafe(q)}%`)) : undefined,
+      ),
+    )
+    .orderBy(sql`${score} desc`, sql`${songs.createdAt} desc`, sql`${songs.id} desc`)
+    .limit(limit)
+    .offset(offset);
+  const [{ total }] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(songs)
+    .where(
+      and(
+        genre === "all" ? undefined : eq(songs.genre, genre),
+        q ? or(ilike(songs.title, `%${likeSafe(q)}%`), ilike(songs.artist, `%${likeSafe(q)}%`)) : undefined,
+      ),
+    );
+  res.set("X-Total-Count", String(total));
 
   res.json(
     rows.map((r) => ({
@@ -119,6 +139,9 @@ musicRouter.get("/", async (req, res) => {
     })),
   );
 });
+
+// % and _ are wildcards in LIKE: a search for "100%" should find "100%", not everything
+const likeSafe = (text: string) => text.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 function isAddedBy(song: Song, who: string) {
   return who === (song.addedByUserId ? `user:${song.addedByUserId}` : `client:${song.addedByClientId}`);
