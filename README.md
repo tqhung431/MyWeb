@@ -36,7 +36,6 @@ Then, in a terminal (on Windows: PowerShell):
 ```bash
 git clone https://github.com/tqhung431/Nook.git
 cd Nook
-git checkout claude/zealous-hopper-b0w8ms   # the branch with the latest stage (skip once it's merged into main)
 
 cp .env.example .env                        # Windows PowerShell: copy .env.example .env
 # Open .env in a text editor and set POSTGRES_PASSWORD (do this before the first start).
