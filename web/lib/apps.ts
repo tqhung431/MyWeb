@@ -79,12 +79,13 @@ export const APPS: AppInfo[] = [
   {
     id: "hobby-hub",
     name: "Hobby Hub",
-    tagline: "Post and chat in hobby groups",
+    shortName: "Hobbies",
+    tagline: "Post and chat in hobby groups, live",
     href: "/hobby-hub",
     icon: Users,
     accent: "from-emerald-400 to-teal-500",
-    status: "soon",
-    phase: "Phase 3",
+    status: "live",
+    phase: "Stage 11",
   },
   {
     id: "habits",

@@ -1,6 +1,6 @@
 # Nook: notes for Claude
 
-Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–10).
+Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–11).
 
 ## The project
 
@@ -11,12 +11,17 @@ Read this first in every session. It carries the context from the sessions that 
 - Work goes stage by stage. Done: 1 static page · 2 Next.js · 3 API + PostgreSQL · 3.5 frontend review and
   design system · 4 guests-first accounts, LAN access · 5 Valkey cache/queue/worker · 6 Socket.IO real time ·
   7 Docker Compose + Caddy · 8 GitHub Actions + OpenTelemetry/Grafana · 9 local AI with Ollama ·
-  10 Mini Arcade (canvas games, high scores) + music player controls.
+  10 Mini Arcade (canvas games, high scores) + music player controls · 11 Hobby Hub, names instead of accounts, data retention.
   Each stage has an explainer in `docs/stage-N.md`; write one for every new stage and update the README's stage list.
 - Apps: **Chill Corner** (focus timer, generated sounds, tips, achievements), **Music** (uploaded songs
   stored and streamed by Nook, auto genre, charts, queue/shuffle/repeat/volume), **Mini Arcade** (6 games in
   `web/features/arcade/games`, rules in `logic/` with tests, scores in `game_scores`), **Free-time Companion**
-  (Ollama + pgvector RAG, SSE streaming). Planned ("soon" in `web/lib/apps.ts`): WatchList, Hobby Hub, Habit & Reading Tracker, Arcade Online.
+  (Ollama + pgvector RAG, SSE streaming). **Hobby Hub** (groups, posts, comments, likes, live chat via Socket.IO rooms `group:<slug>`).
+  Planned ("soon" in `web/lib/apps.ts`): WatchList, Habit & Reading Tracker, Arcade Online.
+- People (Stage 11): **name only, one browser** (owner's choice): no email/password, no login page. `POST /api/me {name}`
+  sets the `nook_session` cookie; names unique by lower(name). Guests (X-Client-Id) still work until they pick a name.
+  Data retention (owner's choice: "store data but not for too long"): worker job `cleanup` daily deletes people unseen for
+  `DATA_RETENTION_DAYS` (90) with cascade, chat after `CHAT_RETENTION_DAYS` (30). New user-linked tables need `onDelete: cascade`.
 
 ## Working with the owner
 

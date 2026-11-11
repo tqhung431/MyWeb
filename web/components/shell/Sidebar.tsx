@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { Badge } from "@/components/ui/Badge";
-import { UserMenu } from "@/features/auth/UserMenu";
+import { UserMenu } from "@/features/me/UserMenu";
 import { ThemeSwitcher } from "@/features/theme/ThemeSwitcher";
 import { LivePill } from "@/features/realtime/LiveNow";
 import { APPS, isActive } from "@/lib/apps";

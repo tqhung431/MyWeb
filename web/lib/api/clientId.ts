@@ -1,5 +1,5 @@
 // A random id for this browser (a "guest"), kept in localStorage.
-// Each PC or browser is its own guest. Signing in moves the guest's history into the account.
+// Each PC or browser is its own guest. Picking a name makes the guest's history yours.
 
 const KEY = "clientId";
 let memoryId: string | null = null; // used when storage is blocked

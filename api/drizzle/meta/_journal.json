@@ -64,6 +64,20 @@
       "when": 1794398789850,
       "tag": "0008_arcade_scores",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794404278959,
+      "tag": "0009_names_only",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794404304277,
+      "tag": "0010_hobby_hub",
+      "breakpoints": true
     }
   ]
 }

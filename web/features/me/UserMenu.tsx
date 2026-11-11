@@ -1,31 +1,37 @@
 "use client";
 
-// Signed in: your initials and name, linking to /account.
-// Guest: a small card saying everything works without an account, with an optional sign-in link.
+// You, in the sidebar and the phone header: your name linking to /account ("You"),
+// or a "Pick a name" button if you haven't yet.
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/cn";
-import { useAuth } from "./AuthProvider";
+import { useMe } from "./MeProvider";
 
 export function UserMenu({ compact = false }: { compact?: boolean }) {
-  const { user } = useAuth();
+  const { user, askName } = useMe();
   const pathname = usePathname();
-  const next = pathname === "/login" || pathname === "/register" ? "/" : pathname;
-  const signInHref = `/login?next=${encodeURIComponent(next)}`;
 
   if (compact) {
     // Phone header: a small round button
     return user ? (
-      <Link href="/account" aria-label={`Account: ${user.name}`} className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+      <Link
+        href="/account"
+        aria-label={`You: ${user.name}`}
+        className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
         <Avatar name={user.name} size="sm" />
       </Link>
     ) : (
-      <Link href={signInHref} className="flex items-center gap-2 rounded-full py-1 pr-1 pl-3 text-xs font-semibold text-muted hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-        Guest
+      <button
+        type="button"
+        onClick={askName}
+        className="flex cursor-pointer items-center gap-2 rounded-full py-1 pr-1 pl-3 text-xs font-semibold text-muted hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        Pick a name
         <Avatar size="sm" />
-      </Link>
+      </button>
     );
   }
 
@@ -35,9 +41,9 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
         <Avatar />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">Guest</p>
-          <Link href={signInHref} className="text-xs font-semibold text-primary hover:underline">
-            Sign in to sync (optional)
-          </Link>
+          <button type="button" onClick={askName} className="cursor-pointer text-xs font-semibold text-primary hover:underline">
+            Pick a name
+          </button>
         </div>
       </div>
     );
@@ -55,7 +61,7 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
       <Avatar name={user.name} />
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold">{user.name}</span>
-        <span className="block truncate text-xs text-muted">{user.email}</span>
+        <span className="block truncate text-xs text-muted">You · your data</span>
       </span>
     </Link>
   );

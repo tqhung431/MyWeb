@@ -16,7 +16,7 @@ import { valkey } from "../src/valkey/client.js";
 import { closeAll, resetDatabase } from "./helpers.js";
 
 const app = createApp();
-const alice = { email: "alice@example.com", password: "correct horse battery", name: "Alice" };
+const alice = { name: "Alice" };
 
 beforeEach(resetDatabase);
 afterAll(closeAll);
@@ -44,25 +44,25 @@ describe("cache (tips)", () => {
   });
 });
 
-describe("cached sign-in lookups", () => {
-  it("stops working right after sign-out, even though it was cached", async () => {
-    const res = await request(app).post("/api/auth/register").send(alice);
+describe("cached session lookups", () => {
+  it("stop working right after you delete yourself, even though they were cached", async () => {
+    const res = await request(app).post("/api/me").send(alice);
     const cookie = ([] as string[]).concat(res.headers["set-cookie"])[0].split(";")[0];
 
-    await request(app).get("/api/auth/me").set("Cookie", cookie); // now cached in Valkey
+    await request(app).get("/api/me").set("Cookie", cookie); // now cached in Valkey
     expect(await valkey.keys("auth:session:*")).toHaveLength(1);
 
-    await request(app).post("/api/auth/logout").set("Cookie", cookie);
+    await request(app).delete("/api/me").set("Cookie", cookie);
     expect(await valkey.keys("auth:session:*")).toHaveLength(0);
-    expect((await request(app).get("/api/auth/me").set("Cookie", cookie)).body.user).toBeNull();
+    expect((await request(app).get("/api/me").set("Cookie", cookie)).body.user).toBeNull();
   });
 });
 
 describe("shared rate-limit counters", () => {
   it("are stored in Valkey, so every API server sees the same count", async () => {
-    await request(app).post("/api/auth/login").send({ email: "x@example.com", password: "whatever1" });
-    const keys = await valkey.keys("ratelimit:auth-email:*");
-    expect(keys).toEqual(["ratelimit:auth-email:email:x@example.com"]);
+    await request(app).post("/api/me").send({ name: "Linh" });
+    const keys = await valkey.keys("ratelimit:name-all:*");
+    expect(keys).toEqual(["ratelimit:name-all:all"]);
     expect(await valkey.get(keys[0])).toBe("1");
     expect(await valkey.pttl(keys[0])).toBeGreaterThan(0); // the window expires by itself
   });
@@ -100,18 +100,12 @@ describe("job queue + worker", () => {
     expect(earned.find((a: { code: string }) => a.code === "first-focus").earnedAt).not.toBeNull();
   });
 
-  it("queues a welcome email and a badge check on sign-up", async () => {
-    await request(app).post("/api/auth/register").send(alice);
+  it("queues a badge check when you pick a name", async () => {
+    await request(app).post("/api/me").send(alice);
     const queue = new Queue(config.QUEUE_NAME, { connection: new Redis(config.VALKEY_URL, { maxRetriesPerRequest: null }) });
     const names = (await queue.getWaiting()).map((j) => j.name).sort();
-    expect(names).toEqual(["achievements", "welcome-email"]);
+    expect(names).toEqual(["achievements"]);
     await queue.close();
-  });
-
-  it("builds the welcome email (printed instead of sent when there's no SMTP server)", async () => {
-    const res = await request(app).post("/api/auth/register").send(alice);
-    const result = await processJob("welcome-email", { userId: res.body.user.id });
-    expect(result).toHaveProperty("messageId");
   });
 
   it("moves guest badges into the account: the account is re-checked from the merged history", async () => {
@@ -120,7 +114,7 @@ describe("job queue + worker", () => {
     await processJob("achievements", { userId: null, clientId, timeZone: "UTC" });
 
     const browser = request.agent(app);
-    const reg = await browser.post("/api/auth/register").set("X-Client-Id", clientId).send(alice);
+    const reg = await browser.post("/api/me").set("X-Client-Id", clientId).send(alice);
     await processJob("achievements", { userId: reg.body.user.id, clientId: null, timeZone: "UTC" });
 
     const mine = (await browser.get("/api/achievements")).body;

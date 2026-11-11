@@ -20,13 +20,15 @@ import { config } from "../config.js";
 import { liveConnections } from "../metrics.js";
 import { isAllowedOrigin } from "../middleware/security.js";
 import { waitForValkey } from "../valkey/client.js";
-import { CHANNEL_KEY, ownerRoom, recentActivity, setRealtimeServer, type Owner } from "./emit.js";
+import { CHANNEL_KEY, groupRoom, ownerRoom, recentActivity, setRealtimeServer, type Owner } from "./emit.js";
 
 export type Presence = { online: number; focusing: number };
 
 type SocketData = Owner & { name: string | null; focusing: boolean };
 
 const focusState = z.object({ running: z.boolean(), mode: z.enum(["focus", "short", "long"]) });
+// Stage 11: Hobby Hub rooms. A slug is lowercase letters, numbers and dashes.
+const groupSlug = z.object({ slug: z.string().regex(/^[a-z0-9-]{1,48}$/) });
 
 export async function attachRealtime(http: HttpServer): Promise<Server> {
   const io = new Server(http, {
@@ -87,6 +89,23 @@ export async function attachRealtime(http: HttpServer): Promise<Server> {
       if (!parsed.success) return;
       data.focusing = parsed.data.running && parsed.data.mode === "focus";
       schedulePresence();
+    });
+
+    // Stage 11: a group's page is open → get its chat and board updates. Reading is open to everyone.
+    socket.on("hobby:join", (raw: unknown) => {
+      const parsed = groupSlug.safeParse(raw);
+      if (parsed.success) void socket.join(groupRoom(parsed.data.slug));
+    });
+    socket.on("hobby:leave", (raw: unknown) => {
+      const parsed = groupSlug.safeParse(raw);
+      if (parsed.success) void socket.leave(groupRoom(parsed.data.slug));
+    });
+    // "Linh is typing…": passed on to the others in the room, never stored. Only people with a name.
+    socket.on("hobby:typing", (raw: unknown) => {
+      const parsed = groupSlug.safeParse(raw);
+      const room = parsed.success ? groupRoom(parsed.data.slug) : null;
+      if (!room || !data.name || !socket.rooms.has(room)) return;
+      socket.to(room).emit("hobby:typing", { slug: parsed.data!.slug, name: data.name });
     });
 
     liveConnections.add(1);

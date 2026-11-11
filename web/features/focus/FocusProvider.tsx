@@ -6,10 +6,10 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { chime } from "@/features/ambient/engine";
 import { useAchievements } from "@/features/achievements/AchievementsProvider";
-import { useAuth } from "@/features/auth/AuthProvider";
+import { useMe } from "@/features/me/MeProvider";
 import { useRealtime } from "@/features/realtime/RealtimeProvider";
 import type { Mode, Summary } from "@/lib/api/sessions";
-import { savePreferences } from "@/lib/api/auth";
+import { savePreferences } from "@/lib/api/me";
 import { cleanDurations, DEFAULT_DURATIONS, formatTime, type Durations } from "./logic";
 import { useCountdown } from "./useCountdown";
 import { useSessions, type SessionsStatus } from "./useSessions";
@@ -50,11 +50,11 @@ function readLocalDurations(): Durations | null {
 export function FocusProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<Mode>("focus");
   const [finished, setFinished] = useState(false);
-  const { user } = useAuth();
+  const { user } = useMe();
   const { summary, status, record } = useSessions(user?.id ?? null);
   const { checkSoon } = useAchievements();
 
-  // Stage 7: your own lengths (minutes). Saved in this browser, and in your account when signed in.
+  // Stage 7: your own lengths (minutes). Saved in this browser, and with your name once you picked one.
   const [durations, setDurationsState] = useState<Durations>(DEFAULT_DURATIONS);
   const ms = useCallback((m: Mode) => durations[m] * 60 * 1000, [durations]);
 
@@ -88,7 +88,7 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     [idle, mode, set],
   );
 
-  // Load saved lengths: from your account when signed in, else from this browser.
+  // Load saved lengths: saved with your name, else from this browser.
   // (Runs when someone signs in or out, or their saved lengths change on another device.)
   const accountTimer = user?.preferences?.timer;
   const savedKey = accountTimer ? `${accountTimer.focus}/${accountTimer.short}/${accountTimer.long}` : `local:${user?.id ?? ""}`;

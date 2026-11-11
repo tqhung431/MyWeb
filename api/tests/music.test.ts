@@ -169,10 +169,10 @@ describe("charts", () => {
 describe("timer preferences (signed in)", () => {
   it("saves timer lengths to the account and checks them", async () => {
     const browser = request.agent(app);
-    await browser.post("/api/auth/register").send({ name: "Linh", email: "linh@example.com", password: "quiet library hours" });
+    await browser.post("/api/me").send({ name: "Linh" });
     const saved = await browser.put("/api/me/preferences").send({ timer: { focus: 50, short: 10, long: 30 } });
     expect(saved.body.user.preferences).toEqual({ timer: { focus: 50, short: 10, long: 30 } });
-    expect((await browser.get("/api/auth/me")).body.user.preferences.timer.focus).toBe(50);
+    expect((await browser.get("/api/me")).body.user.preferences.timer.focus).toBe(50);
     expect((await browser.put("/api/me/preferences").send({ timer: { focus: 500, short: 0, long: 30 } })).status).toBe(400);
   });
 });

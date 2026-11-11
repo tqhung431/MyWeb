@@ -10,7 +10,7 @@ import { pool } from "./db/client.js";
 import { processJob } from "./jobs/handlers.js";
 import { jobDuration, jobsDone } from "./metrics.js";
 import { aiEnabled } from "./ai/ollama.js";
-import { enqueue } from "./jobs/queue.js";
+import { enqueue, scheduleCleanup } from "./jobs/queue.js";
 import type { JobName } from "./jobs/queue.js";
 
 // A worker waits for jobs with a long blocking command, so it must never give up retrying:
@@ -27,6 +27,8 @@ worker.on("ready", () => {
   console.log(`Worker ready, waiting for jobs on queue "${config.QUEUE_NAME}"`);
   // Stage 9: on start, make sure the Companion knows every tip and song (unchanged ones are skipped)
   if (aiEnabled()) void enqueue("reindex", {});
+  // Stage 11: delete old data now, then once a day (the schedule's first run is right away)
+  void scheduleCleanup();
 });
 worker.on("completed", (job, result) => {
   jobsDone.add(1, { job_name: job.name, status: "completed" });

@@ -8,7 +8,7 @@
 #
 #   docker compose up -d --build              start (or update) what COMPOSE_PROFILES says
 #   docker compose down                       stop (your data stays in the volumes)
-#   docker compose up -d db valkey mailpit    only the services `npm run dev` needs (developers)
+#   docker compose up -d db valkey            only the services `npm run dev` needs (developers)
 #
 # With "app", open https://localhost on this PC, or http://<this PC's IP> on other PCs.
 
@@ -59,14 +59,6 @@ services:
       retries: 10
     restart: unless-stopped
 
-  # A pretend mail server: emails land in the web inbox at http://localhost:8025
-  mailpit:
-    image: axllent/mailpit:latest
-    ports:
-      - "127.0.0.1:1025:1025"
-      - "127.0.0.1:8025:8025"
-    restart: unless-stopped
-
   # --- The app (profile "app") ------------------------------------------------------
 
   api:
@@ -83,8 +75,9 @@ services:
       HOST: 0.0.0.0 # inside Docker's private network; only Caddy can reach it
       PORT: "4000"
       TRUST_PROXY: "1" # Caddy is one trusted hop in front: real visitor IPs, HTTPS detection
-      SMTP_URL: ${SMTP_URL:-smtp://mailpit:1025}
-      MAIL_FROM: ${MAIL_FROM:-Nook <hello@nook.local>}
+      # Stage 11: how long Nook keeps data (days). See .env.example.
+      DATA_RETENTION_DAYS: ${DATA_RETENTION_DAYS:-90}
+      CHAT_RETENTION_DAYS: ${CHAT_RETENTION_DAYS:-30}
       MEDIA_DIR: /app/media
       # Stage 9: where Ollama is. Without the ai profile it isn't running, and the Companion says so.
       # Set OLLAMA_URL= (empty) in .env to switch the AI off completely.

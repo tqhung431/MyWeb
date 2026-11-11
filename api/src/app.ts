@@ -14,8 +14,8 @@ import { sameOrigin } from "./middleware/security.js";
 import { achievementsRouter } from "./routes/achievements.js";
 import { arcadeRouter } from "./routes/arcade.js";
 import { activityRouter } from "./routes/activity.js";
-import { authRouter } from "./routes/auth.js";
 import { companionRouter } from "./routes/companion.js";
+import { hobbyRouter } from "./routes/hobby.js";
 import { meRouter } from "./routes/me.js";
 import { musicRouter } from "./routes/music.js";
 import { sessionsRouter } from "./routes/sessions.js";
@@ -44,7 +44,6 @@ export function createApp() {
     res.json({ ok: true, database: "up", valkey: valkeyUp ? "up" : "down (running without cache)" });
   });
 
-  app.use("/api/auth", authRouter);
   app.use("/api/tips", tipsRouter);
   app.use("/api/sessions", sessionsRouter);
   app.use("/api/achievements", achievementsRouter);
@@ -53,6 +52,7 @@ export function createApp() {
   app.use("/api/songs", musicRouter);
   app.use("/api/companion", companionRouter);
   app.use("/api/arcade", arcadeRouter);
+  app.use("/api/hobby", hobbyRouter);
 
   app.use(notFound);
   app.use(errorHandler); // must be last

@@ -5,13 +5,13 @@
 import { Minus, Plus } from "lucide-react";
 import type { Mode } from "@/lib/api/sessions";
 import { cn } from "@/lib/cn";
-import { useAuth } from "@/features/auth/AuthProvider";
+import { useMe } from "@/features/me/MeProvider";
 import { useFocus } from "./FocusProvider";
 import { LIMITS, MODES, PRESETS } from "./logic";
 
 export function TimerSettings() {
   const { durations, setDurations, pendingDurations } = useFocus();
-  const { user } = useAuth();
+  const { user } = useMe();
 
   return (
     <section aria-label="Timer lengths" className="rounded-2xl border border-border bg-surface-muted p-4">
@@ -49,7 +49,7 @@ export function TimerSettings() {
         {pendingDurations
           ? "Your session keeps its length; the new one starts with the next session."
           : user
-            ? "Saved to your account: the same on all your devices."
+            ? "Saved with your name."
             : "Saved on this device."}
       </p>
     </section>

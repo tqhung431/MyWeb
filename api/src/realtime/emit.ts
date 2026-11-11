@@ -62,6 +62,14 @@ export function broadcast(event: string, payload: unknown = {}): void {
   target()?.emit(event, payload);
 }
 
+// Stage 11: a Hobby Hub group's room: the browsers with that group open.
+export const groupRoom = (slug: string) => `group:${slug}`;
+
+// Stage 11: to everyone in one room, e.g. "group:cooking" (the browsers with that group open).
+export function toRoom(room: string, event: string, payload: unknown): void {
+  target()?.to(room).emit(event, payload);
+}
+
 export function notifyOwner(owner: Owner, event: string, payload: unknown): void {
   target()?.to(ownerRoom(owner)).emit(event, payload);
 }
@@ -87,8 +95,7 @@ export async function recentActivity(): Promise<Activity[]> {
   return items.map((i) => JSON.parse(i) as Activity);
 }
 
-// How people appear in the public activity feed: first name only, or "A guest".
+// How people appear in the public activity feed: the name they picked, or "A guest".
 export function displayName(name: string | null | undefined): string {
-  const first = name?.trim().split(/\s+/)[0];
-  return first ? first : "A guest";
+  return name?.trim() || "A guest";
 }

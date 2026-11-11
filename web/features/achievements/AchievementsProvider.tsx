@@ -9,7 +9,7 @@
 
 import { Award, X } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useAuth } from "@/features/auth/AuthProvider";
+import { useMe } from "@/features/me/MeProvider";
 import { useRealtime, useRealtimeEvent } from "@/features/realtime/RealtimeProvider";
 import { getAchievements, type Achievement } from "@/lib/api/achievements";
 import { BadgeIcon } from "./BadgeIcon";
@@ -24,7 +24,7 @@ const AchievementsContext = createContext<AchievementsState | null>(null);
 const RETRIES_MS = [700, 1500, 3000, 6000];
 
 export function AchievementsProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user } = useMe();
   const [list, setList] = useState<Achievement[]>([]);
   const [status, setStatus] = useState<AchievementsState["status"]>("loading");
   const [toasts, setToasts] = useState<Achievement[]>([]);
@@ -65,7 +65,7 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
   }, [load, connected]);
 
   // First load, and again when someone signs in or out (different badges), without pop-ups.
-  // After signing in, the worker re-checks badges from the merged guest + account history while
+  // After you pick a name, the worker re-checks badges from your merged guest history while
   // the WebSocket is reconnecting as the new user; one extra look a moment later catches those.
   const userId = user?.id ?? null;
   useEffect(() => {
