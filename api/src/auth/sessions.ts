@@ -75,7 +75,8 @@ async function forget(id: string): Promise<void> {
 }
 
 // Look up who owns this token. Also renews sessions that are past halfway, so active people stay logged in.
-export async function userFromToken(token: string | undefined, res: Response): Promise<User | null> {
+// res is optional: a WebSocket connection has no HTTP response to renew the cookie on.
+export async function userFromToken(token: string | undefined, res?: Response): Promise<User | null> {
   if (!token) return null;
   const id = hashToken(token);
 
@@ -95,7 +96,7 @@ export async function userFromToken(token: string | undefined, res: Response): P
     const expiresAt = new Date(Date.now() + SESSION_DAYS * DAY);
     await db.update(authSessions).set({ expiresAt }).where(eq(authSessions.id, id));
     await forget(id);
-    res.cookie(COOKIE_NAME, token, { ...cookieOptions, expires: expiresAt });
+    res?.cookie(COOKIE_NAME, token, { ...cookieOptions, expires: expiresAt });
   }
   return row.user;
 }

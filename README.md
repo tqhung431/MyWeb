@@ -3,19 +3,21 @@
 My web programming learning project for 2026. It grows one stage at a time,
 from a static page to a full system (frontend, API, database, real-time, AI).
 
-## Current: Stage 5 — cache, background jobs, more sounds
+## Current: Stage 6 — real-time
 
 MyWeb is a hub of small apps with a sidebar (desktop), a tab bar (phone) and a floating mini player.
-**Chill Corner** has a focus timer, a **mixer with 11 generated music and nature tracks**, a weekly chart,
-**achievements** (awarded by a background worker) and tips. Several people can use it at once from other PCs
-on your network, as guests or with an optional account. **System / Light / Dark** theme switch included.
+**Chill Corner** has a focus timer, a mixer with **21 generated tracks** (music, nature sounds and
+**10 original Vietnamese drill instrumentals**), a weekly chart, achievements and tips.
+Several people can use it at once from other PCs on your network. Everyone sees **who's online and focusing**
+and a **live activity feed**, and badges pop up the instant they're earned.
 
 ```
-Browser ──► Next.js web (:3000) ──► API (:4000) ──► PostgreSQL (:5432)
-            pages + /api/* proxy      │    └──────► Valkey (:6379)  cache · counters · job queue
-                                      └ Worker ◄───────┘            badges · emails
+Browser ──► Next.js web (:3000) ──► API + Socket.IO (:4000) ──► PostgreSQL (:5432)
+            pages + /api/* proxy      │          └───────────► Valkey (:6379)  cache · queue · pub/sub
+                                      └ Worker ◄──────────────────┘            badges · emails · live events
 ```
 
+- Real-time, presence, live feed, Vietnamese drill: [docs/stage-6.md](docs/stage-6.md)
 - Cache, job queue, worker, theme and sound mixer: [docs/stage-5.md](docs/stage-5.md)
 - Using MyWeb from other PCs, guests and accounts: [docs/stage-4.md](docs/stage-4.md)
 - Frontend review, structure and how to add a new app: [docs/stage-3.5.md](docs/stage-3.5.md)
@@ -56,6 +58,7 @@ api/                   Express API (TypeScript)
   src/auth/            password hashing, login sessions
   src/jobs/, worker.ts job queue and the background worker
   src/valkey/          cache and Valkey connection
+  src/realtime/        Socket.IO server and live events
   src/db/              schema, migrations runner, seed data
   drizzle/             generated SQL migrations
   tests/               API tests (Vitest + Supertest)
@@ -72,7 +75,7 @@ docker-compose.yml     PostgreSQL, Valkey and Mailpit for local development
    - 3.5 Frontend review, app shell, design system ✅
 4. Many users — guests first, optional accounts, network access ✅
 5. Cache + queue + worker — Valkey ✅
-6. Real-time — WebSockets
+6. Real-time — Socket.IO, presence, live feed ✅
 7. Packaging — Docker Compose + Caddy
 8. Automation and monitoring — GitHub Actions, OpenTelemetry, Grafana
 9. Local AI (optional) — Ollama

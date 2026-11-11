@@ -11,6 +11,7 @@ import { loadUser } from "./middleware/auth.js";
 import { errorHandler, notFound } from "./middleware/errors.js";
 import { sameOrigin } from "./middleware/security.js";
 import { achievementsRouter } from "./routes/achievements.js";
+import { activityRouter } from "./routes/activity.js";
 import { authRouter } from "./routes/auth.js";
 import { sessionsRouter } from "./routes/sessions.js";
 import { tipsRouter } from "./routes/tips.js";
@@ -42,6 +43,7 @@ export function createApp() {
   app.use("/api/tips", tipsRouter);
   app.use("/api/sessions", sessionsRouter);
   app.use("/api/achievements", achievementsRouter);
+  app.use("/api/activity", activityRouter);
 
   app.use(notFound);
   app.use(errorHandler); // must be last

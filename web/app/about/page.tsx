@@ -4,11 +4,11 @@ import { Card } from "@/components/ui/Card";
 export const metadata: Metadata = { title: "About" };
 
 const CREDITS = [
-  ["Music & sounds", "All 11 tracks (lo-fi beats, piano, music box, rain, forest...) are composed and generated live by our own code with the Web Audio API. No recordings, nothing to license."],
+  ["Music & sounds", "All 21 tracks (lo-fi beats, piano, rain, forest, 10 Vietnamese drill instrumentals...) are composed and generated live by our own code with the Web Audio API. No recordings, nothing to license."],
   ["Icons", "Lucide (ISC licence)"],
   ["Font", "Plus Jakarta Sans (SIL Open Font License), self-hosted by Next.js"],
   ["Framework", "Next.js, React (MIT) · TypeScript (Apache-2.0) · Tailwind CSS (MIT)"],
-  ["API & data", "Express, Zod, Drizzle ORM, node-postgres, cookie-parser, BullMQ, ioredis, Nodemailer · PostgreSQL (PostgreSQL Licence) · Valkey (BSD)"],
+  ["API & data", "Express, Zod, Drizzle ORM, node-postgres, cookie-parser, BullMQ, ioredis, Nodemailer, Socket.IO · PostgreSQL (PostgreSQL Licence) · Valkey (BSD)"],
 ];
 
 export default function AboutPage() {

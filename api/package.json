@@ -16,6 +16,8 @@
     "start:worker": "node dist/worker.js"
   },
   "dependencies": {
+    "@socket.io/redis-adapter": "^8.3.0",
+    "@socket.io/redis-emitter": "^5.1.0",
     "bullmq": "^6.7.3",
     "cookie-parser": "^1.4.7",
     "drizzle-orm": "0.45.4",
@@ -24,6 +26,7 @@
     "ioredis": "^5.11.1",
     "nodemailer": "^10.5.0",
     "pg": "8.23.1",
+    "socket.io": "^4.8.4",
     "zod": "4.6.7"
   },
   "devDependencies": {
@@ -34,6 +37,7 @@
     "@types/pg": "8.23.1",
     "@types/supertest": "^6.0.3",
     "drizzle-kit": "0.31.11",
+    "socket.io-client": "^4.8.4",
     "supertest": "7.3.2",
     "tsx": "4.23.15",
     "typescript": "5.9.3",

@@ -9,6 +9,7 @@ import { AppIcon } from "@/components/ui/AppIcon";
 import { Badge } from "@/components/ui/Badge";
 import { buttonClasses } from "@/components/ui/Button";
 import { TodayStats } from "@/features/focus/TodayStats";
+import { LiveNow } from "@/features/realtime/LiveNow";
 import { APPS, type AppInfo } from "@/lib/apps";
 import { cn } from "@/lib/cn";
 
@@ -34,12 +35,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section aria-labelledby="today-title">
-        <h2 id="today-title" className="mb-3 text-sm font-semibold tracking-wider text-muted uppercase">
-          Today
-        </h2>
-        <TodayStats />
-      </section>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+        <section aria-labelledby="today-title">
+          <h2 id="today-title" className="mb-3 text-sm font-semibold tracking-wider text-muted uppercase">
+            Today
+          </h2>
+          <TodayStats />
+        </section>
+        <LiveNow />
+      </div>
 
       <section aria-labelledby="apps-title">
         <h2 id="apps-title" className="mb-3 text-sm font-semibold tracking-wider text-muted uppercase">

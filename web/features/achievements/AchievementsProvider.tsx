@@ -3,12 +3,14 @@
 // Your badges, and the "Achievement unlocked!" pop-ups.
 //
 // Badges are awarded by the API's background worker, a moment AFTER a session is saved.
-// So after saving we look again a few times (checkSoon). Stage 6 replaces this polling
-// with a live push over WebSockets.
+// Stage 6: the worker pushes each new badge over the WebSocket ("achievement" event), so it
+// appears instantly. Only when the live connection is down do we fall back to asking a few
+// times (checkSoon), like Stage 5.
 
 import { Award, X } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { useRealtime, useRealtimeEvent } from "@/features/realtime/RealtimeProvider";
 import { getAchievements, type Achievement } from "@/lib/api/achievements";
 import { BadgeIcon } from "./BadgeIcon";
 
@@ -45,19 +47,34 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const { connected } = useRealtime();
+
+  // Live: a badge arrives the moment the worker awards it.
+  useRealtimeEvent<Achievement>("achievement", (badge) => {
+    if (known.current?.has(badge.code)) return; // already shown
+    known.current?.add(badge.code);
+    setToasts((t) => [...t, badge]);
+    setList((items) => items.map((a) => (a.code === badge.code ? { ...a, earnedAt: badge.earnedAt } : a)));
+  });
+
+  // Fallback when offline: ask again a few times.
   const checkSoon = useCallback(() => {
+    if (connected) return;
     timers.current.forEach(clearTimeout);
     timers.current = RETRIES_MS.map((ms) => setTimeout(() => void load(true), ms));
-  }, [load]);
+  }, [load, connected]);
 
-  // First load, and again when someone signs in or out (different badges). Then look again
-  // shortly: signing in asks the worker to re-check badges from the merged guest + account history.
+  // First load, and again when someone signs in or out (different badges), without pop-ups.
+  // After signing in, the worker re-checks badges from the merged guest + account history while
+  // the WebSocket is reconnecting as the new user; one extra look a moment later catches those.
   const userId = user?.id ?? null;
   useEffect(() => {
     known.current = null;
     void load(false);
-    if (userId) checkSoon();
-  }, [load, checkSoon, userId]);
+    if (!userId) return;
+    const id = setTimeout(() => void load(true), 2500);
+    return () => clearTimeout(id);
+  }, [load, userId]);
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 

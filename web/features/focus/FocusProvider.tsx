@@ -7,6 +7,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { chime } from "@/features/ambient/engine";
 import { useAchievements } from "@/features/achievements/AchievementsProvider";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { useRealtime } from "@/features/realtime/RealtimeProvider";
 import type { Mode, Summary } from "@/lib/api/sessions";
 import { formatTime, MODES } from "./logic";
 import { useCountdown } from "./useCountdown";
@@ -61,6 +62,13 @@ export function FocusProvider({ children }: { children: ReactNode }) {
   );
 
   useTabTitle(time, timer.running, finished);
+
+  // Stage 6: tell the server when this tab starts or stops focusing (for "N people focusing now").
+  // Sent again after a reconnect, because the server forgets a socket when it drops.
+  const { socket, connected } = useRealtime();
+  useEffect(() => {
+    if (socket && connected) socket.emit("focus:state", { running: timer.running, mode });
+  }, [socket, connected, timer.running, mode]);
 
   const value: FocusState = {
     mode,

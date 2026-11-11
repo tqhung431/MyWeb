@@ -2,6 +2,7 @@ import { pool } from "../src/db/client.js";
 import { runMigrations } from "../src/db/migrate.js";
 import { seed } from "../src/db/seed.js";
 import { closeQueue } from "../src/jobs/queue.js";
+import { closeEmitter } from "../src/realtime/emit.js";
 import { valkey, waitForValkey } from "../src/valkey/client.js";
 
 let migrated = false;
@@ -21,6 +22,7 @@ export async function resetDatabase() {
 
 export async function closeAll() {
   await closeQueue();
+  closeEmitter();
   valkey.disconnect();
   await pool.end();
 }

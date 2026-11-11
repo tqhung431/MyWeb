@@ -1,8 +1,9 @@
 import type { LucideIcon } from "lucide-react";
-import { AudioLines, AudioWaveform, Bird, CloudRain, Droplets, Flame, Headphones, MoonStar, Music2, Piano, Waves } from "lucide-react";
+import { AudioLines, AudioWaveform, BellRing, Bird, CloudRain, Droplets, Flame, Guitar, Headphones, MoonStar, Music2, Piano, Waves, Wind } from "lucide-react";
+import { DRILL_SONGS, type DrillSong } from "./drill";
 import type { TrackName } from "./engine";
 
-export type Category = "music" | "nature";
+export type Category = "music" | "drill" | "nature";
 
 export type Track = {
   name: TrackName;
@@ -11,10 +12,12 @@ export type Track = {
   icon: LucideIcon;
   accent: string; // gradient for the icon tile
   category: Category;
+  exclusive?: boolean; // only one exclusive track plays at a time (drill songs would clash)
 };
 
 export const CATEGORIES: { id: Category; label: string }[] = [
   { id: "music", label: "Music" },
+  { id: "drill", label: "VN Drill" },
   { id: "nature", label: "Nature & noise" },
 ];
 
@@ -33,6 +36,28 @@ export const TRACKS: Track[] = [
   { name: "stream", label: "Stream", description: "Babbling water", icon: Droplets, accent: "from-teal-400 to-sky-500", category: "nature" },
   { name: "brown-noise", label: "Brown noise", description: "Deep, steady, blocks chatter", icon: AudioLines, accent: "from-stone-400 to-stone-600", category: "nature" },
 ];
+
+// Drill songs: named after their lead Vietnamese instrument
+const INSTRUMENTS: Record<DrillSong["lead"], { name: string; icon: LucideIcon }> = {
+  bau: { name: "đàn bầu", icon: AudioWaveform },
+  tranh: { name: "đàn tranh", icon: Guitar },
+  sao: { name: "sáo trúc", icon: Wind },
+  piano: { name: "piano", icon: Piano },
+  bell: { name: "bells", icon: BellRing },
+};
+const DRILL_ACCENTS = ["from-zinc-700 to-red-600", "from-slate-700 to-amber-500", "from-neutral-800 to-fuchsia-600", "from-stone-700 to-emerald-500", "from-zinc-800 to-sky-500"];
+
+TRACKS.push(
+  ...DRILL_SONGS.map((song, i) => ({
+    name: song.id,
+    label: song.title,
+    description: `${song.meaning} · ${INSTRUMENTS[song.lead].name} · ${song.bpm} BPM`,
+    icon: INSTRUMENTS[song.lead].icon,
+    accent: DRILL_ACCENTS[i % DRILL_ACCENTS.length],
+    category: "drill" as const,
+    exclusive: true,
+  })),
+);
 
 export function getTrack(name: TrackName | null | undefined): Track | undefined {
   return TRACKS.find((t) => t.name === name);

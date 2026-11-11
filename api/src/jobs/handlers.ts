@@ -2,10 +2,11 @@
 
 import { and, eq, isNull } from "drizzle-orm";
 import nodemailer from "nodemailer";
-import { earnedCodes } from "../achievements.js";
+import { ACHIEVEMENTS, earnedCodes } from "../achievements.js";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { achievements, focusSessions, users } from "../db/schema.js";
+import { displayName, notifyOwner, publishActivity } from "../realtime/emit.js";
 import type { JobData, JobName } from "./queue.js";
 
 // --- achievements ---------------------------------------------------------------
@@ -29,7 +30,23 @@ export async function checkAchievements({ userId, clientId, timeZone }: JobData[
     .insert(achievements)
     .values(codes.map((code) => ({ userId, clientId: userId ? null : clientId, code })))
     .onConflictDoNothing()
-    .returning({ code: achievements.code });
+    .returning({ code: achievements.code, earnedAt: achievements.earnedAt });
+
+  // Stage 6: tell the person right away (all their open tabs and PCs), and tell everyone in the feed.
+  if (added.length) {
+    const [user] = userId ? await db.select({ name: users.name }).from(users).where(eq(users.id, userId)) : [];
+    for (const a of added) {
+      const rule = ACHIEVEMENTS.find((r) => r.code === a.code)!;
+      notifyOwner({ userId, clientId }, "achievement", {
+        code: rule.code,
+        title: rule.title,
+        description: rule.description,
+        icon: rule.icon,
+        earnedAt: a.earnedAt,
+      });
+      await publishActivity(rule.icon, `${displayName(user?.name)} unlocked “${rule.title}”`);
+    }
+  }
   return { added: added.map((a) => a.code) };
 }
 

@@ -31,6 +31,11 @@ export const sameOrigin: RequestHandler = (req, _res, next) => {
 };
 
 function isOwnSite(origin: string, req: Request): boolean {
+  return isAllowedOrigin(origin, req.get("x-forwarded-host") ?? req.get("host"));
+}
+
+// Shared with the WebSocket server (src/realtime/server.ts), which checks the same thing.
+export function isAllowedOrigin(origin: string, siteHost: string | undefined): boolean {
   if (config.ALLOWED_ORIGINS.includes(origin)) return true;
   let originHost: string;
   try {
@@ -38,7 +43,6 @@ function isOwnSite(origin: string, req: Request): boolean {
   } catch {
     return false; // "null" or garbage
   }
-  const siteHost = req.get("x-forwarded-host") ?? req.get("host");
   return originHost === siteHost;
 }
 

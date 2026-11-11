@@ -106,3 +106,9 @@
     transition: none !important;
   }
 }
+
+/* Stage 6: new live-feed rows fade in */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}

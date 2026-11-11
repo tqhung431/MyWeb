@@ -8,16 +8,19 @@ import { AchievementsProvider } from "@/features/achievements/AchievementsProvid
 import { AmbientProvider } from "@/features/ambient/AmbientProvider";
 import { AuthProvider } from "@/features/auth/AuthProvider";
 import { FocusProvider } from "@/features/focus/FocusProvider";
+import { RealtimeProvider } from "@/features/realtime/RealtimeProvider";
 import type { User } from "@/lib/api/auth";
 
 export function AppProviders({ initialUser, children }: { initialUser: User | null; children: ReactNode }) {
   return (
     <AuthProvider initialUser={initialUser}>
-      <AmbientProvider>
-        <AchievementsProvider>
-          <FocusProvider>{children}</FocusProvider>
-        </AchievementsProvider>
-      </AmbientProvider>
+      <RealtimeProvider>
+        <AmbientProvider>
+          <AchievementsProvider>
+            <FocusProvider>{children}</FocusProvider>
+          </AchievementsProvider>
+        </AmbientProvider>
+      </RealtimeProvider>
     </AuthProvider>
   );
 }

@@ -7,6 +7,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import * as engine from "./engine";
 import type { TrackName } from "./engine";
+import { getTrack } from "./tracks";
 
 const DEFAULT_TRACK_VOLUME = 70; // 0–100
 
@@ -34,8 +35,11 @@ export function AmbientProvider({ children }: { children: ReactNode }) {
         engine.stop(name);
         setPlaying(playing.filter((n) => n !== name));
       } else {
+        // Starting a drill song stops the one already playing (they'd clash). Rain etc. keep playing.
+        const replaced = getTrack(name)?.exclusive ? playing.filter((n) => getTrack(n)?.exclusive) : [];
+        replaced.forEach(engine.stop);
         engine.start(name, (volumes[name] ?? DEFAULT_TRACK_VOLUME) / 100);
-        setPlaying([...playing, name]);
+        setPlaying([...playing.filter((n) => !replaced.includes(n)), name]);
       }
     },
     [playing, volumes],

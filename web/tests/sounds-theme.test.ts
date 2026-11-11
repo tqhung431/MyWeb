@@ -8,6 +8,13 @@ describe("sound library", () => {
     expect(TRACKS.map((t) => t.name).sort()).toEqual([...TRACK_NAMES].sort());
   });
 
+  it("has 10 Vietnamese drill songs that play one at a time", () => {
+    const drill = TRACKS.filter((t) => t.category === "drill");
+    expect(drill).toHaveLength(10);
+    expect(drill.every((t) => t.exclusive)).toBe(true);
+    expect(new Set(drill.map((t) => t.label)).size).toBe(10);
+  });
+
   it("offers both music and nature sounds", () => {
     expect(TRACKS.filter((t) => t.category === "music").length).toBeGreaterThanOrEqual(5);
     expect(TRACKS.filter((t) => t.category === "nature").length).toBeGreaterThanOrEqual(5);

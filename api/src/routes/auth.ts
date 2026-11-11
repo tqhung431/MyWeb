@@ -15,6 +15,7 @@ import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { users } from "../db/schema.js";
 import { enqueue } from "../jobs/queue.js";
+import { displayName, publishActivity } from "../realtime/emit.js";
 import { HttpError } from "../middleware/errors.js";
 import { rateLimit } from "../middleware/security.js";
 import { timeZoneOf } from "./sessions.js";
@@ -59,6 +60,7 @@ authRouter.post("/register", overallLimit, perEmailLimit, async (req, res) => {
   await claimAnonymousSessions(user.id, req.get("x-client-id"));
   res.status(201).json({ user: publicUser(user) });
 
+  await publishActivity("UserPlus", `${displayName(user.name)} joined MyWeb`);
   // Stage 5: slow or optional work happens in the background worker.
   await enqueue("welcome-email", { userId: user.id });
   await enqueue("achievements", { userId: user.id, clientId: null, timeZone: timeZoneOf(req) });

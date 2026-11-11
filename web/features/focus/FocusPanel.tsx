@@ -8,6 +8,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useFocus } from "./FocusProvider";
 import { MODE_OPTIONS, MODES } from "./logic";
 import { TimerRing } from "./TimerRing";
+import { LivePill } from "@/features/realtime/LiveNow";
 
 export function FocusPanel() {
   const focus = useFocus();
@@ -35,8 +36,9 @@ export function FocusPanel() {
         action={<Badge tone={running ? "primary" : finished ? "success" : "neutral"}>{state}</Badge>}
       />
 
-      <div className="flex justify-center">
+      <div className="flex flex-col items-center gap-3">
         <SegmentedControl label="Timer mode" options={MODE_OPTIONS} value={mode} onChange={focus.setMode} />
+        <LivePill />
       </div>
 
       <div className="my-6 flex flex-1 items-center sm:my-8">
