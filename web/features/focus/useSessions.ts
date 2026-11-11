@@ -1,9 +1,9 @@
 "use client";
 
-// Focus sessions, now saved in PostgreSQL through the API (Stage 2 used localStorage).
+// Focus sessions, saved in PostgreSQL through the API.
 
 import { useCallback, useEffect, useState } from "react";
-import { getSummary, saveSession, type Mode, type Summary } from "@/lib/api";
+import { getSummary, saveSession, type Mode, type Summary } from "@/lib/api/sessions";
 
 export type SessionsStatus = "loading" | "ready" | "offline";
 
@@ -20,7 +20,6 @@ export function useSessions() {
     }
   }, []);
 
-  // Load once when the app starts in the browser.
   useEffect(() => {
     void refresh();
   }, [refresh]);

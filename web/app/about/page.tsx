@@ -1,45 +1,55 @@
 import type { Metadata } from "next";
+import { Card } from "@/components/ui/Card";
 
-export const metadata: Metadata = { title: "About · Chill Corner" };
+export const metadata: Metadata = { title: "About" };
+
+const CREDITS = [
+  ["Sounds", "Generated live with the Web Audio API. No recordings, nothing to license."],
+  ["Icons", "Lucide (ISC licence)"],
+  ["Font", "Plus Jakarta Sans (SIL Open Font License), self-hosted by Next.js"],
+  ["Framework", "Next.js, React (MIT) · TypeScript (Apache-2.0) · Tailwind CSS (MIT)"],
+  ["API & data", "Express, Zod, Drizzle ORM, node-postgres · PostgreSQL (PostgreSQL Licence)"],
+];
 
 export default function AboutPage() {
   return (
-    <div className="prose">
-      <h1>About Chill Corner</h1>
-      <p>
-        Chill Corner is part of <strong>MyWeb</strong>. In Stage 2 it became a <strong>Next.js</strong> app written in{" "}
-        <strong>React</strong> and <strong>TypeScript</strong>.
-      </p>
+    <div className="flex max-w-3xl flex-col gap-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">About MyWeb</h1>
+        <p className="mt-2 text-muted">
+          A learning project that grows one stage at a time, from a single HTML page to a full system with an API, a
+          database, real-time features and AI.
+        </p>
+      </div>
 
-      <h2>How it works</h2>
-      <ul>
-        <li>
-          <strong>Server Components</strong> (this page, the Tips pages) are turned into HTML on the server. They send no
-          JavaScript.
-        </li>
-        <li>
-          <strong>Client Components</strong> (the sound player and timer) also arrive as HTML, then React makes them
-          interactive in the browser.
-        </li>
-        <li>
-          <strong>Routing</strong> comes from folders: <code>app/tips/page.tsx</code> is <code>/tips</code>.
-        </li>
-      </ul>
+      <Card>
+        <h2 className="text-lg font-bold">How it fits together</h2>
+        <ul className="mt-3 list-disc space-y-2 pl-5 text-muted">
+          <li>
+            <strong className="text-text">Website</strong>: Next.js. Pages are Server Components; interactive parts
+            (timer, sounds) are Client Components.
+          </li>
+          <li>
+            <strong className="text-text">API</strong>: Express. Checks every input and is the only part that talks to
+            the database.
+          </li>
+          <li>
+            <strong className="text-text">Database</strong>: PostgreSQL. Stores tips and your focus sessions.
+          </li>
+        </ul>
+      </Card>
 
-      <h2>Credits and licences</h2>
-      <ul>
-        <li>
-          <strong>All sounds</strong> are generated in your browser with the{" "}
-          <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API">Web Audio API</a>. No recorded audio
-          is used.
-        </li>
-        <li>
-          <strong>Next.js, React, TypeScript</strong>: MIT / Apache-2.0 licences.
-        </li>
-        <li>
-          <strong>Icons</strong>: Unicode emoji. <strong>Fonts</strong>: your system font.
-        </li>
-      </ul>
+      <Card>
+        <h2 className="text-lg font-bold">Credits and licences</h2>
+        <dl className="mt-3 divide-y divide-border">
+          {CREDITS.map(([term, detail]) => (
+            <div key={term} className="grid gap-1 py-3 sm:grid-cols-[8rem_1fr]">
+              <dt className="font-semibold">{term}</dt>
+              <dd className="text-muted">{detail}</dd>
+            </div>
+          ))}
+        </dl>
+      </Card>
     </div>
   );
 }

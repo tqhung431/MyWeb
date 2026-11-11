@@ -11,3 +11,8 @@
 | Express, cors, helmet, pg, Zod, Drizzle ORM | npm | MIT (Drizzle: Apache-2.0) |
 | PostgreSQL | postgresql.org | PostgreSQL Licence |
 | Vitest, Supertest, tsx | npm | MIT |
+| Tailwind CSS | npm | MIT |
+| Lucide icons (lucide-react) | npm | ISC |
+| Plus Jakarta Sans font | Google Fonts, self-hosted by next/font | SIL Open Font License 1.1 |
+| clsx | npm | MIT |
+| Testing Library, jsdom | npm | MIT |
