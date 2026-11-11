@@ -5,20 +5,24 @@
 
 import { CheckCircle2, CircleAlert, ExternalLink, Loader2, Music, Upload } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { ApiError } from "@/lib/api/client";
-import { uploadSong, type UploadedSong } from "@/lib/api/music";
+import { getUploadLimits, uploadSong, type UploadedSong } from "@/lib/api/music";
 import { cn } from "@/lib/cn";
 import { genreOf } from "./genres";
 import { useMusic } from "./MusicProvider";
 import { STARTER_PACK } from "./starter-pack";
 
 type Rights = "own" | "cc" | "permission";
-type Item = { id: string; file: File; progress: number; status: "waiting" | "uploading" | "done" | "error"; song?: UploadedSong; error?: string };
+// skip: an error that trying again won't fix (too big, not audio, already in Nook)
+type Item = { id: string; file: File; progress: number; status: "waiting" | "uploading" | "done" | "error"; song?: UploadedSong; error?: string; skip?: boolean };
+
+const mb = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(bytes < 10 * 1024 * 1024 ? 1 : 0)} MB`;
+const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const AUDIO = /\.(mp3|m4a|aac|ogg|opus|flac|wav)$/i;
 
@@ -33,12 +37,29 @@ export function AddSongForm() {
   const picker = useRef<HTMLInputElement>(null);
   const { play } = useMusic();
   const busy = items.some((i) => i.status === "uploading");
+  const [maxMb, setMaxMb] = useState(100);
+  const [stopped, setStopped] = useState("");
+
+  useEffect(() => {
+    getUploadLimits().then((l) => setMaxMb(l.maxMb), () => {});
+  }, []);
 
   function addFiles(files: FileList | File[]) {
-    const fresh = Array.from(files)
-      .filter((f) => AUDIO.test(f.name) || f.type.startsWith("audio/"))
-      .map((file) => ({ id: `${file.name}-${file.size}-${Math.random()}`, file, progress: 0, status: "waiting" as const }));
-    setItems((list) => [...list.filter((i) => i.status !== "done"), ...fresh]);
+    setStopped("");
+    setItems((list) => {
+      const kept = list.filter((i) => i.status !== "done");
+      const fresh = Array.from(files)
+        .filter((f) => AUDIO.test(f.name) || f.type.startsWith("audio/"))
+        .filter((f) => !kept.some((i) => i.file.name === f.name && i.file.size === f.size)) // the same file twice
+        .map((file): Item => {
+          const id = `${file.name}-${file.size}-${Math.random()}`;
+          // Too big: say so now, instead of sending it and failing at the end
+          if (file.size > maxMb * 1024 * 1024)
+            return { id, file, progress: 0, status: "error", skip: true, error: `Too big: ${mb(file.size)} (Nook takes up to ${maxMb} MB)` };
+          return { id, file, progress: 0, status: "waiting" };
+        });
+      return [...kept, ...fresh];
+    });
   }
 
   function update(id: string, patch: Partial<Item>) {
@@ -51,14 +72,34 @@ export function AddSongForm() {
       credit: credit || undefined,
       sourceUrl: sourceUrl || undefined,
     };
+    setStopped("");
     // One at a time: clear progress per song, and a slow network isn't flooded.
-    for (const item of items.filter((i) => i.status === "waiting" || i.status === "error")) {
+    for (const item of items.filter((i) => (i.status === "waiting" || i.status === "error") && !i.skip)) {
       update(item.id, { status: "uploading", progress: 0, error: undefined });
-      try {
-        const song = await uploadSong(item.file, fields, (p) => update(item.id, { progress: p }));
-        update(item.id, { status: "done", progress: 1, song });
-      } catch (e) {
-        update(item.id, { status: "error", error: e instanceof ApiError ? (e.details[0]?.message ?? e.message) : "Upload failed" });
+      let song: UploadedSong | null = null;
+      let error: unknown = null;
+      // A dropped connection (Wi-Fi blip, PC busy) gets two more tries
+      for (let attempt = 1; attempt <= 3 && !song; attempt++) {
+        try {
+          song = await uploadSong(item.file, fields, (p) => update(item.id, { progress: p }));
+        } catch (e) {
+          error = e;
+          if (!(e instanceof ApiError && e.status === 0) || attempt === 3) break;
+          update(item.id, { progress: 0, error: `Connection lost, trying again (${attempt + 1} of 3)…` });
+          await pause(1500 * attempt);
+        }
+      }
+      if (song) {
+        update(item.id, { status: "done", progress: 1, song, error: undefined });
+        continue;
+      }
+      const e = error instanceof ApiError ? error : null;
+      const message = e ? (e.details[0]?.message ?? e.message) : "Upload failed";
+      // 409 already in Nook, 413 too big, 415 not a song: trying again won't help
+      update(item.id, { status: "error", error: message, skip: e !== null && [409, 413, 415].includes(e.status) });
+      if (e?.status === 429) {
+        setStopped(message); // over the hourly limit: stop here, the rest stay in the list
+        break;
       }
     }
   }
@@ -69,7 +110,9 @@ export function AddSongForm() {
     addFiles(e.dataTransfer.files);
   };
 
-  const waiting = items.filter((i) => i.status === "waiting" || i.status === "error").length;
+  const waiting = items.filter((i) => (i.status === "waiting" || i.status === "error") && !i.skip).length;
+  const added = items.filter((i) => i.status === "done").length;
+  const problems = items.filter((i) => i.status === "error").length;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
@@ -91,7 +134,9 @@ export function AddSongForm() {
             <Upload className="h-6 w-6" aria-hidden="true" />
           </span>
           <p className="font-semibold">Drop song files here</p>
-          <p className="text-sm text-muted">MP3, M4A, OGG, FLAC or WAV. Title, artist, genre and cover are read from each file.</p>
+          <p className="text-sm text-muted">
+            MP3, M4A, OGG, FLAC or WAV, up to {maxMb} MB each. Title, artist, genre and cover are read from each file. Any file name works.
+          </p>
           <input ref={picker} type="file" accept="audio/*,.mp3,.m4a,.ogg,.opus,.flac,.wav" multiple hidden onChange={(e) => e.target.files && addFiles(e.target.files)} />
           <Button variant="secondary" onClick={() => picker.current?.click()}>
             <Music className="h-4 w-4" aria-hidden="true" /> Choose files
@@ -99,8 +144,15 @@ export function AddSongForm() {
         </div>
 
         {/* The files */}
+        {items.length > 1 && (
+          <p className="text-sm font-semibold" aria-live="polite">
+            {added} of {items.length} added
+            {problems > 0 && <span className="text-rose-600 dark:text-rose-300"> · {problems} with a problem</span>}
+          </p>
+        )}
+        {stopped && <p className="rounded-2xl bg-amber-500/12 p-3 text-sm text-amber-800 dark:text-amber-200">{stopped}</p>}
         {items.length > 0 && (
-          <ul className="flex flex-col gap-2" aria-live="polite">
+          <ul className="flex max-h-[28rem] flex-col gap-2 overflow-y-auto" aria-live="polite">
             {items.map((i) => (
               <li key={i.id} className="flex items-center gap-3 rounded-2xl border border-border p-3">
                 {i.status === "done" ? (
@@ -119,7 +171,7 @@ export function AddSongForm() {
                       <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${Math.round(i.progress * 100)}%` }} />
                     </div>
                   )}
-                  {i.status === "error" && <p className="text-xs text-rose-600 dark:text-rose-300">{i.error}</p>}
+                  {i.error && <p className={cn("text-xs", i.status === "error" ? "text-rose-600 dark:text-rose-300" : "text-muted")}>{i.error}</p>}
                   {i.song && (
                     <p className="text-xs text-muted">
                       {i.song.starterPack ? "Starter pack · " : ""}
