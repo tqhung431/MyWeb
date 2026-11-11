@@ -1,0 +1,105 @@
+# Stage 8: every push and pull request is checked automatically on GitHub's machines.
+#
+#   api ──┐
+#         ├──► docker: build both images, start everything with Compose, check it answers through Caddy
+#   web ──┘
+#
+# Results: the "Actions" tab on GitHub, and a ✓ or ✗ next to each commit.
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# A newer push to the same branch cancels the older, still-running check.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    name: API — types, tests, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    # Real PostgreSQL and Valkey for the tests, like on your PC
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16 # Postgres + pgvector (Stage 9)
+        env:
+          POSTGRES_USER: myweb
+          POSTGRES_PASSWORD: myweb
+          POSTGRES_DB: myweb_test
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U myweb" --health-interval 5s --health-retries 10
+      valkey:
+        image: valkey/valkey:8
+        ports: ["6379:6379"]
+        options: --health-cmd "valkey-cli ping" --health-interval 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  web:
+    name: Website — types, tests, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  docker:
+    name: Docker — build images, start everything, smoke test
+    needs: [api, web]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Settings
+        run: cp .env.example .env
+      - name: Build the images
+        run: docker compose --profile app build
+      - name: Start everything and wait until healthy
+        run: docker compose --profile app up -d --wait --wait-timeout 180
+      - name: Smoke test through Caddy
+        run: |
+          set -e
+          # pages (HTTPS with Caddy's local certificate, so -k)
+          curl -fsSk https://localhost/ -o /dev/null
+          curl -fsSk https://localhost/chill -o /dev/null
+          curl -fsSk https://localhost/music -o /dev/null
+          # the API behind Caddy: tips come from the seeded database
+          curl -fsSk https://localhost/api/tips | grep -q '"slug":"one-thing"'
+          # other PCs: plain HTTP on the network address works too
+          curl -fsS http://127.0.0.1/api/songs -H "X-Client-Id: 3f1c2b6e-9d5a-4c8e-8f00-123456789abc" -o /dev/null
+          # the API reports a healthy database and Valkey
+          docker compose exec -T api node -e "fetch('http://127.0.0.1:4000/health').then(r=>r.json()).then(j=>{console.log(j);process.exit(j.valkey==='up'?0:1)})"
+          echo "✓ Nook answers through Caddy"
+      - name: Show logs if something failed
+        if: failure()
+        run: docker compose --profile app logs --tail 80
+      - name: Stop
+        if: always()
+        run: docker compose --profile app down -v

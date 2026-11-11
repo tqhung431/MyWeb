@@ -1,0 +1,55 @@
+# Caddy: Nook's front door (Stage 7). Every visitor's request arrives here first.
+#
+#   /api/*  (data, sign-in, live events) → the API, WebSockets included
+#   everything else (pages)             → the website
+#
+# Caddy also:
+#   - gives https://localhost a real HTTPS certificate from its own local certificate authority
+#   - tells the API the visitor's real IP (X-Forwarded-For) and whether they used HTTPS
+#     (X-Forwarded-Proto), ignoring any such headers the browser tries to send itself
+#   - compresses responses
+#
+# API_UPSTREAM / WEB_UPSTREAM default to the Docker service names; you can point them elsewhere
+# to try Caddy without Docker, e.g. API_UPSTREAM=127.0.0.1:4000 WEB_UPSTREAM=127.0.0.1:3000 caddy run
+
+# Stage 8: tracing. With monitoring on (CADDY_TRACING=tracing_on), Caddy starts each request's
+# trace and passes it on ("traceparent"), so Grafana shows Caddy → website → API → database.
+(tracing_on) {
+	tracing {
+		span caddy
+	}
+}
+
+(tracing_off) {
+}
+
+(myweb) {
+	import {$CADDY_TRACING:tracing_off}
+	encode zstd gzip
+
+	# Song uploads can be large (Stage 8); Caddy itself sets no limit, the API checks the size.
+
+	handle /api/* {
+		reverse_proxy {$API_UPSTREAM:api:4000}
+	}
+	handle {
+		reverse_proxy {$WEB_UPSTREAM:web:3000}
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}
+
+# On the PC running Nook: https://localhost (http://localhost redirects here)
+localhost {
+	tls internal
+	import myweb
+}
+
+# Other PCs and phones on your network: http://<this PC's IP>, e.g. http://192.168.1.20
+:80 {
+	import myweb
+}

@@ -1,0 +1,30 @@
+# The API image. Also used for the worker (same code, different start command).
+#
+#   docker compose build api        (normally: docker compose --profile app up -d --build)
+
+# --- 1. Build: TypeScript → JavaScript ---------------------------------------
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY tsconfig.json ./
+COPY src ./src
+RUN npm run build
+
+# --- 2. Run: only what's needed (no TypeScript, no test tools) ----------------
+FROM node:22-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+COPY --from=build /app/dist ./dist
+COPY drizzle ./drizzle
+COPY seed ./seed
+# Song files live here (a Docker volume, so they survive rebuilds). Owned by the app's user.
+RUN mkdir -p media && chown node:node media
+# Don't run as root inside the container
+USER node
+EXPOSE 4000
+# Bring the database up to date, put the starting tips in, then start the API
+# (with OpenTelemetry loaded first; it stays off unless OTEL_EXPORTER_OTLP_ENDPOINT is set).
+CMD ["sh", "-c", "node dist/db/migrate.js && node dist/db/seed.js && exec node --import ./dist/telemetry.js dist/index.js"]

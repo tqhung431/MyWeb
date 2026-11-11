@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chill Corner · Nook</title>
+  <meta name="description" content="A calm corner of the web: ambient sounds and a focus timer.">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- defer: download now, run after the HTML is parsed, in this order -->
+  <script src="js/audio.js" defer></script>
+  <script src="js/timer.js" defer></script>
+  <script src="js/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <a class="brand" href="index.html">🌙 Chill Corner</a>
+    <nav aria-label="Main">
+      <a href="index.html" aria-current="page">Home</a>
+      <a href="about.html">About</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="intro">
+      <h1>Take a breath.</h1>
+      <p>Pick a sound, start the timer, and focus on one thing.</p>
+    </section>
+
+    <div class="cards">
+      <!-- Sound player -->
+      <section class="card" aria-labelledby="sound-title">
+        <h2 id="sound-title">Sounds</h2>
+        <p class="hint">Made live in your browser with the Web Audio API.</p>
+
+        <div class="tracks" role="group" aria-label="Choose a sound">
+          <button class="track" data-track="rain" aria-pressed="false">
+            <span aria-hidden="true">🌧️</span> Rain
+          </button>
+          <button class="track" data-track="waves" aria-pressed="false">
+            <span aria-hidden="true">🌊</span> Waves
+          </button>
+          <button class="track" data-track="keys" aria-pressed="false">
+            <span aria-hidden="true">🎹</span> Lo-fi keys
+          </button>
+        </div>
+
+        <label class="volume" for="volume">
+          Volume
+          <input id="volume" type="range" min="0" max="100" value="60">
+        </label>
+
+        <p class="now-playing" id="now-playing" aria-live="polite">Nothing playing</p>
+      </section>
+
+      <!-- Focus timer -->
+      <section class="card" aria-labelledby="timer-title">
+        <h2 id="timer-title">Focus timer</h2>
+
+        <div class="modes" role="group" aria-label="Timer mode">
+          <button class="mode" data-mode="focus" aria-pressed="true">Focus 25</button>
+          <button class="mode" data-mode="short" aria-pressed="false">Break 5</button>
+          <button class="mode" data-mode="long" aria-pressed="false">Long 15</button>
+        </div>
+
+        <p class="time" id="time" role="timer" aria-live="off">25:00</p>
+
+        <div class="controls">
+          <button class="primary" id="start">Start</button>
+          <button id="reset">Reset</button>
+        </div>
+
+        <p class="hint" id="sessions">Focus sessions today: 0</p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>Part of <strong>Nook</strong> · Stage 1 · <a href="about.html">Credits</a></p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,195 @@
+// Stage 6: WebSockets. Real servers on random ports, real socket.io clients, real Valkey.
+
+import { randomUUID } from "node:crypto";
+import { createServer, type Server as HttpServer } from "node:http";
+import type { AddressInfo } from "node:net";
+import { Emitter } from "@socket.io/redis-emitter";
+import { Redis } from "ioredis";
+import request from "supertest";
+import type { Server } from "socket.io";
+import { io as connect, type Socket } from "socket.io-client";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { createApp } from "../src/app.js";
+import { config } from "../src/config.js";
+import { processJob } from "../src/jobs/handlers.js";
+import { CHANNEL_KEY, setRealtimeServer } from "../src/realtime/emit.js";
+import { attachRealtime } from "../src/realtime/server.js";
+import { closeAll, resetDatabase } from "./helpers.js";
+
+const app = createApp();
+let http: HttpServer;
+let io: Server;
+let url: string;
+const sockets: Socket[] = [];
+
+async function startServer() {
+  const server = createServer(app);
+  const realtime = await attachRealtime(server);
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+  return { server, realtime, url: `http://127.0.0.1:${(server.address() as AddressInfo).port}` };
+}
+
+beforeAll(async () => {
+  ({ server: http, realtime: io, url } = await startServer());
+});
+beforeEach(resetDatabase);
+afterEach(() => {
+  sockets.splice(0).forEach((s) => s.disconnect());
+});
+afterAll(async () => {
+  io.close();
+  await closeAll();
+});
+
+// A browser tab: connects like the website does (guest id, or a login cookie).
+function tab(opts: { clientId?: string; cookie?: string; origin?: string; to?: string; polling?: boolean } = {}): Socket {
+  const socket = connect(opts.to ?? url, {
+    path: "/api/realtime",
+    addTrailingSlash: false,
+    transports: [opts.polling ? "polling" : "websocket"],
+    auth: { clientId: opts.clientId ?? randomUUID() },
+    extraHeaders: { ...(opts.cookie && { cookie: opts.cookie }), ...(opts.origin && { origin: opts.origin }) },
+    forceNew: true,
+  });
+  sockets.push(socket);
+  return socket;
+}
+
+// Wait for the next event with this name (and, optionally, a matching payload).
+function next<T>(socket: Socket, event: string, match: (p: T) => boolean = () => true, ms = 3000): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`no "${event}" within ${ms} ms`)), ms);
+    const handler = (payload: T) => {
+      if (!match(payload)) return;
+      clearTimeout(timer);
+      socket.off(event, handler);
+      resolve(payload);
+    };
+    socket.on(event, handler);
+  });
+}
+
+type Presence = { online: number; focusing: number };
+
+describe("presence", () => {
+  it("counts people online and focusing, live, across tabs", async () => {
+    const alice = randomUUID();
+    const a1 = tab({ clientId: alice });
+    expect(await next<Presence>(a1, "presence", (p) => p.online === 1)).toEqual({ online: 1, focusing: 0 });
+
+    const a2 = tab({ clientId: alice }); // a second tab of the same person
+    const bob = tab();
+    await next<Presence>(a1, "presence", (p) => p.online === 2); // 2 people, 3 tabs
+
+    bob.emit("focus:state", { running: true, mode: "focus" });
+    expect(await next<Presence>(a1, "presence", (p) => p.focusing === 1)).toEqual({ online: 2, focusing: 1 });
+
+    bob.disconnect();
+    expect(await next<Presence>(a2, "presence", (p) => p.online === 1)).toEqual({ online: 1, focusing: 0 });
+  });
+
+  it("works over HTTP long-polling too (what the browser uses behind the Next.js proxy)", async () => {
+    const a = tab({ polling: true });
+    const b = tab({ polling: true });
+    b.emit("focus:state", { running: true, mode: "focus" });
+    expect(await next<Presence>(a, "presence", (p) => p.online === 2 && p.focusing === 1)).toEqual({ online: 2, focusing: 1 });
+  });
+
+  it("ignores junk sent by a browser", async () => {
+    const a = tab();
+    await next<Presence>(a, "presence");
+    a.emit("focus:state", { running: "yes please", mode: "party" });
+    const b = tab();
+    expect(await next<Presence>(b, "presence", (p) => p.online === 2)).toEqual({ online: 2, focusing: 0 });
+  });
+});
+
+describe("security", () => {
+  it("refuses connections from other websites", async () => {
+    const s = tab({ origin: "https://evil.example" });
+    await expect(next(s, "connect_error")).resolves.toBeTruthy();
+  });
+
+  it("refuses a connection with neither a sign-in nor a guest id", async () => {
+    const s = connect(url, { path: "/api/realtime", addTrailingSlash: false, transports: ["websocket"], forceNew: true });
+    sockets.push(s);
+    const err = await next<Error>(s, "connect_error");
+    expect(err.message).toMatch(/clientId/);
+  });
+});
+
+describe("live events", () => {
+  it("pushes a new badge to its owner only, and tells everyone in the feed", async () => {
+    const guest = randomUUID();
+    const owner = tab({ clientId: guest });
+    const stranger = tab();
+    await next(owner, "presence");
+    await next(stranger, "presence");
+
+    let strangerGotBadge = false;
+    stranger.on("achievement", () => (strangerGotBadge = true));
+
+    await request(app).post("/api/sessions").set("X-Client-Id", guest).send({ mode: "focus", minutes: 25 });
+    const badge = next<{ code: string }>(owner, "achievement", (a) => a.code === "first-focus");
+    const feed = next<{ text: string }>(stranger, "activity", (a) => a.text.includes("First focus"));
+    await processJob("achievements", { userId: null, clientId: guest, timeZone: "UTC" }); // what the worker does
+
+    expect((await badge).code).toBe("first-focus");
+    expect((await feed).text).toBe("A guest unlocked “First focus”");
+    await new Promise((r) => setTimeout(r, 100));
+    expect(strangerGotBadge).toBe(false);
+  });
+
+  it("knows signed-in people by their cookie and shows their first name", async () => {
+    const browser = request.agent(app);
+    const reg = await browser.post("/api/auth/register").send({ name: "Linh Pham", email: "linh@example.com", password: "quiet library hours" });
+    const cookie = ([] as string[]).concat(reg.headers["set-cookie"])[0].split(";")[0];
+
+    const phone = tab({ cookie });
+    const other = tab();
+    await next(phone, "presence");
+    const feed = next<{ text: string }>(other, "activity", (a) => a.text.startsWith("Linh"));
+    await browser.post("/api/sessions").send({ mode: "focus", minutes: 25 });
+    expect((await feed).text).toBe("Linh finished a 25-min focus session");
+  });
+
+  it("sends the recent feed to a page that connects later", async () => {
+    await request(app).post("/api/sessions").set("X-Client-Id", randomUUID()).send({ mode: "focus", minutes: 25 });
+    const late = tab();
+    const recent = await next<{ text: string }[]>(late, "activity:recent");
+    expect(recent[0].text).toBe("A guest finished a 25-min focus session");
+  });
+});
+
+describe("many servers, one Valkey", () => {
+  it("delivers events and counts presence across API servers", async () => {
+    const second = await startServer(); // like running the API twice behind a load balancer
+    setRealtimeServer(io); // events from this test process go out through server 1
+    try {
+      const onFirst = tab();
+      const onSecond = tab({ to: second.url });
+      // Presence counted on server 2 includes the browser on server 1
+      onSecond.emit("focus:state", { running: true, mode: "focus" });
+      expect(await next<Presence>(onFirst, "presence", (p) => p.online === 2 && p.focusing === 1)).toEqual({ online: 2, focusing: 1 });
+
+      // An event published on server 1 reaches the browser on server 2
+      const heard = next<{ text: string }>(onSecond, "activity", (a) => a.text.includes("25-min"));
+      await request(app).post("/api/sessions").set("X-Client-Id", randomUUID()).send({ mode: "focus", minutes: 25 });
+      expect((await heard).text).toMatch(/finished a 25-min focus session/);
+    } finally {
+      second.realtime.close();
+      setRealtimeServer(io);
+    }
+  });
+
+  it("lets the worker (no WebSocket server of its own) reach browsers through Valkey", async () => {
+    const guest = randomUUID();
+    const owner = tab({ clientId: guest });
+    await next(owner, "presence");
+    const emitter = new Emitter(new Redis(config.VALKEY_URL), { key: CHANNEL_KEY }); // exactly what the worker uses
+    const got = next<{ hello: string }>(owner, "achievement");
+    emitter.to(`client:${guest}`).emit("achievement", { hello: "from the worker" });
+    expect(await got).toEqual({ hello: "from the worker" });
+    emitter.redisClient.disconnect();
+  });
+});
