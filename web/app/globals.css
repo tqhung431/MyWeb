@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Make Tailwind's dark: classes follow our theme switch instead of only the device setting. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /*
   Design tokens. Every colour in the app comes from these variables,
   so light and dark themes only change values here.
@@ -24,24 +27,27 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0b0915;
-    --surface: rgb(255 255 255 / 0.045);
-    --surface-strong: #18152b;
-    --surface-muted: rgb(255 255 255 / 0.06);
-    --border: rgb(255 255 255 / 0.09);
-    --text: #efecfa;
-    --muted: #a39dbf;
-    --primary: #9d87ff;
-    --primary-2: #ff7fbd;
-    --on-primary: #0b0915;
-    --glow-1: #3f2bb0;
-    --glow-2: #7a2160;
-    --glow-3: #0f4870;
-    --shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 20px 50px -24px rgb(0 0 0 / 0.7);
-    color-scheme: dark;
-  }
+/*
+  Dark theme. A tiny script in app/layout.tsx sets <html data-theme="light|dark"> before the page
+  is drawn, from your choice (System / Light / Dark, saved in localStorage) and, for System,
+  from your device setting. So there's no white flash when you load a dark page.
+*/
+:root[data-theme="dark"] {
+  --background: #0b0915;
+  --surface: rgb(255 255 255 / 0.045);
+  --surface-strong: #18152b;
+  --surface-muted: rgb(255 255 255 / 0.06);
+  --border: rgb(255 255 255 / 0.09);
+  --text: #efecfa;
+  --muted: #a39dbf;
+  --primary: #9d87ff;
+  --primary-2: #ff7fbd;
+  --on-primary: #0b0915;
+  --glow-1: #3f2bb0;
+  --glow-2: #7a2160;
+  --glow-3: #0f4870;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 20px 50px -24px rgb(0 0 0 / 0.7);
+  color-scheme: dark;
 }
 
 @theme inline {

@@ -17,3 +17,7 @@
 | clsx | npm | MIT |
 | Testing Library, jsdom | npm | MIT |
 | cookie-parser, server-only | npm | MIT |
+| BullMQ, ioredis, Nodemailer | npm | MIT (Nodemailer: MIT-0) |
+| Valkey | valkey.io (Docker image) | BSD-3-Clause |
+| Mailpit (local test inbox) | Docker image | MIT |
+| All music and sounds | Generated live in the browser by `web/features/ambient/engine.ts` | Our own code, no recordings |

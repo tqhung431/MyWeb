@@ -10,6 +10,7 @@ import {
   serial,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -70,6 +71,25 @@ export const focusSessions = pgTable(
     check("has_owner", sql`${t.userId} is not null or ${t.clientId} is not null`),
     index("focus_sessions_client_time_idx").on(t.clientId, t.completedAt),
     index("focus_sessions_user_time_idx").on(t.userId, t.completedAt),
+  ],
+);
+
+// --- Stage 5: achievements (written by the background worker) -----------------
+
+export const achievements = pgTable(
+  "achievements",
+  {
+    id: serial("id").primaryKey(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    clientId: uuid("client_id"),
+    code: text("code").notNull(), // e.g. "first-focus" (rules in src/achievements.ts)
+    earnedAt: timestamp("earned_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check("achievement_has_owner", sql`${t.userId} is not null or ${t.clientId} is not null`),
+    // Each badge only once per owner. (NULLs never clash, so guests and users don't collide.)
+    uniqueIndex("achievements_user_code_idx").on(t.userId, t.code),
+    uniqueIndex("achievements_client_code_idx").on(t.clientId, t.code),
   ],
 );
 

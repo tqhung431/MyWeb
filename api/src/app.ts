@@ -10,9 +10,11 @@ import { pool } from "./db/client.js";
 import { loadUser } from "./middleware/auth.js";
 import { errorHandler, notFound } from "./middleware/errors.js";
 import { sameOrigin } from "./middleware/security.js";
+import { achievementsRouter } from "./routes/achievements.js";
 import { authRouter } from "./routes/auth.js";
 import { sessionsRouter } from "./routes/sessions.js";
 import { tipsRouter } from "./routes/tips.js";
+import { valkey, valkeyReady } from "./valkey/client.js";
 
 export function createApp() {
   const app = express();
@@ -29,14 +31,17 @@ export function createApp() {
   app.use(express.json({ limit: "10kb" })); // parse JSON bodies, refuse huge ones
   app.use(loadUser); // req.user from the login cookie
 
+  // Is everything up? PostgreSQL is required; Valkey is optional (MyWeb falls back without it).
   app.get("/health", async (_req, res) => {
-    await pool.query("select 1"); // also checks the database is reachable
-    res.json({ ok: true });
+    await pool.query("select 1"); // throws → 500 if the database is down
+    const valkeyUp = valkeyReady() && (await valkey.ping().then(() => true, () => false));
+    res.json({ ok: true, database: "up", valkey: valkeyUp ? "up" : "down (running without cache)" });
   });
 
   app.use("/api/auth", authRouter);
   app.use("/api/tips", tipsRouter);
   app.use("/api/sessions", sessionsRouter);
+  app.use("/api/achievements", achievementsRouter);
 
   app.use(notFound);
   app.use(errorHandler); // must be last

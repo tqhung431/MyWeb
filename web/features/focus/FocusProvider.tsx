@@ -5,6 +5,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { chime } from "@/features/ambient/engine";
+import { useAchievements } from "@/features/achievements/AchievementsProvider";
 import { useAuth } from "@/features/auth/AuthProvider";
 import type { Mode, Summary } from "@/lib/api/sessions";
 import { formatTime, MODES } from "./logic";
@@ -37,12 +38,14 @@ export function FocusProvider({ children }: { children: ReactNode }) {
   const [finished, setFinished] = useState(false);
   const { user } = useAuth();
   const { summary, status, record } = useSessions(user?.id ?? null);
+  const { checkSoon } = useAchievements();
 
   const handleDone = useCallback(() => {
     chime();
     setFinished(true);
-    void record(mode, MODES[mode].minutes); // POST /api/sessions
-  }, [mode, record]);
+    // POST /api/sessions, then look for new badges (the worker awards them a moment later)
+    void record(mode, MODES[mode].minutes).then(checkSoon);
+  }, [mode, record, checkSoon]);
 
   const timer = useCountdown(ms("focus"), handleDone);
   const { set, start, reset } = timer;

@@ -1,17 +1,28 @@
 import { pool } from "../src/db/client.js";
 import { runMigrations } from "../src/db/migrate.js";
 import { seed } from "../src/db/seed.js";
+import { closeQueue } from "../src/jobs/queue.js";
+import { valkey, waitForValkey } from "../src/valkey/client.js";
 
 let migrated = false;
 
-// Empty every table and put the starting tips back, so each test starts the same.
+// Empty every table and the test Valkey database, then put the starting tips back,
+// so each test starts the same.
 export async function resetDatabase() {
   if (!migrated) {
     await runMigrations();
+    await waitForValkey();
     migrated = true;
   }
-  await pool.query("truncate tips, focus_sessions, auth_sessions, users restart identity cascade");
+  await pool.query("truncate tips, focus_sessions, achievements, auth_sessions, users restart identity cascade");
+  await valkey.flushdb(); // only database 1 (see vitest.config.ts)
   await seed();
+}
+
+export async function closeAll() {
+  await closeQueue();
+  valkey.disconnect();
+  await pool.end();
 }
 
 // What a browser on our site sends: the page's Origin, and (via the Next.js proxy) the site's host.

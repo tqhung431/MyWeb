@@ -30,6 +30,17 @@ const schema = z.object({
 
   // Sign-in attempts allowed per email address per 15 minutes.
   AUTH_RATE_LIMIT: z.coerce.number().int().positive().default(10),
+
+  // --- Stage 5 ---
+  // Valkey (a fast in-memory store, compatible with Redis). Used for the cache,
+  // shared rate-limit counters and the job queue. MyWeb still works if it's down.
+  VALKEY_URL: z.string().default("redis://127.0.0.1:6379"),
+  QUEUE_NAME: z.string().default("myweb"),
+
+  // Email. Without SMTP_URL, emails are printed in the worker's terminal instead of sent.
+  // With Mailpit from docker-compose: SMTP_URL=smtp://127.0.0.1:1025 (inbox at http://localhost:8025)
+  SMTP_URL: z.string().optional(),
+  MAIL_FROM: z.string().default("MyWeb <hello@myweb.local>"),
 });
 
 export const config = schema.parse(process.env);

@@ -23,12 +23,21 @@ describe("SegmentedControl", () => {
 });
 
 describe("TrackCard", () => {
+  const rain = TRACKS.find((t) => t.name === "rain")!;
+
   it("is a toggle button named after the track", async () => {
     const onToggle = vi.fn();
-    render(<TrackCard track={TRACKS[0]} active={false} onToggle={onToggle} />);
+    render(<TrackCard track={rain} active={false} onToggle={onToggle} />);
     const button = screen.getByRole("button", { name: /Rain/ });
     expect(button).toHaveAttribute("aria-pressed", "false");
     await userEvent.click(button);
     expect(onToggle).toHaveBeenCalledOnce();
+  });
+
+  it("shows its own volume slider only while playing", () => {
+    const { rerender } = render(<TrackCard track={rain} active={false} onToggle={() => {}} onVolume={() => {}} />);
+    expect(screen.queryByRole("slider")).toBeNull();
+    rerender(<TrackCard track={rain} active onToggle={() => {}} volume={40} onVolume={() => {}} />);
+    expect(screen.getByRole("slider", { name: "Rain volume" })).toHaveValue("40");
   });
 });

@@ -20,7 +20,8 @@ export function MiniPlayer() {
   const ambient = useAmbient();
   const focus = useFocus();
 
-  const track = getTrack(ambient.playing);
+  const tracks = ambient.playing.map((n) => getTrack(n)).filter((t) => t !== undefined);
+  const track = tracks[0]; // the first one sets the icon
   const visible = (track || focus.active) && pathname !== "/chill";
   if (!visible) return null;
 
@@ -35,7 +36,7 @@ export function MiniPlayer() {
         <AppIcon icon={track?.icon ?? chill.icon} accent={track?.accent ?? chill.accent} size="md" />
         <span className="min-w-0">
           <span className="flex items-center gap-2 truncate text-sm font-semibold">
-            {track ? track.label : "Silence"}
+            {track ? (tracks.length > 1 ? `${track.label} +${tracks.length - 1}` : track.label) : "Silence"}
             {track && (
               <span className="text-primary">
                 <Equalizer />
@@ -62,7 +63,7 @@ export function MiniPlayer() {
         </Button>
       )}
       {track && (
-        <Button variant="secondary" size="icon" className="h-10 w-10" onClick={ambient.stop} aria-label="Stop sound">
+        <Button variant="secondary" size="icon" className="h-10 w-10" onClick={ambient.stopAll} aria-label="Stop all sounds">
           <Square className="h-4 w-4" aria-hidden="true" />
         </Button>
       )}

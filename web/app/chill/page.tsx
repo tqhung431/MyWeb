@@ -2,6 +2,7 @@
 // plus one tip fetched on the server. If the API is down, the tip is simply left out.
 
 import type { Metadata } from "next";
+import { AchievementsCard } from "@/features/achievements/AchievementsCard";
 import { SoundPanel } from "@/features/ambient/SoundPanel";
 import { FocusPanel } from "@/features/focus/FocusPanel";
 import { WeekChart } from "@/features/focus/WeekChart";
@@ -27,8 +28,11 @@ export default async function ChillPage() {
       <div className="lg:row-span-2">
         <FocusPanel />
       </div>
-      <SoundPanel />
       <WeekChart />
+      <AchievementsCard />
+      <div className="lg:col-span-2">
+        <SoundPanel />
+      </div>
       {tip && (
         <div className="lg:col-span-2">
           <TipCard tip={tip} eyebrow="Tip for this session" />

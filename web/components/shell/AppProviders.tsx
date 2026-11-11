@@ -4,6 +4,7 @@
 // (FocusProvider reads the signed-in user to reload your sessions after login/logout).
 
 import type { ReactNode } from "react";
+import { AchievementsProvider } from "@/features/achievements/AchievementsProvider";
 import { AmbientProvider } from "@/features/ambient/AmbientProvider";
 import { AuthProvider } from "@/features/auth/AuthProvider";
 import { FocusProvider } from "@/features/focus/FocusProvider";
@@ -13,7 +14,9 @@ export function AppProviders({ initialUser, children }: { initialUser: User | nu
   return (
     <AuthProvider initialUser={initialUser}>
       <AmbientProvider>
-        <FocusProvider>{children}</FocusProvider>
+        <AchievementsProvider>
+          <FocusProvider>{children}</FocusProvider>
+        </AchievementsProvider>
       </AmbientProvider>
     </AuthProvider>
   );

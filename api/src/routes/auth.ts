@@ -14,8 +14,10 @@ import { claimAnonymousSessions, COOKIE_NAME, endSession, publicUser, startSessi
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { users } from "../db/schema.js";
+import { enqueue } from "../jobs/queue.js";
 import { HttpError } from "../middleware/errors.js";
 import { rateLimit } from "../middleware/security.js";
+import { timeZoneOf } from "./sessions.js";
 
 export const authRouter = Router();
 
@@ -35,11 +37,12 @@ const loginBody = z.object({ email, password: z.string().min(1).max(128) });
 //   would make everyone on the network share one counter.
 const WINDOW = 15 * 60 * 1000;
 const perEmailLimit = rateLimit({
+  name: "auth-email",
   windowMs: WINDOW,
   max: config.AUTH_RATE_LIMIT,
   key: (req) => `email:${String(req.body?.email ?? "").trim().toLowerCase()}`,
 });
-const overallLimit = rateLimit({ windowMs: WINDOW, max: config.AUTH_RATE_LIMIT * 30, key: () => "all" });
+const overallLimit = rateLimit({ name: "auth-all", windowMs: WINDOW, max: config.AUTH_RATE_LIMIT * 30, key: () => "all" });
 
 authRouter.post("/register", overallLimit, perEmailLimit, async (req, res) => {
   const input = registerBody.parse(req.body);
@@ -55,6 +58,10 @@ authRouter.post("/register", overallLimit, perEmailLimit, async (req, res) => {
   await startSession(res, user.id, req.get("user-agent"));
   await claimAnonymousSessions(user.id, req.get("x-client-id"));
   res.status(201).json({ user: publicUser(user) });
+
+  // Stage 5: slow or optional work happens in the background worker.
+  await enqueue("welcome-email", { userId: user.id });
+  await enqueue("achievements", { userId: user.id, clientId: null, timeZone: timeZoneOf(req) });
 });
 
 authRouter.post("/login", overallLimit, perEmailLimit, async (req, res) => {
@@ -71,6 +78,7 @@ authRouter.post("/login", overallLimit, perEmailLimit, async (req, res) => {
   await startSession(res, user.id, req.get("user-agent"));
   await claimAnonymousSessions(user.id, req.get("x-client-id"));
   res.json({ user: publicUser(user) });
+  await enqueue("achievements", { userId: user.id, clientId: null, timeZone: timeZoneOf(req) });
 });
 
 authRouter.post("/logout", async (req, res) => {

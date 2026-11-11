@@ -16,6 +16,8 @@ import { Brand } from "@/components/shell/Brand";
 import { MiniPlayer } from "@/components/shell/MiniPlayer";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { UserMenu } from "@/features/auth/UserMenu";
+import { themeScript } from "@/features/theme/theme";
+import { ThemeSwitcher } from "@/features/theme/ThemeSwitcher";
 import { getMe } from "@/lib/api/server";
 import "./globals.css";
 
@@ -38,7 +40,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const { user } = await getMe();
 
   return (
-    <html lang="en" className={jakarta.variable}>
+    // suppressHydrationWarning: the theme script changes <html> before React loads, on purpose.
+    <html lang="en" className={jakarta.variable} suppressHydrationWarning>
+      <head>
+        {/* Apply the saved theme before the first paint (no white flash in dark mode) */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="min-h-dvh font-sans">
         <a
           href="#main"
@@ -56,7 +63,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               {/* Phone header (the sidebar replaces it on desktop) */}
               <header className="flex items-center justify-between px-4 pt-5 lg:hidden">
                 <Brand />
-                <UserMenu compact />
+                <div className="flex items-center gap-2">
+                  <ThemeSwitcher compact />
+                  <UserMenu compact />
+                </div>
               </header>
 
               <main id="main" className="mx-auto max-w-6xl px-4 pt-6 pb-44 sm:px-6 lg:px-10 lg:pt-10 lg:pb-32">

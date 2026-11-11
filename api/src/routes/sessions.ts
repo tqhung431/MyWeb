@@ -10,13 +10,14 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../db/client.js";
 import { focusSessions } from "../db/schema.js";
+import { enqueue } from "../jobs/queue.js";
 import { rateLimit } from "../middleware/security.js";
 
 export const sessionsRouter = Router();
 
-type Owner = { userId: string; clientId: null } | { userId: null; clientId: string };
+export type Owner = { userId: string; clientId: null } | { userId: null; clientId: string };
 
-function owner(req: Request): Owner {
+export function owner(req: Request): Owner {
   if (req.user) return { userId: req.user.id, clientId: null };
   const clientId = z.uuid({ message: "Sign in, or send an X-Client-Id header (UUID)" }).parse(req.get("x-client-id"));
   return { userId: null, clientId };
@@ -38,6 +39,7 @@ const newSession = z.object({
 
 // 30 saves a minute per user or browser (not per IP: everyone on the network shares one IP here).
 const saveLimit = rateLimit({
+  name: "session-save",
   windowMs: 60_000,
   max: 30,
   key: (req) => (req.user ? `user:${req.user.id}` : `client:${req.get("x-client-id") ?? "none"}`),
@@ -50,19 +52,28 @@ sessionsRouter.post("/", saveLimit, async (req, res) => {
     .insert(focusSessions)
     .values({ ...o, ...input })
     .returning();
-  res.status(201).json(saved); // 201 Created
+  res.status(201).json(saved); // 201 Created: the visitor doesn't wait for anything below
+
+  // Stage 5: badges are checked later by the worker, not here.
+  if (input.mode === "focus") await enqueue("achievements", { ...o, timeZone: timeZoneOf(req) });
 });
 
 // --- GET /api/sessions/summary?tz=Asia/Ho_Chi_Minh&days=7 --------------------
 
-const isTimeZone = (tz: string) => {
+// The browser's time zone, sent as X-Time-Zone (e.g. "Asia/Ho_Chi_Minh"). Used for "today" and badges.
+export function timeZoneOf(req: Request): string {
+  const tz = req.get("x-time-zone");
+  return tz && isTimeZone(tz) ? tz : "UTC";
+}
+
+function isTimeZone(tz: string): boolean {
   try {
     new Intl.DateTimeFormat("en", { timeZone: tz });
     return true;
   } catch {
     return false;
   }
-};
+}
 
 const summaryQuery = z.object({
   tz: z.string().refine(isTimeZone, "Unknown time zone").default("UTC"),

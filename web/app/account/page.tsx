@@ -8,6 +8,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card, CardHeader } from "@/components/ui/Card";
+import { AchievementsCard } from "@/features/achievements/AchievementsCard";
 import { SignOutButton } from "@/features/auth/SignOutButton";
 import { TodayStats } from "@/features/focus/TodayStats";
 import { getMe } from "@/lib/api/server";
@@ -32,6 +33,7 @@ export default async function AccountPage() {
       </section>
 
       <TodayStats />
+      <AchievementsCard />
 
       <Card>
         <CardHeader title="Account details" />

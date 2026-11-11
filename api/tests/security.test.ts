@@ -1,13 +1,18 @@
 import express from "express";
 import request from "supertest";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { errorHandler } from "../src/middleware/errors.js";
 import { rateLimit } from "../src/middleware/security.js";
+import { valkey, waitForValkey } from "../src/valkey/client.js";
+
+// Count in Valkey from the first request (otherwise the first few would be counted in memory).
+beforeAll(() => waitForValkey());
+afterAll(() => valkey.disconnect());
 
 describe("rateLimit", () => {
   it("allows `max` requests per window, then answers 429 with Retry-After", async () => {
     const app = express();
-    app.get("/", rateLimit({ windowMs: 60_000, max: 3, key: () => "test" }), (_req, res) => {
+    app.get("/", rateLimit({ name: `t1-${Date.now()}`, windowMs: 60_000, max: 3, key: () => "test" }), (_req, res) => {
       res.send("ok");
     });
     app.use(errorHandler);
@@ -23,7 +28,7 @@ describe("rateLimit with a custom key", () => {
   it("counts each key separately (e.g. per email)", async () => {
     const app = express();
     app.use(express.json());
-    app.post("/", rateLimit({ windowMs: 60_000, max: 1, key: (req) => req.body.email }), (_req, res) => {
+    app.post("/", rateLimit({ name: `t2-${Date.now()}`, windowMs: 60_000, max: 1, key: (req) => req.body.email }), (_req, res) => {
       res.send("ok");
     });
     app.use(errorHandler);

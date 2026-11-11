@@ -5,13 +5,13 @@ import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 import { pool } from "../src/db/client.js";
-import { ORIGIN, resetDatabase, SITE_HOST } from "./helpers.js";
+import { closeAll, ORIGIN, resetDatabase, SITE_HOST } from "./helpers.js";
 
 const app = createApp();
 const alice = { email: "Alice@Example.com", password: "correct horse battery", name: "Alice" };
 
 beforeEach(resetDatabase);
-afterAll(() => pool.end());
+afterAll(closeAll);
 
 function sessionCookie(res: request.Response): string | undefined {
   const cookies = ([] as string[]).concat(res.headers["set-cookie"] ?? []);

@@ -1,10 +1,10 @@
-# Stage 3: only the database runs in Docker for now.
-# Stage 7 will add the web app, the API and Caddy to this file.
+# Services MyWeb needs while you develop. Stage 7 will add the website, the API and Caddy.
 #
-#   docker compose up -d db     start PostgreSQL in the background
-#   docker compose down         stop it (your data stays in the volume)
+#   docker compose up -d        start everything below in the background
+#   docker compose down         stop (your data stays in the volumes)
 
 services:
+  # The database (Stage 3)
   db:
     image: postgres:16
     environment:
@@ -12,7 +12,7 @@ services:
       POSTGRES_PASSWORD: myweb # fine for learning on your PC; never reuse this in production
       POSTGRES_DB: myweb
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432" # this PC only
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
@@ -20,5 +20,26 @@ services:
       interval: 5s
       retries: 10
 
+  # Stage 5: cache, rate-limit counters and the job queue (BSD licence, a fork of Redis)
+  valkey:
+    image: valkey/valkey:8
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - valkey-data:/data # queued jobs survive a restart
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  # Stage 5 (optional): a pretend mail server. Emails the worker sends land in a web inbox
+  # at http://localhost:8025 instead of anyone's real mailbox. Set SMTP_URL in api/.env to use it.
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "127.0.0.1:1025:1025" # SMTP
+      - "127.0.0.1:8025:8025" # inbox in the browser
+
 volumes:
   db-data:
+  valkey-data:

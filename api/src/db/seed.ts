@@ -3,6 +3,8 @@
 import { sql } from "drizzle-orm";
 import { db, pool } from "./client.js";
 import { tips } from "./schema.js";
+import { invalidate } from "../valkey/cache.js";
+import { valkey, waitForValkey } from "../valkey/client.js";
 
 export const seedTips = [
   {
@@ -60,10 +62,14 @@ export async function seed() {
         minutes: sql`excluded.minutes`,
       },
     });
+  // The tips changed, so cached copies are out of date: delete them.
+  await waitForValkey();
+  await invalidate("tips:list", ...seedTips.map((t) => `tips:${t.slug}`));
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   await seed();
   console.log(`Seeded ${seedTips.length} tips.`);
   await pool.end();
+  valkey.disconnect();
 }
