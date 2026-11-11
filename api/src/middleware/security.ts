@@ -26,6 +26,12 @@ export const sameOrigin: RequestHandler = (req, _res, next) => {
   if (origin && !isOwnSite(origin, req)) throw new HttpError(403, "Cross-site request blocked");
 
   const hasBody = Number(req.get("content-length") ?? 0) > 0 || req.get("transfer-encoding") !== undefined;
+  // File uploads (Stage 8) are forms, which other sites CAN send. So for them the Origin
+  // header is required, not just checked when present: no Origin, no upload.
+  if (hasBody && req.is("multipart/form-data")) {
+    if (!origin) throw new HttpError(403, "Uploads must come from MyWeb's own page");
+    return next();
+  }
   if (hasBody && !req.is("application/json")) throw new HttpError(415, "Send JSON");
   next();
 };

@@ -39,7 +39,7 @@ export const APPS: AppInfo[] = [
   {
     id: "music",
     name: "Music",
-    tagline: "Drill, Remix, Pop and Lofi with vocals: community charts",
+    tagline: "Songs with vocals, played by MyWeb itself: community charts",
     href: "/music",
     icon: Disc3,
     accent: "from-rose-500 to-orange-400",
@@ -47,7 +47,7 @@ export const APPS: AppInfo[] = [
     phase: "Stage 7",
     links: [
       { href: "/music", label: "Charts" },
-      { href: "/music/add", label: "Add a song" },
+      { href: "/music/add", label: "Add songs" },
     ],
   },
   {

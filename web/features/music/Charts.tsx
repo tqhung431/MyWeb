@@ -3,7 +3,7 @@
 // The charts: songs ranked by MyWeb listeners (plays + 3 × likes) this week, this month or all time.
 // They update live: when anyone plays or adds a song, everyone's chart refreshes.
 
-import { CloudOff, Heart, ListMusic, Play, Plus } from "lucide-react";
+import { CloudOff, Heart, ListMusic, Play, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
@@ -11,7 +11,7 @@ import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useRealtimeEvent } from "@/features/realtime/RealtimeProvider";
-import { getCharts, setLike, type Genre, type Period, type Song } from "@/lib/api/music";
+import { deleteSong, getCharts, setLike, updateSong, type ChartSong as Song, type Genre, type Period } from "@/lib/api/music";
 import { cn } from "@/lib/cn";
 import { genreOf, GENRES } from "./genres";
 import { useMusic } from "./MusicProvider";
@@ -52,6 +52,18 @@ export function Charts() {
     }, 800);
   });
 
+  async function changeGenre(song: Song, genre: Genre) {
+    setSongs((list) => list?.map((s) => (s.id === song.id ? { ...s, genre } : s)) ?? null);
+    await updateSong(song.id, { genre }).catch(() => {});
+    void load();
+  }
+
+  async function remove(song: Song) {
+    if (!window.confirm(`Remove “${song.title}” from MyWeb?`)) return;
+    await deleteSong(song.id).catch(() => {});
+    void load();
+  }
+
   async function toggleLike(song: Song) {
     // Show it at once ("optimistic"), then take the server's numbers
     setSongs((list) => list?.map((s) => (s.id === song.id ? { ...s, liked: !s.liked, likes: s.likes + (s.liked ? -1 : 1) } : s)) ?? null);
@@ -74,7 +86,7 @@ export function Charts() {
             </Button>
           )}
           <Link href="/music/add" className={buttonClasses("secondary", "sm")}>
-            <Plus className="h-4 w-4" aria-hidden="true" /> Add a song
+            <Plus className="h-4 w-4" aria-hidden="true" /> Add songs
           </Link>
         </div>
       </div>
@@ -105,6 +117,8 @@ export function Charts() {
                 playing={current?.id === song.id}
                 onPlay={() => play(song, songs)}
                 onLike={() => toggleLike(song)}
+                onGenre={(g) => changeGenre(song, g)}
+                onRemove={() => remove(song)}
               />
             ))}
           </ol>
@@ -113,13 +127,24 @@ export function Charts() {
 
       <p className="text-xs text-muted">
         Ranked by MyWeb listeners: plays + 3 × likes {period === "all" ? "of all time" : period === "week" ? "in the last 7 days" : "in the last 30 days"}.
-        Songs stream from SoundCloud or YouTube: the artists keep their rights and get the plays.
+        Songs are stored and played by MyWeb itself, so they work on any network that can open MyWeb.
       </p>
     </div>
   );
 }
 
-function Row({ rank, song, period, playing, onPlay, onLike }: { rank: number; song: Song; period: Period; playing: boolean; onPlay: () => void; onLike: () => void }) {
+type RowProps = {
+  rank: number;
+  song: Song;
+  period: Period;
+  playing: boolean;
+  onPlay: () => void;
+  onLike: () => void;
+  onGenre: (g: Genre) => void;
+  onRemove: () => void;
+};
+
+function Row({ rank, song, period, playing, onPlay, onLike, onGenre, onRemove }: RowProps) {
   const g = genreOf(song.genre);
   return (
     <li className={cn("group flex items-center gap-3 rounded-2xl p-2 transition sm:gap-4", playing ? "bg-primary/10" : "hover:bg-surface-muted")}>
@@ -150,12 +175,29 @@ function Row({ rank, song, period, playing, onPlay, onLike }: { rank: number; so
       </button>
       <div className="min-w-0 flex-1">
         <p className={cn("truncate font-semibold", playing && "text-primary")}>{song.title}</p>
-        <p className="truncate text-sm text-muted">
-          {song.artist} · {song.provider === "youtube" ? "YouTube" : "SoundCloud"}
+        <p className="truncate text-sm text-muted" title={`${song.license}${song.credit ? ` · ${song.credit}` : ""}`}>
+          {song.artist}
+          {song.credit ? ` · ${song.credit}` : ""}
         </p>
       </div>
       <span className="hidden sm:block">
-        <Badge>{g.label}</Badge>
+        {song.mine ? (
+          // You added it: you can fix the genre MyWeb guessed
+          <select
+            value={song.genre}
+            onChange={(e) => onGenre(e.target.value as Genre)}
+            aria-label={`Genre of ${song.title}`}
+            className="cursor-pointer rounded-full border border-border bg-surface-strong px-2 py-0.5 text-xs font-semibold"
+          >
+            {GENRES.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <Badge>{g.label}</Badge>
+        )}
       </span>
       <span className="hidden w-24 text-right text-xs text-muted tabular-nums md:block" title={`plays ${period === "all" ? "in total" : `this ${period}`}`}>
         {song.plays} {song.plays === 1 ? "play" : "plays"}
@@ -173,6 +215,16 @@ function Row({ rank, song, period, playing, onPlay, onLike }: { rank: number; so
         <Heart className={cn("h-4 w-4", song.liked && "fill-current")} aria-hidden="true" />
         {song.likes}
       </button>
+      {song.mine && (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`Remove ${song.title}`}
+          className="hidden h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted hover:bg-rose-500/10 hover:text-rose-600 sm:inline-flex"
+        >
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
+        </button>
+      )}
     </li>
   );
 }
@@ -185,10 +237,10 @@ function Empty({ genre }: { genre: Genre | "all" }) {
       </span>
       <p className="font-semibold">No {genre === "all" ? "" : `${genreOf(genre).label} `}songs yet</p>
       <p className="max-w-sm text-sm text-muted">
-        Add a song from SoundCloud or YouTube. Everyone on MyWeb can play it, and the charts fill up as people listen and like.
+        Upload songs you may share (your own, or Creative Commons), or start with the starter pack of 12 free songs with vocals.
       </p>
       <Link href="/music/add" className={buttonClasses("primary", "md")}>
-        <Plus className="h-4 w-4" aria-hidden="true" /> Add the first song
+        <Plus className="h-4 w-4" aria-hidden="true" /> Add songs
       </Link>
     </div>
   );

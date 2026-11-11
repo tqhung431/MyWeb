@@ -6,6 +6,7 @@
 // Every copy has an expiry (TTL), so stale data fixes itself. When we change data
 // ourselves, we delete the copy straight away (invalidate).
 
+import { cacheLookups } from "../metrics.js";
 import { valkey, valkeyReady } from "./client.js";
 
 export type Cached<T> = { value: T; hit: boolean };
@@ -14,12 +15,16 @@ export async function cached<T>(key: string, ttlSeconds: number, load: () => Pro
   if (valkeyReady()) {
     try {
       const hit = await valkey.get(key);
-      if (hit !== null) return { value: JSON.parse(hit) as T, hit: true };
+      if (hit !== null) {
+        cacheLookups.add(1, { result: "hit" });
+        return { value: JSON.parse(hit) as T, hit: true };
+      }
     } catch {
       // Valkey hiccup: just load from the database
     }
   }
 
+  cacheLookups.add(1, { result: "miss" });
   const value = await load();
   if (valkeyReady()) {
     // EX = expire after N seconds. Not awaited: the visitor shouldn't wait for the cache write.

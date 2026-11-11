@@ -1,125 +1,210 @@
 "use client";
 
-import { CheckCircle2, Link2, Loader2, Play } from "lucide-react";
+// Add songs (Stage 8): drop in files. Title, artist, genre and cover are read from each file,
+// so there's nothing to fill in except what allows you to share them.
+
+import { CheckCircle2, CircleAlert, ExternalLink, Loader2, Music, Upload } from "lucide-react";
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type DragEvent } from "react";
+import { Badge } from "@/components/ui/Badge";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { ApiError } from "@/lib/api/client";
-import { addSong, type Genre, type Song } from "@/lib/api/music";
+import { uploadSong, type UploadedSong } from "@/lib/api/music";
 import { cn } from "@/lib/cn";
-import { GENRES } from "./genres";
+import { genreOf } from "./genres";
 import { useMusic } from "./MusicProvider";
+import { STARTER_PACK } from "./starter-pack";
+
+type Rights = "own" | "cc" | "permission";
+type Item = { id: string; file: File; progress: number; status: "waiting" | "uploading" | "done" | "error"; song?: UploadedSong; error?: string };
+
+const AUDIO = /\.(mp3|m4a|aac|ogg|opus|flac|wav)$/i;
 
 export function AddSongForm() {
-  const [url, setUrl] = useState("");
-  const [genre, setGenre] = useState<Genre>("drill");
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState("");
-  const [added, setAdded] = useState<Song | null>(null);
+  const [items, setItems] = useState<Item[]>([]);
+  const [rights, setRights] = useState<Rights>("cc");
+  const [license, setLicense] = useState("CC BY 4.0");
+  const [credit, setCredit] = useState("");
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const picker = useRef<HTMLInputElement>(null);
   const { play } = useMusic();
+  const busy = items.some((i) => i.status === "uploading");
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setPending(true);
-    setError("");
-    setAdded(null);
-    try {
-      setAdded(await addSong(url, genre));
-      setUrl("");
-    } catch (err) {
-      // The API explains: not SoundCloud/YouTube, not found, embedding not allowed, already added...
-      setError(err instanceof ApiError ? (err.details[0]?.message ?? err.message) : "Can't reach the server.");
-    } finally {
-      setPending(false);
+  function addFiles(files: FileList | File[]) {
+    const fresh = Array.from(files)
+      .filter((f) => AUDIO.test(f.name) || f.type.startsWith("audio/"))
+      .map((file) => ({ id: `${file.name}-${file.size}-${Math.random()}`, file, progress: 0, status: "waiting" as const }));
+    setItems((list) => [...list.filter((i) => i.status !== "done"), ...fresh]);
+  }
+
+  function update(id: string, patch: Partial<Item>) {
+    setItems((list) => list.map((i) => (i.id === id ? { ...i, ...patch } : i)));
+  }
+
+  async function uploadAll() {
+    const fields = {
+      license: rights === "own" ? "Own work" : rights === "permission" ? "Shared with permission" : license,
+      credit: credit || undefined,
+      sourceUrl: sourceUrl || undefined,
+    };
+    // One at a time: clear progress per song, and a slow network isn't flooded.
+    for (const item of items.filter((i) => i.status === "waiting" || i.status === "error")) {
+      update(item.id, { status: "uploading", progress: 0, error: undefined });
+      try {
+        const song = await uploadSong(item.file, fields, (p) => update(item.id, { progress: p }));
+        update(item.id, { status: "done", progress: 1, song });
+      } catch (e) {
+        update(item.id, { status: "error", error: e instanceof ApiError ? (e.details[0]?.message ?? e.message) : "Upload failed" });
+      }
     }
   }
 
+  const onDrop = (e: DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    addFiles(e.dataTransfer.files);
+  };
+
+  const waiting = items.filter((i) => i.status === "waiting" || i.status === "error").length;
+
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-      <Card>
-        <form onSubmit={onSubmit} className="flex flex-col gap-5">
-          <Input
-            label="Song link"
-            name="url"
-            type="url"
-            inputMode="url"
-            placeholder="https://soundcloud.com/artist/song  or  https://youtu.be/…"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            required
-            hint="One song from SoundCloud or YouTube (the Share → Copy link button)."
-          />
-
-          <fieldset>
-            <legend className="mb-2 text-sm font-semibold">Genre</legend>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {GENRES.map((g) => (
-                <button
-                  key={g.id}
-                  type="button"
-                  aria-pressed={genre === g.id}
-                  onClick={() => setGenre(g.id)}
-                  className={cn(
-                    "flex cursor-pointer flex-col items-start gap-2 rounded-2xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                    genre === g.id ? "border-primary/50 bg-primary/10" : "border-border bg-surface-strong/50 hover:border-primary/30",
-                  )}
-                >
-                  <span className={cn("inline-flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br text-white", g.accent)}>
-                    <g.icon className="h-4 w-4" aria-hidden="true" />
-                  </span>
-                  <span>
-                    <span className="block text-sm font-semibold">{g.label}</span>
-                    <span className="block text-xs text-muted">{g.hint}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </fieldset>
-
-          {error && (
-            <p role="alert" className="rounded-2xl bg-rose-500/10 px-4 py-3 text-sm font-medium text-rose-700 dark:text-rose-300">
-              {error}
-            </p>
+      <Card className="flex flex-col gap-5">
+        {/* Drop zone */}
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+          className={cn(
+            "flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed p-8 text-center transition",
+            dragging ? "border-primary bg-primary/8" : "border-border",
           )}
-
-          <Button type="submit" variant="primary" size="lg" disabled={pending || !url}>
-            {pending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : <Link2 className="h-5 w-5" aria-hidden="true" />}
-            {pending ? "Checking with the music site…" : "Add song"}
+        >
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/12 text-primary">
+            <Upload className="h-6 w-6" aria-hidden="true" />
+          </span>
+          <p className="font-semibold">Drop song files here</p>
+          <p className="text-sm text-muted">MP3, M4A, OGG, FLAC or WAV. Title, artist, genre and cover are read from each file.</p>
+          <input ref={picker} type="file" accept="audio/*,.mp3,.m4a,.ogg,.opus,.flac,.wav" multiple hidden onChange={(e) => e.target.files && addFiles(e.target.files)} />
+          <Button variant="secondary" onClick={() => picker.current?.click()}>
+            <Music className="h-4 w-4" aria-hidden="true" /> Choose files
           </Button>
-        </form>
+        </div>
 
-        {added && (
-          <div role="status" className="mt-5 flex items-center gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/8 p-3">
-            <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-600 dark:text-emerald-300" aria-hidden="true" />
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-semibold">{added.title}</p>
-              <p className="truncate text-sm text-muted">{added.artist} · added to the charts</p>
-            </div>
-            <Button variant="secondary" size="sm" onClick={() => play(added)}>
-              <Play className="h-4 w-4" aria-hidden="true" /> Play
-            </Button>
-          </div>
+        {/* The files */}
+        {items.length > 0 && (
+          <ul className="flex flex-col gap-2" aria-live="polite">
+            {items.map((i) => (
+              <li key={i.id} className="flex items-center gap-3 rounded-2xl border border-border p-3">
+                {i.status === "done" ? (
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-300" aria-hidden="true" />
+                ) : i.status === "error" ? (
+                  <CircleAlert className="h-5 w-5 shrink-0 text-rose-600 dark:text-rose-300" aria-hidden="true" />
+                ) : i.status === "uploading" ? (
+                  <Loader2 className="h-5 w-5 shrink-0 animate-spin text-primary" aria-hidden="true" />
+                ) : (
+                  <Music className="h-5 w-5 shrink-0 text-muted" aria-hidden="true" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{i.song ? `${i.song.title} — ${i.song.artist}` : i.file.name}</p>
+                  {i.status === "uploading" && (
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-muted">
+                      <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${Math.round(i.progress * 100)}%` }} />
+                    </div>
+                  )}
+                  {i.status === "error" && <p className="text-xs text-rose-600 dark:text-rose-300">{i.error}</p>}
+                  {i.song && (
+                    <p className="text-xs text-muted">
+                      {i.song.starterPack ? "Starter pack · " : ""}
+                      {i.song.license}
+                    </p>
+                  )}
+                </div>
+                {i.song && (
+                  <>
+                    <Badge tone="primary">{genreOf(i.song.genre).label}</Badge>
+                    <Button variant="ghost" size="sm" onClick={() => play(i.song!)}>
+                      Play
+                    </Button>
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
         )}
+
+        {/* What lets you share them */}
+        <fieldset className="flex flex-col gap-3">
+          <legend className="mb-1 text-sm font-semibold">What allows you to share these songs?</legend>
+          {(
+            [
+              ["own", "I made them", "Your own music"],
+              ["cc", "A free licence", "e.g. Creative Commons; give the licence and credit"],
+              ["permission", "I have permission", "The artist said you may share them here"],
+            ] as const
+          ).map(([value, label, hint]) => (
+            <label key={value} className={cn("flex cursor-pointer items-start gap-3 rounded-2xl border p-3", rights === value ? "border-primary/50 bg-primary/8" : "border-border")}>
+              <input type="radio" name="rights" value={value} checked={rights === value} onChange={() => setRights(value)} className="mt-1" />
+              <span>
+                <span className="block text-sm font-semibold">{label}</span>
+                <span className="block text-xs text-muted">{hint}</span>
+              </span>
+            </label>
+          ))}
+          {rights === "cc" && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input label="Licence" value={license} onChange={(e) => setLicense(e.target.value)} hint="e.g. CC BY 4.0, CC BY-NC 3.0" />
+              <Input label="Credit (optional)" value={credit} onChange={(e) => setCredit(e.target.value)} hint="feat. …, original artists" />
+              <Input className="sm:col-span-2" label="Where it's from (optional)" type="url" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://…" />
+            </div>
+          )}
+          <p className="text-xs text-muted">Starter-pack songs are recognised by file name; their licence and credit are filled in for you.</p>
+        </fieldset>
+
+        <label className="flex items-start gap-3 text-sm">
+          <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} className="mt-1" />
+          <span>I may share these songs with everyone on MyWeb, as chosen above.</span>
+        </label>
+
+        <Button variant="primary" size="lg" onClick={uploadAll} disabled={!confirmed || waiting === 0 || busy}>
+          {busy ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : <Upload className="h-5 w-5" aria-hidden="true" />}
+          {busy ? "Uploading…" : waiting > 0 ? `Add ${waiting} song${waiting === 1 ? "" : "s"}` : "Add songs"}
+        </Button>
       </Card>
 
       <Card>
-        <h2 className="text-lg font-bold">Finding good songs</h2>
-        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted">
-          <li>
-            On SoundCloud, search e.g. <em>vietnamese drill</em>, <em>vinahouse remix</em>, <em>v-pop</em> or <em>lofi chill</em>, open a song, then
-            Share → Copy link.
-          </li>
-          <li>
-            On YouTube, open the official music video and copy the address. Artists&apos; own channels are best.
-          </li>
-          <li>
-            Prefer <strong className="text-text">official uploads</strong> by the artist or label. Re-uploads by strangers may be removed.
-          </li>
-          <li>Songs only play here if their owner allows embedding; MyWeb checks this when you add one.</li>
+        <h2 className="text-lg font-bold">Starter pack: 12 free songs with vocals</h2>
+        <p className="mt-1 text-sm text-muted">
+          Picked by listener ratings on ccMixter, 3 per genre, all under Creative Commons licences that allow sharing them here.
+          Open each page, press <strong className="text-text">Download</strong>, then drop the files on the left.
+        </p>
+        <ul className="mt-4 flex flex-col divide-y divide-border">
+          {STARTER_PACK.map((s) => (
+            <li key={s.page} className="flex items-center gap-3 py-2">
+              <Badge>{genreOf(s.genre).label}</Badge>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold">{s.title}</span>
+                <span className="block truncate text-xs text-muted">
+                  {s.artist} · {s.license}
+                </span>
+              </span>
+              <a href={s.page} target="_blank" rel="noopener noreferrer" className={buttonClasses("ghost", "sm")} aria-label={`Open ${s.title} on ccMixter`}>
+                <ExternalLink className="h-4 w-4" aria-hidden="true" />
+              </a>
+            </li>
+          ))}
         </ul>
-        <Link href="/music" className={buttonClasses("ghost", "sm", "mt-4 -ml-3")}>
+        <p className="mt-3 text-xs text-muted">
+          Running MyWeb yourself? Put the downloads in a folder and run <code>npm run music:import -- folder</code> in <code>api/</code>.
+        </p>
+        <Link href="/music" className={buttonClasses("ghost", "sm", "mt-3 -ml-3")}>
           ← Back to the charts
         </Link>
       </Card>

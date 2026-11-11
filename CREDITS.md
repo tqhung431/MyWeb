@@ -23,4 +23,8 @@
 | All music and sounds | Generated live in the browser by `web/features/ambient/engine.ts` | Our own code, no recordings |
 | Socket.IO (server, client, Redis adapter and emitter) | npm | MIT |
 | Caddy | caddyserver.com (Docker image) | Apache-2.0 |
-| Songs in the Music app | Streamed from SoundCloud / YouTube in their official embedded players; MyWeb stores links only | Each song belongs to its artist/label |
+| Songs in the Music app | Uploaded by people who may share them; starter pack from ccMixter (credits and licences shown with each song, list in api/seed/starter-pack.json) | CC BY / CC BY-NC, or as stated per song |
+| Multer, music-metadata | npm | MIT |
+| OpenTelemetry JS (SDK, auto-instrumentations) | npm | Apache-2.0 |
+| @vercel/otel | npm | MIT |
+| grafana/otel-lgtm image (collector, Prometheus, Tempo, Loki, Grafana) | Docker Hub | Apache-2.0 image; Grafana, Loki, Tempo AGPL-3.0 |

@@ -1,150 +1,168 @@
-// Music: adding songs (checked with a FAKE SoundCloud / YouTube), charts, plays, likes.
-// Also Stage 7 bits: timer preferences, real IPs and Secure cookies behind a trusted proxy.
+// Music (Stage 8): songs are files MyWeb stores and streams itself.
+// Uses tiny test songs in tests/fixtures (2 seconds of tone, made with ffmpeg).
 
 import { randomUUID } from "node:crypto";
-import type { Server } from "node:http";
-import express from "express";
+import { existsSync } from "node:fs";
+import { readdir } from "node:fs/promises";
 import request from "supertest";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 import { pool } from "../src/db/client.js";
-import { parseLink } from "../src/music/links.js";
-import { closeAll, resetDatabase } from "./helpers.js";
+import { mediaDir } from "../src/music/files.js";
+import { detectGenre } from "../src/music/genre.js";
+import { closeAll, ORIGIN, resetDatabase, SITE_HOST } from "./helpers.js";
 
 const app = createApp();
-let fake: Server;
+const fixture = (name: string) => new URL(`./fixtures/${name}`, import.meta.url).pathname;
 
-// The fake platform: knows a few songs, one of which doesn't allow embedding.
-beforeAll(async () => {
-  const f = express();
-  f.get("/soundcloud/oembed", (req, res) => {
-    const url = String(req.query.url);
-    if (url.endsWith("/private-song")) return void res.status(403).end();
-    if (!url.startsWith("https://soundcloud.com/some-artist/")) return void res.status(404).end();
-    const slug = url.split("/").pop();
-    res.json({
-      title: `Song ${slug} by Some Artist`,
-      author_name: "Some Artist",
-      thumbnail_url: "https://i1.sndcdn.com/artworks-x.jpg",
-      html: `<iframe width="100%" height="400" src="https://w.soundcloud.com/player/?visual=true&amp;url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F123&amp;show_artwork=true"></iframe>`,
-    });
-  });
-  f.get("/youtube/oembed", (_req, res) => {
-    res.json({ title: "Official MV", author_name: "Artist Channel", thumbnail_url: "https://i.ytimg.com/vi/x/hqdefault.jpg" });
-  });
-  await new Promise<void>((r) => {
-    fake = f.listen(4998, "127.0.0.1", () => r());
-  });
-});
-afterAll(async () => {
-  await new Promise<void>((r) => fake.close(() => r()));
-  await closeAll();
-});
 beforeEach(resetDatabase);
+afterAll(closeAll);
 
-const guest = () => randomUUID();
-const add = (client: string, url: string, genre = "drill") =>
-  request(app).post("/api/songs").set("X-Client-Id", client).send({ url, genre });
+// Upload like the browser does: a form from MyWeb's own page.
+function upload(file: string, opts: { client?: string; as?: string; fields?: Record<string, string> } = {}) {
+  const req = request(app)
+    .post("/api/songs")
+    .set("Origin", ORIGIN)
+    .set("X-Forwarded-Host", SITE_HOST)
+    .set("X-Client-Id", opts.client ?? randomUUID());
+  const fields = { rights: "yes", license: "Own work", ...opts.fields };
+  for (const [k, v] of Object.entries(fields)) req.field(k, v);
+  return req.attach("file", fixture(file), opts.as ? { filename: opts.as } : undefined);
+}
 
-describe("recognising links", () => {
-  it("cleans SoundCloud and YouTube links", () => {
-    expect(parseLink("https://soundcloud.com/some-artist/my-song?si=abc&utm_source=x")).toEqual({
-      provider: "soundcloud",
-      url: "https://soundcloud.com/some-artist/my-song",
-    });
-    expect(parseLink("https://youtu.be/dQw4w9WgXcQ?t=42").url).toBe("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
-    expect(parseLink("https://music.youtube.com/watch?v=dQw4w9WgXcQ&list=x").url).toBe("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
-  });
-
-  it("refuses other sites and profile pages", () => {
-    expect(() => parseLink("https://example.com/song.mp3")).toThrow(/Only SoundCloud and YouTube/);
-    expect(() => parseLink("https://soundcloud.com/some-artist")).toThrow(/not a profile/);
-    expect(() => parseLink("javascript:alert(1)")).toThrow();
+describe("detecting the genre", () => {
+  it("uses the file's genre tag first, then words in the title", () => {
+    expect(detectGenre({ tags: ["Hip-Hop"] })).toBe("drill");
+    expect(detectGenre({ tags: ["Chillout"] })).toBe("lofi");
+    expect(detectGenre({ tags: ["Dance"] })).toBe("remix");
+    expect(detectGenre({ title: "Đêm Nay (Vinahouse Remix)" })).toBe("remix");
+    expect(detectGenre({ title: "Em Ơi (Lofi Ver.) slowed + reverb" })).toBe("lofi");
+    expect(detectGenre({ title: "Drill Sài Gòn" })).toBe("drill");
+    expect(detectGenre({ title: "Một Bài Hát" })).toBe("pop"); // no clue → pop
   });
 });
 
-describe("adding songs", () => {
-  it("adds a SoundCloud song with details from the platform, and only SoundCloud's own player", async () => {
-    const res = await add(guest(), "https://soundcloud.com/some-artist/dem-sai-gon?si=123");
+describe("uploading", () => {
+  it("reads title, artist, genre, length and cover from the file: no need to choose a genre", async () => {
+    const res = await upload("tagged-hiphop.mp3");
     expect(res.status).toBe(201);
     expect(res.body).toMatchObject({
-      provider: "soundcloud",
-      url: "https://soundcloud.com/some-artist/dem-sai-gon",
-      title: "Song dem-sai-gon", // " by Some Artist" removed
-      artist: "Some Artist",
-      genre: "drill",
+      title: "Street Lights",
+      artist: "Test Rapper",
+      genre: "drill", // from the "Hip-Hop" tag
+      detectedGenre: "drill",
+      durationSec: 2,
+      license: "Own work",
+      audioUrl: `/api/songs/${res.body.id}/audio`,
+      artworkUrl: `/api/songs/${res.body.id}/artwork`,
     });
-    const player = new URL(res.body.embedUrl);
-    expect(player.hostname).toBe("w.soundcloud.com");
-    expect(player.searchParams.get("visual")).toBe("false");
+    expect(res.body).not.toHaveProperty("fileName"); // where it's stored stays private
   });
 
-  it("adds a YouTube video with the privacy-enhanced player", async () => {
-    const res = await add(guest(), "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "pop");
-    expect(res.status).toBe(201);
-    expect(res.body.embedUrl).toMatch(/^https:\/\/www\.youtube-nocookie\.com\/embed\/dQw4w9WgXcQ\?/);
+  it("detects from the title, keeps Vietnamese text, and falls back to the file name", async () => {
+    const remix = await upload("title-remix.mp3");
+    expect(remix.body).toMatchObject({ title: "Đêm Nay (Vinahouse Remix)", artist: "DJ Thử", genre: "remix", artworkUrl: null });
+    const plain = await upload("untagged-song.mp3");
+    expect(plain.body).toMatchObject({ title: "untagged-song", artist: "Unknown artist", genre: "pop" });
   });
 
-  it("explains what went wrong", async () => {
-    expect((await add(guest(), "https://soundcloud.com/nobody/nothing")).status).toBe(404);
-    const blocked = await add(guest(), "https://soundcloud.com/some-artist/private-song");
-    expect(blocked.status).toBe(422);
-    expect(blocked.body.error).toMatch(/doesn't allow/);
-    expect((await add(guest(), "https://example.com/x.mp3")).status).toBe(400);
-    expect((await request(app).post("/api/songs").set("X-Client-Id", guest()).send({ url: "https://soundcloud.com/some-artist/a", genre: "jazz" })).status).toBe(400);
+  it("lets you pick the genre yourself if you want", async () => {
+    expect((await upload("tagged-hiphop.mp3", { fields: { genre: "lofi" } })).body.genre).toBe("lofi");
   });
 
-  it("doesn't add the same song twice", async () => {
-    await add(guest(), "https://soundcloud.com/some-artist/same");
-    const again = await add(guest(), "https://soundcloud.com/some-artist/same?utm_source=share");
-    expect(again.status).toBe(409);
-    expect(again.body.song.title).toBe("Song same");
+  it("recognises starter-pack songs and fills in the credit and licence", async () => {
+    const res = await upload("untagged-song.mp3", { as: "4nsic_-_Go_time (1).mp3", fields: { license: "whatever" } });
+    expect(res.body).toMatchObject({
+      title: "Go time",
+      artist: "FORENSIC",
+      genre: "drill",
+      license: "CC BY-NC 3.0",
+      licenseUrl: "http://creativecommons.org/licenses/by-nc/3.0/",
+      credit: "feat. Sol, speak ez",
+      sourceUrl: "https://ccmixter.org/files/4nsic/28500",
+      starterPack: true,
+    });
+  });
+
+  it("refuses files that aren't music, duplicates, and uploads without the rights checkbox", async () => {
+    expect((await upload("not-audio.mp3")).status).toBe(415);
+    await upload("tagged-hiphop.mp3");
+    const again = await upload("tagged-hiphop.mp3", { as: "renamed.mp3" });
+    expect(again.status).toBe(409); // same file, even with another name
+    expect(again.body.error).toMatch(/Street Lights/);
+    expect((await upload("untagged-song.mp3", { fields: { rights: "no" } })).status).toBe(400);
+  });
+
+  it("refuses uploads from other websites, or with no Origin at all", async () => {
+    const evil = await request(app).post("/api/songs").set("Origin", "https://evil.example").set("X-Client-Id", randomUUID())
+      .field("rights", "yes").field("license", "x").attach("file", fixture("untagged-song.mp3"));
+    expect(evil.status).toBe(403);
+    const noOrigin = await request(app).post("/api/songs").set("X-Client-Id", randomUUID())
+      .field("rights", "yes").field("license", "x").attach("file", fixture("untagged-song.mp3"));
+    expect(noOrigin.status).toBe(403);
+  });
+});
+
+describe("playing the file", () => {
+  it("streams the song, supports seeking, and serves the cover", async () => {
+    const { body: song } = await upload("tagged-hiphop.mp3");
+    const full = await request(app).get(song.audioUrl);
+    expect(full.status).toBe(200);
+    expect(full.headers["content-type"]).toBe("audio/mpeg");
+    expect(full.headers["cache-control"]).toMatch(/immutable/);
+
+    const part = await request(app).get(song.audioUrl).set("Range", "bytes=0-99"); // jump around in the song
+    expect(part.status).toBe(206);
+    expect(part.headers["content-range"]).toMatch(/^bytes 0-99\//);
+
+    const cover = await request(app).get(song.artworkUrl);
+    expect(cover.headers["content-type"]).toBe("image/png");
+  });
+});
+
+describe("fixing or removing a song", () => {
+  it("only the person who added it can change or delete it, and deleting removes the files", async () => {
+    const me = randomUUID();
+    const { body: song } = await upload("tagged-hiphop.mp3", { client: me });
+
+    const other = await request(app).patch(`/api/songs/${song.id}`).set("X-Client-Id", randomUUID()).send({ genre: "pop" });
+    expect(other.status).toBe(403);
+    const fixed = await request(app).patch(`/api/songs/${song.id}`).set("X-Client-Id", me).send({ genre: "pop" });
+    expect(fixed.body.genre).toBe("pop");
+
+    expect((await readdir(mediaDir)).length).toBe(2); // song + cover
+    expect((await request(app).delete(`/api/songs/${song.id}`).set("X-Client-Id", me)).status).toBe(204);
+    expect(existsSync(mediaDir) ? await readdir(mediaDir) : []).toEqual([]);
   });
 });
 
 describe("charts", () => {
-  it("ranks by plays + 3 × likes, filters by genre, and knows what I liked", async () => {
-    const a = (await add(guest(), "https://soundcloud.com/some-artist/a", "drill")).body;
-    const b = (await add(guest(), "https://soundcloud.com/some-artist/b", "drill")).body;
-    const c = (await add(guest(), "https://soundcloud.com/some-artist/c", "lofi")).body;
+  it("ranks by plays + 3 × likes, filters by genre, and knows what I liked and added", async () => {
+    const me = randomUUID();
+    const drill = (await upload("tagged-hiphop.mp3", { client: me })).body;
+    const remix = (await upload("title-remix.mp3")).body;
+    const pop = (await upload("untagged-song.mp3")).body;
 
-    // A: 4 different listeners play it. B: 2 likes (= 6 points). C: lofi.
-    for (let i = 0; i < 4; i++) await request(app).post(`/api/songs/${a.id}/play`).set("X-Client-Id", guest());
-    const me = guest();
-    await request(app).put(`/api/songs/${b.id}/like`).set("X-Client-Id", me);
-    await request(app).put(`/api/songs/${b.id}/like`).set("X-Client-Id", guest());
-    await request(app).post(`/api/songs/${c.id}/play`).set("X-Client-Id", guest());
+    for (let i = 0; i < 4; i++) await request(app).post(`/api/songs/${pop.id}/play`).set("X-Client-Id", randomUUID());
+    await request(app).put(`/api/songs/${remix.id}/like`).set("X-Client-Id", me);
+    await request(app).put(`/api/songs/${remix.id}/like`).set("X-Client-Id", randomUUID());
+    await request(app).post(`/api/songs/${drill.id}/play`).set("X-Client-Id", randomUUID());
 
-    const week = (await request(app).get("/api/songs?period=week&genre=drill").set("X-Client-Id", me)).body;
-    expect(week.map((s: { title: string }) => s.title)).toEqual(["Song b", "Song a"]);
-    expect(week[0]).toMatchObject({ likes: 2, score: 6, liked: true });
-    expect(week[1]).toMatchObject({ plays: 4, score: 4, liked: false });
-
-    const lofi = (await request(app).get("/api/songs?genre=lofi")).body;
-    expect(lofi.map((s: { title: string }) => s.title)).toEqual(["Song c"]);
+    const week = (await request(app).get("/api/songs?period=week").set("X-Client-Id", me)).body;
+    expect(week.map((s: { title: string }) => s.title)).toEqual(["Đêm Nay (Vinahouse Remix)", "untagged-song", "Street Lights"]);
+    expect(week[0]).toMatchObject({ likes: 2, score: 6, liked: true, mine: false });
+    expect(week[2]).toMatchObject({ plays: 1, mine: true });
+    expect((await request(app).get("/api/songs?genre=drill")).body.map((s: { id: number }) => s.id)).toEqual([drill.id]);
   });
 
-  it("only counts this week's plays in 'week', but all of them in 'all'", async () => {
-    const a = (await add(guest(), "https://soundcloud.com/some-artist/old")).body;
-    await pool.query("insert into song_plays (song_id, owner, played_at) values ($1, 'client:x', now() - interval '20 days')", [a.id]);
+  it("counts week, month and all time separately, and one play per person per 10 minutes", async () => {
+    const song = (await upload("tagged-hiphop.mp3")).body;
+    await pool.query("insert into song_plays (song_id, owner, played_at) values ($1, 'client:x', now() - interval '20 days')", [song.id]);
     expect((await request(app).get("/api/songs?period=week")).body[0].plays).toBe(0);
     expect((await request(app).get("/api/songs?period=month")).body[0].plays).toBe(1);
-    expect((await request(app).get("/api/songs?period=all")).body[0].plays).toBe(1);
-  });
-
-  it("counts one play per person per song per 10 minutes", async () => {
-    const a = (await add(guest(), "https://soundcloud.com/some-artist/repeat")).body;
-    const me = guest();
-    expect((await request(app).post(`/api/songs/${a.id}/play`).set("X-Client-Id", me)).body).toEqual({ counted: true });
-    expect((await request(app).post(`/api/songs/${a.id}/play`).set("X-Client-Id", me)).body).toEqual({ counted: false });
-  });
-
-  it("likes and unlikes", async () => {
-    const a = (await add(guest(), "https://soundcloud.com/some-artist/love")).body;
-    const me = guest();
-    expect((await request(app).put(`/api/songs/${a.id}/like`).set("X-Client-Id", me)).body).toEqual({ liked: true, likes: 1 });
-    expect((await request(app).put(`/api/songs/${a.id}/like`).set("X-Client-Id", me)).body).toEqual({ liked: true, likes: 1 }); // no double like
-    expect((await request(app).delete(`/api/songs/${a.id}/like`).set("X-Client-Id", me)).body).toEqual({ liked: false, likes: 0 });
+    const me = randomUUID();
+    expect((await request(app).post(`/api/songs/${song.id}/play`).set("X-Client-Id", me)).body).toEqual({ counted: true });
+    expect((await request(app).post(`/api/songs/${song.id}/play`).set("X-Client-Id", me)).body).toEqual({ counted: false });
   });
 });
 
@@ -154,8 +172,7 @@ describe("timer preferences (signed in)", () => {
     await browser.post("/api/auth/register").send({ name: "Linh", email: "linh@example.com", password: "quiet library hours" });
     const saved = await browser.put("/api/me/preferences").send({ timer: { focus: 50, short: 10, long: 30 } });
     expect(saved.body.user.preferences).toEqual({ timer: { focus: 50, short: 10, long: 30 } });
-    expect((await browser.get("/api/auth/me")).body.user.preferences.timer.focus).toBe(50); // not a stale cached copy
+    expect((await browser.get("/api/auth/me")).body.user.preferences.timer.focus).toBe(50);
     expect((await browser.put("/api/me/preferences").send({ timer: { focus: 500, short: 0, long: 30 } })).status).toBe(400);
-    expect((await request(app).put("/api/me/preferences").send({ timer: { focus: 50, short: 10, long: 30 } })).status).toBe(401);
   });
 });

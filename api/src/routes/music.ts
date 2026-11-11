@@ -1,27 +1,37 @@
-// Music: songs with vocals, embedded from SoundCloud / YouTube, ranked by MyWeb listeners.
+// Music: songs with vocals, stored and played by MyWeb itself, ranked by MyWeb listeners.
 //
 // GET    /api/songs?period=week|month|all&genre=all|drill|remix|pop|lofi   the charts
-// POST   /api/songs              { url, genre }   add a song (checked with the platform first)
-// POST   /api/songs/:id/play     count a play (once per person per song per 10 minutes)
-// PUT    /api/songs/:id/like     like      DELETE /api/songs/:id/like   unlike
+// POST   /api/songs                 upload one song (multipart: file, license, credit?, sourceUrl?, genre?)
+// GET    /api/songs/:id/audio       the song file (supports seeking: HTTP Range requests)
+// GET    /api/songs/:id/artwork     its cover picture, if the file had one
+// PATCH  /api/songs/:id             fix genre / title / artist (only whoever added it)
+// DELETE /api/songs/:id             remove it (only whoever added it)
+// POST   /api/songs/:id/play        count a play (once per person per song per 10 minutes)
+// PUT    /api/songs/:id/like        like      DELETE /api/songs/:id/like   unlike
 //
-// Charts: score = plays + 3 × likes inside the period. A like is worth more than a play,
-// because it's a deliberate "I love this".
+// Charts: score = plays + 3 × likes inside the period.
 
+import { rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { Router, type Request } from "express";
+import multer from "multer";
 import { z } from "zod";
+import { config } from "../config.js";
 import { db } from "../db/client.js";
-import { songLikes, songPlays, songs } from "../db/schema.js";
+import { songLikes, songPlays, songs, type Song } from "../db/schema.js";
+import { songPlays as songPlaysMetric, songUploads } from "../metrics.js";
 import { HttpError } from "../middleware/errors.js";
 import { rateLimit } from "../middleware/security.js";
-import { lookUp, parseLink } from "../music/links.js";
+import { addSongFile } from "../music/add.js";
+import { mediaPath, removeFiles } from "../music/files.js";
+import { GENRES } from "../music/genre.js";
 import { broadcast, displayName, ownerRoom, publishActivity } from "../realtime/emit.js";
 import { owner } from "./sessions.js";
 
 export const musicRouter = Router();
 
-export const GENRES = ["drill", "remix", "pop", "lofi"] as const;
 const DAY = 86_400_000;
 const PERIODS = { week: 7 * DAY, month: 30 * DAY, all: null } as const;
 
@@ -29,6 +39,24 @@ const PERIODS = { week: 7 * DAY, month: 30 * DAY, all: null } as const;
 function ownerKey(req: Request, required: boolean): string | null {
   if (!required && !req.user && !req.get("x-client-id")) return null;
   return ownerRoom(owner(req));
+}
+
+// What the browser gets for a song: never the file's location on disk.
+export function publicSong(song: Song) {
+  return {
+    id: song.id,
+    title: song.title,
+    artist: song.artist,
+    genre: song.genre,
+    durationSec: song.durationSec,
+    license: song.license,
+    licenseUrl: song.licenseUrl,
+    credit: song.credit,
+    sourceUrl: song.sourceUrl,
+    audioUrl: `/api/songs/${song.id}/audio`,
+    artworkUrl: song.artworkFile ? `/api/songs/${song.id}/artwork` : null,
+    createdAt: song.createdAt,
+  };
 }
 
 // --- Charts -----------------------------------------------------------------------
@@ -44,7 +72,6 @@ musicRouter.get("/", async (req, res) => {
   const span = PERIODS[period];
   const since = span ? new Date(Date.now() - span) : new Date(0);
 
-  // Count plays and likes inside the period with sub-queries, then rank.
   const plays = db
     .select({ songId: songPlays.songId, n: sql<number>`count(*)::int`.as("plays") })
     .from(songPlays)
@@ -66,15 +93,7 @@ musicRouter.get("/", async (req, res) => {
   const score = sql<number>`coalesce(${plays.n}, 0) + 3 * coalesce(${likes.n}, 0)`;
   const rows = await db
     .select({
-      id: songs.id,
-      provider: songs.provider,
-      url: songs.url,
-      embedUrl: songs.embedUrl,
-      title: songs.title,
-      artist: songs.artist,
-      artworkUrl: songs.artworkUrl,
-      genre: songs.genre,
-      createdAt: songs.createdAt,
+      song: songs,
       plays: sql<number>`coalesce(${plays.n}, 0)`,
       likes: sql<number>`coalesce(${totalLikes.n}, 0)`,
       score,
@@ -88,49 +107,132 @@ musicRouter.get("/", async (req, res) => {
     .orderBy(sql`${score} desc`, sql`${songs.createdAt} desc`)
     .limit(50);
 
-  res.json(rows);
+  res.json(
+    rows.map((r) => ({
+      ...publicSong(r.song),
+      plays: r.plays,
+      likes: r.likes,
+      score: r.score,
+      liked: r.liked,
+      mine: me !== null && isAddedBy(r.song, me),
+    })),
+  );
 });
 
-// --- Add a song -------------------------------------------------------------------
+function isAddedBy(song: Song, who: string) {
+  return who === (song.addedByUserId ? `user:${song.addedByUserId}` : `client:${song.addedByClientId}`);
+}
 
-const newSong = z.object({ url: z.string().min(8).max(500), genre: z.enum(GENRES) });
+// --- Upload -----------------------------------------------------------------------
 
-const addLimit = rateLimit({ name: "song-add", windowMs: 60 * 60 * 1000, max: 10, key: (req) => ownerKey(req, true)! });
+// multer saves the upload to a temporary file first (never all in memory), with a size limit.
+const upload = multer({
+  dest: path.join(tmpdir(), "myweb-uploads"),
+  limits: { fileSize: config.MAX_UPLOAD_MB * 1024 * 1024, files: 1, fields: 10 },
+}).single("file");
 
-musicRouter.post("/", addLimit, async (req, res) => {
-  const { url, genre } = newSong.parse(req.body);
-  const link = parseLink(url); // 400 for anything that isn't SoundCloud / YouTube
+const uploadFields = z.object({
+  // The person must confirm they may share it. MyWeb only hosts songs people have the right to share.
+  rights: z.literal("yes", { message: "Please confirm you may share this song" }),
+  license: z.string().trim().min(2).max(80),
+  licenseUrl: z.url().max(300).optional().or(z.literal("").transform(() => undefined)),
+  credit: z.string().trim().max(200).optional(),
+  sourceUrl: z.url().max(300).optional().or(z.literal("").transform(() => undefined)),
+  genre: z.enum(["auto", ...GENRES]).default("auto"),
+});
 
-  const [existing] = await db.select().from(songs).where(eq(songs.url, link.url));
-  if (existing) {
-    res.status(409).json({ error: "That song is already in MyWeb", song: existing });
-    return;
+const addLimit = rateLimit({ name: "song-add", windowMs: 60 * 60 * 1000, max: 30, key: (req) => ownerKey(req, true)! });
+
+musicRouter.post("/", addLimit, (req, res, next) => {
+  upload(req, res, (err: unknown) => {
+    if (err instanceof multer.MulterError) {
+      return next(new HttpError(err.code === "LIMIT_FILE_SIZE" ? 413 : 400, err.code === "LIMIT_FILE_SIZE" ? `Songs can be up to ${config.MAX_UPLOAD_MB} MB` : err.message));
+    }
+    next(err);
+  });
+}, async (req, res) => {
+  const file = req.file;
+  if (!file) throw new HttpError(400, "Choose a song file to upload");
+  try {
+    const fields = uploadFields.parse(req.body);
+    const o = owner(req);
+    const { song, detected, starter } = await addSongFile({
+      path: file.path,
+      originalName: file.originalname,
+      owner: o,
+      license: fields.license,
+      licenseUrl: fields.licenseUrl,
+      credit: fields.credit,
+      sourceUrl: fields.sourceUrl,
+      genre: fields.genre === "auto" ? undefined : fields.genre,
+    });
+    songUploads.add(1, { genre: song.genre, starter_pack: starter });
+    await publishActivity("ListMusic", `${displayName(req.user?.name)} added “${song.title}” by ${song.artist}`);
+    broadcast("music:changed");
+    res.status(201).json({ ...publicSong(song), detectedGenre: detected, starterPack: starter });
+  } finally {
+    await rm(file.path, { force: true }); // the temporary upload (already moved if it was accepted)
   }
-
-  const details = await lookUp(link); // asks SoundCloud / YouTube; 404 / 422 / 502 on problems
-  const o = owner(req);
-  const [song] = await db
-    .insert(songs)
-    .values({ ...details, genre, addedByUserId: o.userId, addedByClientId: o.clientId })
-    .onConflictDoNothing()
-    .returning();
-  if (!song) throw new HttpError(409, "That song is already in MyWeb");
-
-  await publishActivity("ListMusic", `${displayName(req.user?.name)} added “${song.title}” by ${song.artist}`);
-  broadcast("music:changed");
-  res.status(201).json(song);
 });
 
-// --- Plays and likes --------------------------------------------------------------
+// --- Files ------------------------------------------------------------------------
 
 const idParam = z.object({ id: z.coerce.number().int().positive() });
 
-async function findSong(req: Request) {
+async function findSong(req: Request): Promise<Song> {
   const { id } = idParam.parse(req.params);
   const [song] = await db.select().from(songs).where(eq(songs.id, id));
   if (!song) throw new HttpError(404, "Song not found");
   return song;
 }
+
+// sendFile handles "Range: bytes=…" for seeking, plus ETag / Last-Modified.
+// A song file never changes (a new upload gets a new id), so browsers may keep it for a year.
+musicRouter.get("/:id/audio", async (req, res) => {
+  const song = await findSong(req);
+  res.sendFile(mediaPath(song.fileName), {
+    headers: { "Content-Type": song.mimeType, "Cache-Control": "public, max-age=31536000, immutable" },
+    dotfiles: "allow", // MEDIA_DIR may be a hidden folder (tests use tests/.media); names come from our database, not the visitor
+  });
+});
+
+musicRouter.get("/:id/artwork", async (req, res) => {
+  const song = await findSong(req);
+  if (!song.artworkFile) throw new HttpError(404, "This song has no cover picture");
+  res.sendFile(mediaPath(song.artworkFile), { headers: { "Cache-Control": "public, max-age=31536000, immutable" }, dotfiles: "allow" });
+});
+
+// --- Fix or remove (only whoever added it) -------------------------------------------
+
+async function findOwnSong(req: Request): Promise<Song> {
+  const song = await findSong(req);
+  if (!isAddedBy(song, ownerKey(req, true)!)) throw new HttpError(403, "Only the person who added this song can change it");
+  return song;
+}
+
+const edits = z.object({
+  genre: z.enum(GENRES).optional(),
+  title: z.string().trim().min(1).max(200).optional(),
+  artist: z.string().trim().min(1).max(200).optional(),
+});
+
+musicRouter.patch("/:id", async (req, res) => {
+  const song = await findOwnSong(req);
+  const changes = edits.parse(req.body);
+  const [updated] = await db.update(songs).set(changes).where(eq(songs.id, song.id)).returning();
+  broadcast("music:changed");
+  res.json(publicSong(updated));
+});
+
+musicRouter.delete("/:id", async (req, res) => {
+  const song = await findOwnSong(req);
+  await db.delete(songs).where(eq(songs.id, song.id)); // plays and likes go too (cascade)
+  await removeFiles(song.fileName, song.artworkFile);
+  broadcast("music:changed");
+  res.status(204).end();
+});
+
+// --- Plays and likes --------------------------------------------------------------
 
 musicRouter.post("/:id/play", async (req, res) => {
   const song = await findSong(req);
@@ -147,6 +249,7 @@ musicRouter.post("/:id/play", async (req, res) => {
     return;
   }
   await db.insert(songPlays).values({ songId: song.id, owner: who });
+  songPlaysMetric.add(1, { genre: song.genre });
   await publishActivity("Headphones", `${displayName(req.user?.name)} is listening to “${song.title}”`);
   broadcast("music:changed");
   res.status(201).json({ counted: true });

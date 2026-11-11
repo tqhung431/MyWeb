@@ -52,10 +52,14 @@ const schema = z.object({
     .default("false")
     .transform((v): boolean | number | string => (v === "false" ? false : v === "true" ? true : /^\d+$/.test(v) ? Number(v) : v)),
 
-  // Music: the official "oEmbed" services that confirm a link exists and may be embedded.
-  // Only changed in tests, to point at a fake.
-  SOUNDCLOUD_OEMBED_URL: z.url().default("https://soundcloud.com/oembed"),
-  YOUTUBE_OEMBED_URL: z.url().default("https://www.youtube.com/oembed"),
+  // --- Stage 8: Music files ---
+  // Where song files and their cover pictures are kept (a Docker volume in docker-compose).
+  MEDIA_DIR: z.string().default("./media"),
+  MAX_UPLOAD_MB: z.coerce.number().int().positive().default(30),
+
+  // OpenTelemetry: where traces and metrics go (Grafana's all-in-one "otel-lgtm" in docker-compose).
+  // Not set → telemetry off. Read by the OpenTelemetry SDK itself; listed here so it's documented.
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().optional(),
 });
 
 export const config = schema.parse(process.env);

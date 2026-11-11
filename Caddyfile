@@ -12,8 +12,22 @@
 # API_UPSTREAM / WEB_UPSTREAM default to the Docker service names; you can point them elsewhere
 # to try Caddy without Docker, e.g. API_UPSTREAM=127.0.0.1:4000 WEB_UPSTREAM=127.0.0.1:3000 caddy run
 
+# Stage 8: tracing. With monitoring on (CADDY_TRACING=tracing_on), Caddy starts each request's
+# trace and passes it on ("traceparent"), so Grafana shows Caddy → website → API → database.
+(tracing_on) {
+	tracing {
+		span caddy
+	}
+}
+
+(tracing_off) {
+}
+
 (myweb) {
+	import {$CADDY_TRACING:tracing_off}
 	encode zstd gzip
+
+	# Song uploads can be large (Stage 8); Caddy itself sets no limit, the API checks the size.
 
 	handle /api/* {
 		reverse_proxy {$API_UPSTREAM:api:4000}

@@ -3,23 +3,25 @@
 My web programming learning project for 2026. It grows one stage at a time,
 from a static page to a full system (frontend, API, database, real-time, AI).
 
-## Current: Stage 7 — one command, Caddy in front, Music
+## Current: Stage 8 — automated checks and monitoring
 
 MyWeb is a hub of small apps with a sidebar (desktop), a tab bar (phone) and a floating mini player.
-**Chill Corner**: a focus timer with **your own lengths**, 11 generated sounds, a weekly chart, achievements and tips.
-**Music**: songs with vocals (Drill, Remix, Pop, Lofi) from SoundCloud and YouTube, with **top this week / month** charts
-made by MyWeb listeners. Several people can use it at once from other PCs, live presence and activity included.
+**Chill Corner**: a focus timer with your own lengths, 11 generated sounds, a weekly chart, achievements and tips.
+**Music**: songs with vocals that **MyWeb stores and plays itself** (works behind any firewall), genre detected automatically,
+a starter pack of 12 Creative Commons songs, and top week / month charts. Several people can use it at once, live.
+Every push is **tested on GitHub Actions**; **Grafana** shows traces and metrics across all services.
 
 ```
               ┌──────────── docker compose ───────────────────────────────────┐
 Browsers ──► Caddy (:80, :443) ──► web (Next.js) ──► api (+ Socket.IO) ──► db (PostgreSQL)
               /api/* + WebSockets ─────────────────►  │      worker ─────► valkey · mailpit
-              └───────────────────────────────────────────────────────────────┘
+              └─────────── traces + metrics ──► otel-lgtm (Grafana :3001, profile "monitoring")
 ```
 
 **Start everything:** `cp .env.example .env && docker compose --profile app up -d --build`, then open
 **https://localhost** (or **http://&lt;this PC's IP&gt;** from other PCs).
 
+- CI, OpenTelemetry, Grafana, and the rebuilt Music: [docs/stage-8.md](docs/stage-8.md)
 - Docker, Caddy, Music and the adjustable timer: [docs/stage-7.md](docs/stage-7.md)
 - Real-time, presence, live feed, Vietnamese drill: [docs/stage-6.md](docs/stage-6.md)
 - Cache, job queue, worker, theme and sound mixer: [docs/stage-5.md](docs/stage-5.md)
@@ -69,7 +71,10 @@ api/                   Express API (TypeScript)
 stage-1-static/        Stage 1: the plain HTML/CSS/JS version
 docs/                  one explainer per stage
 docker-compose.yml     everything (profile "app") or just PostgreSQL, Valkey, Mailpit
-Caddyfile              the front door: HTTPS, routing, WebSockets, real IPs
+Caddyfile              the front door: HTTPS, routing, WebSockets, real IPs, tracing
+.github/workflows/     CI: tests, builds and a Docker smoke test on every push
+monitoring/            Grafana dashboard to import
+music-import/          drop song files here to import them
 ```
 
 ## Stages
@@ -82,5 +87,5 @@ Caddyfile              the front door: HTTPS, routing, WebSockets, real IPs
 5. Cache + queue + worker — Valkey ✅
 6. Real-time — Socket.IO, presence, live feed ✅
 7. Packaging — Docker Compose + Caddy ✅ (+ Music app, custom timer lengths)
-8. Automation and monitoring — GitHub Actions, OpenTelemetry, Grafana
+8. Automation and monitoring — GitHub Actions, OpenTelemetry, Grafana ✅ (+ Music stores its own files)
 9. Local AI (optional) — Ollama

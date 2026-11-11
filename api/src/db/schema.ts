@@ -97,29 +97,33 @@ export const achievements = pgTable(
   ],
 );
 
-// --- Stage 7: Music (songs embedded from SoundCloud / YouTube) -------------------
-// We store a LINK and its details, never the audio: songs stream from the platform's own
-// player, so the artist keeps the rights and gets the plays.
+// --- Music (Stage 7, files since Stage 8) ---------------------------------------
+// MyWeb stores the song FILES itself and plays them in its own player, so they work on any
+// network that can open MyWeb (no SoundCloud / YouTube needed, nothing for a firewall to block).
+// Only songs the uploader may share: their own, or ones with a licence that allows it.
 
 export const songs = pgTable(
   "songs",
   {
     id: serial("id").primaryKey(),
-    provider: text("provider", { enum: ["soundcloud", "youtube"] }).notNull(),
-    url: text("url").notNull().unique(), // the page people shared, cleaned up
-    embedUrl: text("embed_url").notNull(), // the official player's address
+    fileName: text("file_name").notNull().unique(), // random name inside MEDIA_DIR
+    sha256: text("sha256").notNull().unique(), // fingerprint: the same file can't be added twice
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    durationSec: integer("duration_sec"),
+    artworkFile: text("artwork_file"), // cover picture taken from the file, if it has one
     title: text("title").notNull(),
     artist: text("artist").notNull(),
-    artworkUrl: text("artwork_url"),
     genre: text("genre", { enum: ["drill", "remix", "pop", "lofi"] }).notNull(),
+    license: text("license").notNull(), // e.g. "CC BY-NC 3.0" or "Own work"
+    licenseUrl: text("license_url"),
+    credit: text("credit"), // featuring / original artists, as the licence asks
+    sourceUrl: text("source_url"), // where it came from (e.g. its ccMixter page)
     addedByUserId: uuid("added_by_user_id").references(() => users.id, { onDelete: "set null" }),
     addedByClientId: uuid("added_by_client_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [
-    check("song_provider_valid", sql`${t.provider} in ('soundcloud', 'youtube')`),
-    check("song_genre_valid", sql`${t.genre} in ('drill', 'remix', 'pop', 'lofi')`),
-  ],
+  (t) => [check("song_genre_valid", sql`${t.genre} in ('drill', 'remix', 'pop', 'lofi')`)],
 );
 
 export const songPlays = pgTable(

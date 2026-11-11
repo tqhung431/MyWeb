@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "About" };
 
 const CREDITS = [
   ["Music & sounds", "All 11 sound tracks (lo-fi beats, piano, rain, forest...) are composed and generated live by our own code with the Web Audio API. No recordings, nothing to license."],
-  ["Music app", "Songs stream from SoundCloud and YouTube in their official players. MyWeb stores links only; each song belongs to its artist."],
+  ["Music app", "Songs are uploaded by people who may share them, with their licence and credit shown. Starter pack: Creative Commons songs from ccMixter."],
   ["Icons", "Lucide (ISC licence)"],
   ["Font", "Plus Jakarta Sans (SIL Open Font License), self-hosted by Next.js"],
   ["Framework", "Next.js, React (MIT) · TypeScript (Apache-2.0) · Tailwind CSS (MIT)"],

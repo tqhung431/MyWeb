@@ -36,6 +36,20 @@
       "when": 1794382638081,
       "tag": "0004_music_and_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794386904837,
+      "tag": "0005_music_drop_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794386911379,
+      "tag": "0006_music_files",
+      "breakpoints": true
     }
   ]
 }

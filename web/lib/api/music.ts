@@ -1,6 +1,6 @@
-// Music: songs embedded from SoundCloud / YouTube (Stage 7).
+// Music: song files stored and streamed by MyWeb itself (Stage 8).
 
-import { apiFetch } from "./client";
+import { ApiError, apiFetch } from "./client";
 import { clientId } from "./clientId";
 
 export type Genre = "drill" | "remix" | "pop" | "lofi";
@@ -8,27 +8,62 @@ export type Period = "week" | "month" | "all";
 
 export type Song = {
   id: number;
-  provider: "soundcloud" | "youtube";
-  url: string;
-  embedUrl: string;
   title: string;
   artist: string;
-  artworkUrl: string | null;
   genre: Genre;
-  plays: number; // in the chosen period
-  likes: number; // all time
-  score: number;
-  liked: boolean;
+  durationSec: number | null;
+  license: string;
+  licenseUrl: string | null;
+  credit: string | null;
+  sourceUrl: string | null;
+  audioUrl: string;
+  artworkUrl: string | null;
 };
+
+export type ChartSong = Song & { plays: number; likes: number; score: number; liked: boolean; mine: boolean };
+export type UploadedSong = Song & { detectedGenre: Genre; starterPack: boolean };
 
 const who = () => ({ "X-Client-Id": clientId() });
 
-export function getCharts(period: Period, genre: Genre | "all"): Promise<Song[]> {
-  return apiFetch<Song[]>(`/api/songs?period=${period}&genre=${genre}`, { headers: who() });
+export function getCharts(period: Period, genre: Genre | "all"): Promise<ChartSong[]> {
+  return apiFetch<ChartSong[]>(`/api/songs?period=${period}&genre=${genre}`, { headers: who() });
 }
 
-export function addSong(url: string, genre: Genre): Promise<Song> {
-  return apiFetch<Song>("/api/songs", { method: "POST", headers: who(), body: JSON.stringify({ url, genre }), timeoutMs: 12000 });
+export type UploadFields = { license: string; licenseUrl?: string; credit?: string; sourceUrl?: string; genre?: Genre | "auto" };
+
+// XMLHttpRequest instead of fetch: it can report upload progress (fetch can't, yet).
+export function uploadSong(file: File, fields: UploadFields, onProgress: (fraction: number) => void): Promise<UploadedSong> {
+  return new Promise((resolve, reject) => {
+    const form = new FormData();
+    form.set("rights", "yes");
+    for (const [k, v] of Object.entries(fields)) if (v) form.set(k, v);
+    form.set("file", file); // last: the server reads the fields first
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/songs");
+    xhr.setRequestHeader("X-Client-Id", clientId());
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
+    xhr.onload = () => {
+      const body = (() => {
+        try {
+          return JSON.parse(xhr.responseText);
+        } catch {
+          return {};
+        }
+      })();
+      if (xhr.status >= 200 && xhr.status < 300) resolve(body);
+      else reject(new ApiError(xhr.status, body.error ?? `Upload failed (${xhr.status})`, body.details));
+    };
+    xhr.onerror = () => reject(new ApiError(0, "Can't reach MyWeb. Check your connection."));
+    xhr.send(form);
+  });
+}
+
+export function updateSong(id: number, changes: Partial<Pick<Song, "genre" | "title" | "artist">>): Promise<Song> {
+  return apiFetch<Song>(`/api/songs/${id}`, { method: "PATCH", headers: who(), body: JSON.stringify(changes) });
+}
+
+export function deleteSong(id: number): Promise<void> {
+  return apiFetch<void>(`/api/songs/${id}`, { method: "DELETE", headers: who() });
 }
 
 export function countPlay(id: number): Promise<{ counted: boolean }> {

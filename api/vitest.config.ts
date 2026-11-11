@@ -9,9 +9,7 @@ export default defineConfig({
       // Valkey database 1 and a separate queue name: tests never touch your dev data (database 0).
       VALKEY_URL: process.env.TEST_VALKEY_URL ?? "redis://127.0.0.1:6379/1",
       QUEUE_NAME: "myweb-test",
-      // A fake SoundCloud / YouTube (started in tests/music.test.ts)
-      SOUNDCLOUD_OEMBED_URL: "http://127.0.0.1:4998/soundcloud/oembed",
-      YOUTUBE_OEMBED_URL: "http://127.0.0.1:4998/youtube/oembed",
+      MEDIA_DIR: "./tests/.media", // uploaded test songs land here, emptied before each test
     },
     fileParallelism: false, // one shared test database: run files one at a time
   },

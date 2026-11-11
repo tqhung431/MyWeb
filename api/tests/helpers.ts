@@ -1,4 +1,6 @@
+import { rm } from "node:fs/promises";
 import { pool } from "../src/db/client.js";
+import { mediaDir } from "../src/music/files.js";
 import { runMigrations } from "../src/db/migrate.js";
 import { seed } from "../src/db/seed.js";
 import { closeQueue } from "../src/jobs/queue.js";
@@ -17,6 +19,7 @@ export async function resetDatabase() {
   }
   await pool.query("truncate tips, focus_sessions, achievements, auth_sessions, songs, song_plays, song_likes, users restart identity cascade");
   await valkey.flushdb(); // only database 1 (see vitest.config.ts)
+  await rm(mediaDir, { recursive: true, force: true }); // uploaded test songs
   await seed();
 }
 

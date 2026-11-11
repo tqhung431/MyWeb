@@ -19,8 +19,12 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist ./dist
 COPY drizzle ./drizzle
+COPY seed ./seed
+# Song files live here (a Docker volume, so they survive rebuilds). Owned by the app's user.
+RUN mkdir -p media && chown node:node media
 # Don't run as root inside the container
 USER node
 EXPOSE 4000
-# Bring the database up to date, put the starting tips in, then start the API.
-CMD ["sh", "-c", "node dist/db/migrate.js && node dist/db/seed.js && node dist/index.js"]
+# Bring the database up to date, put the starting tips in, then start the API
+# (with OpenTelemetry loaded first; it stays off unless OTEL_EXPORTER_OTLP_ENDPOINT is set).
+CMD ["sh", "-c", "node dist/db/migrate.js && node dist/db/seed.js && exec node --import ./dist/telemetry.js dist/index.js"]

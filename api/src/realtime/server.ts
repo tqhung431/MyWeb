@@ -17,6 +17,7 @@ import { Server, type Socket } from "socket.io";
 import { z } from "zod";
 import { COOKIE_NAME, userFromToken } from "../auth/sessions.js";
 import { config } from "../config.js";
+import { liveConnections } from "../metrics.js";
 import { isAllowedOrigin } from "../middleware/security.js";
 import { waitForValkey } from "../valkey/client.js";
 import { CHANNEL_KEY, ownerRoom, recentActivity, setRealtimeServer, type Owner } from "./emit.js";
@@ -88,7 +89,11 @@ export async function attachRealtime(http: HttpServer): Promise<Server> {
       schedulePresence();
     });
 
-    socket.on("disconnect", () => schedulePresence());
+    liveConnections.add(1);
+    socket.on("disconnect", () => {
+      liveConnections.add(-1);
+      schedulePresence();
+    });
   });
 
   setRealtimeServer(io);

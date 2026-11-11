@@ -12,6 +12,7 @@ import { db } from "../db/client.js";
 import { focusSessions } from "../db/schema.js";
 import { enqueue } from "../jobs/queue.js";
 import { displayName, publishActivity } from "../realtime/emit.js";
+import { focusSessionsSaved } from "../metrics.js";
 import { rateLimit } from "../middleware/security.js";
 
 export const sessionsRouter = Router();
@@ -56,6 +57,7 @@ sessionsRouter.post("/", saveLimit, async (req, res) => {
   res.status(201).json(saved); // 201 Created: the visitor doesn't wait for anything below
 
   if (input.mode === "focus") {
+    focusSessionsSaved.add(1, { signed_in: o.userId !== null });
     // Stage 6: everyone's live feed hears about it
     await publishActivity("Timer", `${displayName(req.user?.name)} finished a ${input.minutes}-min focus session`);
     // Stage 5: badges are checked later by the worker, not here.
