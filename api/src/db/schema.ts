@@ -29,15 +29,21 @@ export const tips = pgTable("tips", {
 
 // --- Stage 4: accounts -------------------------------------------------------
 
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  email: text("email").notNull().unique(), // always stored lower-case
-  name: text("name").notNull(),
-  passwordHash: text("password_hash").notNull(), // never the password itself: a scrypt hash
-  // Stage 7: personal settings that follow you to every device (e.g. timer lengths)
-  preferences: jsonb("preferences").$type<Preferences>().notNull().default({}),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+// Stage 11: a person is just a NAME (no email, no password), on one browser.
+// The browser holds a random session token in a cookie (see auth/sessions.ts).
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(), // unique, ignoring upper/lower case: "Linh" and "linh" can't both exist
+    // Stage 7: personal settings (e.g. timer lengths)
+    preferences: jsonb("preferences").$type<Preferences>().notNull().default({}),
+    // Stage 11: people not seen for DATA_RETENTION_DAYS are deleted with their data (jobs/cleanup.ts)
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("users_name_lower_idx").on(sql`lower(${t.name})`), index("users_last_seen_idx").on(t.lastSeenAt)],
+);
 
 // A logged-in browser. The cookie holds a random token; we store only its SHA-256 hash,
 // so someone who reads this table still can't log in as anyone.
@@ -197,6 +203,97 @@ export const gameScores = pgTable(
     index("game_scores_user_idx").on(t.userId, t.game),
     index("game_scores_client_idx").on(t.clientId, t.game),
   ],
+);
+
+// --- Stage 11: Hobby Hub ----------------------------------------------------------------
+// Groups (Gaming, Cooking…), each with a board of posts (comments, likes) and a live chat.
+// Deleting a person deletes everything they wrote (onDelete: cascade).
+
+export const hobbyGroups = pgTable("hobby_groups", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(), // in the URL: /hobby-hub/cooking
+  name: text("name").notNull(),
+  emoji: text("emoji").notNull(),
+  description: text("description").notNull().default(""),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }), // null = a starter group
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const groupMembers = pgTable(
+  "group_members",
+  {
+    groupId: integer("group_id")
+      .notNull()
+      .references(() => hobbyGroups.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.groupId, t.userId] }), index("group_members_user_idx").on(t.userId)],
+);
+
+export const posts = pgTable(
+  "posts",
+  {
+    id: serial("id").primaryKey(),
+    groupId: integer("group_id")
+      .notNull()
+      .references(() => hobbyGroups.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("posts_group_time_idx").on(t.groupId, t.createdAt), index("posts_author_idx").on(t.authorId)],
+);
+
+export const postComments = pgTable(
+  "post_comments",
+  {
+    id: serial("id").primaryKey(),
+    postId: integer("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("post_comments_post_time_idx").on(t.postId, t.createdAt), index("post_comments_author_idx").on(t.authorId)],
+);
+
+export const postLikes = pgTable(
+  "post_likes",
+  {
+    postId: integer("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    likedAt: timestamp("liked_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.postId, t.userId] }), index("post_likes_user_idx").on(t.userId)],
+);
+
+// Chat messages are short-lived: deleted after CHAT_RETENTION_DAYS.
+export const chatMessages = pgTable(
+  "chat_messages",
+  {
+    id: serial("id").primaryKey(),
+    groupId: integer("group_id")
+      .notNull()
+      .references(() => hobbyGroups.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("chat_messages_group_time_idx").on(t.groupId, t.createdAt), index("chat_messages_time_idx").on(t.createdAt)],
 );
 
 export type Preferences = { timer?: { focus: number; short: number; long: number } };

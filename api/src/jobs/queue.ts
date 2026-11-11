@@ -15,8 +15,8 @@ import { config } from "../config.js";
 export type JobData = {
   // Check which achievements this owner has earned (after a focus session or sign-in).
   achievements: { userId: string | null; clientId: string | null; timeZone: string };
-  // Send the "welcome" email after sign-up.
-  "welcome-email": { userId: string };
+  // Stage 11: delete data older than the retention settings (daily).
+  cleanup: Record<string, never>;
   // Stage 9: update the Companion's knowledge (embeddings) after songs or tips changed.
   reindex: Record<string, never>;
 };
@@ -53,6 +53,16 @@ export async function enqueue<N extends JobName>(name: N, data: JobData[N]): Pro
   } catch (error) {
     console.warn(`Could not queue "${name}" job (Valkey down?):`, (error as Error).message);
     return false;
+  }
+}
+
+// Stage 11: a repeating job. BullMQ keeps the schedule in Valkey, so with several workers it still runs
+// once a day in total (not once per worker), and calling this again just updates it.
+export async function scheduleCleanup(): Promise<void> {
+  try {
+    await getQueue().upsertJobScheduler("daily-cleanup", { every: 24 * 60 * 60 * 1000 }, { name: "cleanup", data: {} });
+  } catch (error) {
+    console.warn("Could not schedule the daily cleanup:", (error as Error).message);
   }
 }
 

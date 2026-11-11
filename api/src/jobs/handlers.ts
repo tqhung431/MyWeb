@@ -1,7 +1,6 @@
 // What each background job does. The worker calls these; tests call them directly too.
 
 import { and, eq, isNull } from "drizzle-orm";
-import nodemailer from "nodemailer";
 import { ACHIEVEMENTS, earnedCodes } from "../achievements.js";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
@@ -9,6 +8,7 @@ import { achievements, focusSessions, users } from "../db/schema.js";
 import { displayName, notifyOwner, publishActivity } from "../realtime/emit.js";
 import { reindex } from "../ai/knowledge.js";
 import { AiUnavailable, aiEnabled } from "../ai/ollama.js";
+import { cleanup } from "./cleanup.js";
 import type { JobData, JobName } from "./queue.js";
 
 // --- achievements ---------------------------------------------------------------
@@ -52,47 +52,14 @@ export async function checkAchievements({ userId, clientId, timeZone }: JobData[
   return { added: added.map((a) => a.code) };
 }
 
-// --- welcome email ----------------------------------------------------------------
-// Sending email is slow (a second or more) and can fail, which is exactly why it's a job:
-// sign-up answers at once, and the worker retries if the mail server hiccups.
-
-const transport = config.SMTP_URL
-  ? nodemailer.createTransport(config.SMTP_URL)
-  : nodemailer.createTransport({ jsonTransport: true }); // no mail server: build the email, don't send it
-
-export async function sendWelcomeEmail({ userId }: JobData["welcome-email"]) {
-  const [user] = await db.select().from(users).where(eq(users.id, userId));
-  if (!user) return { skipped: "user deleted" };
-
-  const info = await transport.sendMail({
-    from: config.MAIL_FROM,
-    to: `${user.name} <${user.email}>`,
-    subject: "Welcome to Nook",
-    text: [
-      `Hi ${user.name},`,
-      "",
-      "Your Nook account is ready. Your focus history now follows you to any PC or phone.",
-      "Start a session whenever you like. Your first badge is one focus session away.",
-      "",
-      "Take care,",
-      "Nook",
-    ].join("\n"),
-  });
-
-  if (!config.SMTP_URL) {
-    console.log(`[email not sent: no SMTP_URL] To: ${user.email} · Subject: Welcome to Nook`);
-  }
-  return { messageId: info.messageId };
-}
-
 // --- dispatcher -------------------------------------------------------------------
 
 export async function processJob(name: JobName, data: unknown) {
   switch (name) {
     case "achievements":
       return checkAchievements(data as JobData["achievements"]);
-    case "welcome-email":
-      return sendWelcomeEmail(data as JobData["welcome-email"]);
+    case "cleanup":
+      return cleanup();
     case "reindex":
       // Embedding needs Ollama. Off, not running or models not downloaded yet: skip, it isn't an error.
       // (GET /api/companion/status starts another reindex once the models are ready.)

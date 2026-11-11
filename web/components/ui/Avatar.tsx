@@ -5,9 +5,15 @@ import { cn } from "@/lib/cn";
 
 const sizes = { sm: "h-8 w-8 text-xs", md: "h-10 w-10 text-sm", lg: "h-20 w-20 text-2xl" } as const;
 
+// Split into what a person sees as characters ("graphemes"): an emoji like 🌸 or 👵🏽 is several
+// JavaScript "characters" underneath, and cutting one in half shows a broken symbol.
+const segmenter = new Intl.Segmenter();
+const chars = (s: string) => Array.from(segmenter.segment(s), (g) => g.segment);
+
+// "Linh Tran" → "LT", "Mai 🌸" → "M🌸", "Dad" → "DA"
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  const letters = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : (parts[0] ?? "?").slice(0, 2);
+  const letters = parts.length > 1 ? chars(parts[0])[0] + chars(parts[parts.length - 1])[0] : chars(parts[0] ?? "?").slice(0, 2).join("");
   return letters.toUpperCase();
 }
 

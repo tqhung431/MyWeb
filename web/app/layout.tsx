@@ -16,7 +16,7 @@ import { Brand } from "@/components/shell/Brand";
 import { MiniPlayer } from "@/components/shell/MiniPlayer";
 import { MusicDock } from "@/features/music/MusicDock";
 import { Sidebar } from "@/components/shell/Sidebar";
-import { UserMenu } from "@/features/auth/UserMenu";
+import { UserMenu } from "@/features/me/UserMenu";
 import { themeScript } from "@/features/theme/theme";
 import { ThemeSwitcher } from "@/features/theme/ThemeSwitcher";
 import { getMe } from "@/lib/api/server";

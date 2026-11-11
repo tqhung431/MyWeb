@@ -92,19 +92,19 @@ describe("leaderboards", () => {
 });
 
 describe("accounts", () => {
-  it("moves guest scores into the account on sign-up, with the first name on the board", async () => {
+  it("moves guest scores to you when you pick a name, with your name on the board", async () => {
     const guest = randomUUID();
     await save(guest, "pancakes", 14);
     const browser = request.agent(app);
     await browser
-      .post("/api/auth/register")
+      .post("/api/me")
       .set("X-Client-Id", guest)
-      .send({ email: "linh@example.com", password: "correct horse battery", name: "Linh Tran" });
+      .send({ name: "Linh Tran" });
 
     const me = await browser.get("/api/arcade/me").set("X-Client-Id", guest);
     expect(me.body.bests).toEqual({ pancakes: 14 });
     const board = await browser.get("/api/arcade/scores/pancakes");
-    expect(board.body.top[0]).toMatchObject({ name: "Linh", score: 14, me: true });
+    expect(board.body.top[0]).toMatchObject({ name: "Linh Tran", score: 14, me: true });
 
     // Signed out on the same browser, the scores aren't shown as the guest's any more
     const signedOut = await request(app).get("/api/arcade/me").set("X-Client-Id", guest);

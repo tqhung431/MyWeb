@@ -15,7 +15,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { io, type Socket } from "socket.io-client";
-import { useAuth } from "@/features/auth/AuthProvider";
+import { useMe } from "@/features/me/MeProvider";
 import { clientId } from "@/lib/api/clientId";
 
 export type Presence = { online: number; focusing: number };
@@ -32,14 +32,14 @@ const RealtimeContext = createContext<RealtimeState | null>(null);
 const MAX_ACTIVITY = 20;
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user } = useMe();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState(false);
   const [presence, setPresence] = useState<Presence | null>(null);
   const [activity, setActivity] = useState<Activity[]>([]);
 
-  // (Re)connect when someone signs in or out: the server reads who we are when we connect.
-  const userId = user?.id ?? null;
+  // (Re)connect when you pick or change your name: the server reads who we are when we connect.
+  const userId = user ? `${user.id}:${user.name}` : null;
   useEffect(() => {
     const s = io({
       path: "/api/realtime",

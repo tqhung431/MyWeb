@@ -1,8 +1,9 @@
-// Puts the starting tips into the database. Safe to run again: existing slugs are updated.
+// Puts the starting tips (and Stage 11: starter Hobby Hub groups) into the database.
+// Safe to run again: existing tips are updated, existing groups are left alone.
 
 import { sql } from "drizzle-orm";
 import { db, pool } from "./client.js";
-import { tips } from "./schema.js";
+import { hobbyGroups, tips } from "./schema.js";
 import { invalidate } from "../valkey/cache.js";
 import { valkey, waitForValkey } from "../valkey/client.js";
 
@@ -49,7 +50,17 @@ export const seedTips = [
   },
 ];
 
+export const seedGroups = [
+  { slug: "gaming", name: "Gaming", emoji: "🎮", description: "What are you playing? Tips, screenshots and who's up for a match." },
+  { slug: "cooking", name: "Cooking", emoji: "🍳", description: "Recipes, kitchen wins and spectacular fails." },
+  { slug: "music", name: "Music", emoji: "🎵", description: "Songs on repeat, concerts and playing instruments." },
+  { slug: "books", name: "Books", emoji: "📚", description: "What you're reading and what to read next." },
+  { slug: "movies-anime", name: "Movies & Anime", emoji: "🎬", description: "Watch lists, reviews (spoiler warnings, please) and recommendations." },
+  { slug: "sports", name: "Sports & Fitness", emoji: "⚽", description: "Matches, workouts, runs and walks." },
+];
+
 export async function seed() {
+  await db.insert(hobbyGroups).values(seedGroups).onConflictDoNothing({ target: hobbyGroups.slug });
   await db
     .insert(tips)
     .values(seedTips)

@@ -13,8 +13,10 @@ everyone on your network (family, roommates, classmates).
   Odd Emoji Out) with high scores and live leaderboards for everyone on your Nook.
 - ✨ **Free-time Companion**: an AI buddy that suggests songs and tips from Nook, in English or Vietnamese.
   It runs **on your PC** (Ollama), so your chats never leave your network. Optional.
-- 👥 **Together, live**: see who's online and what others are doing, as it happens. Use it as a guest right away,
-  or create an account to keep your history on every device.
+- 💬 **Hobby Hub**: groups for what you love (Gaming, Cooking, Books…, or start your own), each with posts,
+  comments, likes and a live chat.
+- 👥 **Together, live**: see who's online and what others are doing, as it happens. No sign-up: you just
+  pick a name, so everyone knows who's who. Nook keeps data only for a while (90 days of not using it).
 - 🌗 Light and dark themes, works on phones and desktops.
 
 It's also my **web programming learning project for 2026**: it grows one stage at a time, from a single
@@ -102,7 +104,11 @@ Turn extras on with **`COMPOSE_PROFILES`** in `.env`, then run `docker compose u
 
 ## Upgrade to the latest version
 
-Your data (accounts, songs, history, AI models) is kept in Docker volumes and **survives upgrades**.
+Your data (people, songs, history, posts, AI models) is kept in Docker volumes and **survives upgrades**.
+
+> **Upgrading to Stage 11 (names only):** sign-in with email and password is gone. Everyone who had an account
+> keeps their name and history, and stays signed in on the browser they used. Emails and passwords are deleted
+> from the database. Mailpit isn't needed any more: run `docker compose up -d --remove-orphans` once to remove it.
 
 ```bash
 cd Nook
@@ -123,7 +129,7 @@ docker compose up -d --build  # rebuild and restart (or run the start script)
 | Start it again | `docker compose up -d` (or the start script) | ✅ kept |
 | Free disk space from old builds | `docker builder prune -f` and `docker image prune -f` | ✅ kept |
 | Delete only the AI models (they download again when needed) | `docker volume rm nook_ollama-models` | ✅ rest kept |
-| **Start over**: delete all data | `docker compose down -v` | ❌ **everything deleted**: accounts, songs, history, AI models |
+| **Start over**: delete all data | `docker compose down -v` | ❌ **everything deleted**: people, songs, history, posts, AI models |
 | Also delete Nook's images | `docker compose down -v --rmi local` | ❌ everything deleted |
 | Remove Nook completely | the command above, then delete the `Nook` folder | ❌ |
 
@@ -145,7 +151,7 @@ were running, stop them with `docker compose --profile ai --profile monitoring d
 ```
                 ┌──────────────────────────── docker compose ─────────────────────────────┐
 Browsers ──► caddy ──► web (Next.js) ──► api (+ live updates) ──► db (PostgreSQL + pgvector)
- (:80, :443)    └── /api/* ─────────────►  │  worker ───────────► valkey · mailpit
+ (:80, :443)    └── /api/* ─────────────►  │  worker ───────────► valkey
                                            └──► ollama (AI, profile "ai")
                 every service ── traces + metrics ──► otel-lgtm / Grafana (profile "monitoring")
 ```
@@ -154,11 +160,10 @@ Browsers ──► caddy ──► web (Next.js) ──► api (+ live updates) 
 |---|---|---|
 | **caddy** | yes | The front door: HTTPS, lets other PCs in, sends `/api` to the API and pages to the website |
 | **web** | yes | The website (Next.js + React) |
-| **api** | yes | The data and the rules: accounts, timer history, songs, charts, live updates, the AI chat. Updates the database when it starts |
-| **worker** | yes | Background jobs: welcome emails, achievements, preparing songs and tips for the AI |
+| **api** | yes | The data and the rules: names, timer history, songs, charts, Hobby Hub, live updates, the AI chat. Updates the database when it starts |
+| **worker** | yes | Background jobs: achievements, the daily clean-up of old data, preparing songs and tips for the AI |
 | **db** | yes | PostgreSQL: where everything is stored; pgvector lets the AI search by meaning |
 | **valkey** | yes | Fast memory store: cache, rate limits, the job queue, live updates across services |
-| **mailpit** | yes (small) | Catches emails so you can read them at http://localhost:8025, until you set a real `SMTP_URL` |
 | **ollama** | AI only | Runs the AI models on your PC |
 | **ollama-models** | AI only | Downloads the models, then stops (showing "Exited" is normal) |
 | **otel-lgtm** | monitoring only | Grafana with traces, metrics and logs of every request |
@@ -179,18 +184,18 @@ in the `myweb_...` volumes. Choose one:
   ```
 - **Start fresh** and delete the old data: `docker compose -p myweb down -v` (⚠️ removes the `myweb_...` volumes).
 
-Either way, people get signed out once (the sign-in cookie has a new name).
+Either way, everyone picks their name again once (the cookie has a new name).
 
 ---
 
 ## For developers
 
-Run each part yourself, with live reload. Needs Node.js 20.9+ and Docker (for PostgreSQL, Valkey and Mailpit).
+Run each part yourself, with live reload. Needs Node.js 20.9+ and Docker (for PostgreSQL and Valkey).
 Here each part has its own settings file: `api/.env` and (optional) `web/.env.local`.
 
 ```bash
 cp .env.example .env                          # 1. the main settings (database password)
-docker compose up -d db valkey mailpit        #    PostgreSQL + Valkey + Mailpit only
+docker compose up -d db valkey                #    PostgreSQL + Valkey only
 
 cd api && cp .env.example .env && npm install # 2. API: api/.env's DATABASE_URL must use the
 npm run db:migrate && npm run db:seed         #    same password as POSTGRES_PASSWORD (default: nook)
@@ -252,5 +257,6 @@ stage-1-static/        Stage 1: the plain HTML/CSS/JS version
 8. Automation and monitoring — GitHub Actions, OpenTelemetry, Grafana ✅ · [docs](docs/stage-8.md)
 9. Local AI — Ollama, embeddings in pgvector, streamed answers ✅ · [docs](docs/stage-9.md)
 10. Games in the browser — Mini Arcade (canvas, game loop, high scores); better music player ✅ · [docs](docs/stage-10.md)
+11. Community — Hobby Hub (groups, posts, live chat); names instead of accounts; keeping data only for a while ✅ · [docs](docs/stage-11.md)
 
 Credits and licences: [CREDITS.md](CREDITS.md)

@@ -1,5 +1,9 @@
 # Stage 4 — Many users, guests first, optional accounts
 
+> **Changed in Stage 11:** accounts (email + password) were replaced by **just a name**. This page still explains
+> how sign-in worked (sessions, cookies, password hashing); the code is in the git history before Stage 11.
+> See [stage-11.md](stage-11.md).
+
 **Goal:** several people on different PCs (and phones) use Nook at the same time, from your home or office network.
 Everyone can do **everything as a guest first**. An account is optional: it only adds "my history on every device".
 

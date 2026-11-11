@@ -6,15 +6,15 @@
 import type { ReactNode } from "react";
 import { AchievementsProvider } from "@/features/achievements/AchievementsProvider";
 import { AmbientProvider } from "@/features/ambient/AmbientProvider";
-import { AuthProvider } from "@/features/auth/AuthProvider";
+import { MeProvider } from "@/features/me/MeProvider";
 import { FocusProvider } from "@/features/focus/FocusProvider";
 import { MusicProvider } from "@/features/music/MusicProvider";
 import { RealtimeProvider } from "@/features/realtime/RealtimeProvider";
-import type { User } from "@/lib/api/auth";
+import type { User } from "@/lib/api/me";
 
 export function AppProviders({ initialUser, children }: { initialUser: User | null; children: ReactNode }) {
   return (
-    <AuthProvider initialUser={initialUser}>
+    <MeProvider initialUser={initialUser}>
       <RealtimeProvider>
         <AmbientProvider>
           <AchievementsProvider>
@@ -24,6 +24,6 @@ export function AppProviders({ initialUser, children }: { initialUser: User | nu
           </AchievementsProvider>
         </AmbientProvider>
       </RealtimeProvider>
-    </AuthProvider>
+    </MeProvider>
   );
 }

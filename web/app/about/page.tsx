@@ -9,7 +9,7 @@ const CREDITS = [
   ["Icons", "Lucide (ISC licence)"],
   ["Font", "Plus Jakarta Sans (SIL Open Font License), self-hosted by Next.js"],
   ["Framework", "Next.js, React (MIT) · TypeScript (Apache-2.0) · Tailwind CSS (MIT)"],
-  ["API & data", "Express, Zod, Drizzle ORM, node-postgres, cookie-parser, BullMQ, ioredis, Nodemailer, Socket.IO · PostgreSQL (PostgreSQL Licence) · Valkey (BSD) · Caddy (Apache-2.0)"],
+  ["API & data", "Express, Zod, Drizzle ORM, node-postgres, cookie-parser, BullMQ, ioredis, Socket.IO · PostgreSQL (PostgreSQL Licence) · Valkey (BSD) · Caddy (Apache-2.0)"],
 ];
 
 export default function AboutPage() {

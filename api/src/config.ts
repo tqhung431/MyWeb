@@ -28,19 +28,18 @@ export const configSchema = z.object({
     .default("")
     .transform((v) => v.split(",").map((o) => o.trim()).filter(Boolean)),
 
-  // Sign-in attempts allowed per email address per 15 minutes.
-  AUTH_RATE_LIMIT: z.coerce.number().int().positive().default(10),
-
   // --- Stage 5 ---
   // Valkey (a fast in-memory store, compatible with Redis). Used for the cache,
   // shared rate-limit counters and the job queue. Nook still works if it's down.
   VALKEY_URL: z.string().default("redis://127.0.0.1:6379"),
   QUEUE_NAME: z.string().default("nook"),
 
-  // Email. Without SMTP_URL, emails are printed in the worker's terminal instead of sent.
-  // With Mailpit from docker-compose: SMTP_URL=smtp://127.0.0.1:1025 (inbox at http://localhost:8025)
-  SMTP_URL: z.string().optional(),
-  MAIL_FROM: z.string().default("Nook <hello@nook.local>"),
+  // --- Stage 11: how long Nook keeps data, in days ---
+  // People not seen for this long are deleted with everything they made (jobs/cleanup.ts).
+  // It's also how long "who you are" lasts on a browser you stopped using.
+  DATA_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(90),
+  // Hobby Hub chat messages are deleted after this many days.
+  CHAT_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(30),
 
   // --- Stage 7 ---
   // Is there a trusted proxy (Caddy) in front that sets X-Forwarded-For / -Proto?
