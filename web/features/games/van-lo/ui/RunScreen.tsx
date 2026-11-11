@@ -7,59 +7,35 @@
 //             1–9 for the action bar, Esc to stop aiming
 //   touch     tap next to you to step or attack, tap further away to walk there, tap yourself to wait
 
-import {
-  ArrowDownToLine,
-  BellRing,
-  CloudRain,
-  Flag,
-  Flame,
-  FlaskConical,
-  Hexagon,
-  Hourglass,
-  Pill,
-  ScrollText,
-  Shield,
-  ShieldHalf,
-  Snowflake,
-  Sparkles,
-  Sword,
-  Swords,
-  Wind,
-  X,
-  Zap,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowDownToLine, Hourglass, Pill, ScrollText, X, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Popover } from "@/components/ui/Popover";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
 import { dist, isFloor, same, type Pos } from "../engine/grid";
 import { findPath } from "../engine/path";
-import { ABILITIES, ITEMS, SECRET_REALMS, TREASURES, type AbilityId, type ItemId, type Targeting, type TreasureKind } from "../logic/data";
-import { realmName, stats } from "../logic/player";
+import { ABILITIES, ITEMS, MAJOR_REALMS, PATHS, realmInfo, TREASURES, type AbilityId, type ItemId, type Targeting } from "../logic/data";
+import { abilityQi, realmName, stats } from "../logic/player";
 import type { Game } from "../logic/types";
 import { abilityTargets, act, enemyAt, finishRun, MAX_INTENT, runBagCount, visible, type Action, type Outcome, type Result } from "../logic/world";
 import { Board } from "./Board";
+import { ABILITY_ICON, TREASURE_ICON } from "./icons";
+import { setMusic, sfx, type SfxName } from "./audio";
 
-export const ABILITY_ICON: Record<AbilityId, LucideIcon> = {
-  "kiem-khi": Sword,
-  "ngu-kiem": Wind,
-  "kiem-vu": CloudRain,
-  "luu-quang": Sparkles,
-  "liet-diem": Flame,
-  "boc-phat": Zap,
-  "ho-the": Shield,
-  "bang-tam": Snowflake,
-};
-export const TREASURE_ICON: Record<TreasureKind, LucideIcon> = {
-  "thanh-hong": Swords,
-  "tran-hon": BellRing,
-  "tu-kim": FlaskConical,
-  "bat-quai": Hexagon,
-  "hoan-linh": Flag,
-  "huyen-quy": ShieldHalf,
-};
-const RUN_ITEMS: ItemId[] = ["hoi-xuan", "hoi-linh", "tu-khi", "bao-linh-phu", "truyen-tong-phu", "truc-co-dan"];
+export { ABILITY_ICON, TREASURE_ICON };
+
+const RUN_ITEMS: ItemId[] = [
+  "hoi-xuan",
+  "dai-hoi-xuan",
+  "hoi-linh",
+  "tu-khi",
+  "boi-nguyen",
+  "bao-linh-phu",
+  "truyen-tong-phu",
+  "truc-co-dan",
+  "ket-kim-dan",
+  "hoa-anh-dan",
+];
 
 type Aim = { kind: "ability" | "treasure" | "item"; id: string; targets: Pos[] };
 type Slot = { key: string; label: string; icon: LucideIcon; cost?: number; cooldown: number; disabled: boolean; onUse: () => void };
@@ -85,6 +61,22 @@ type Props = {
   dark: boolean;
 };
 
+// One sound per kind of thing that happened this turn
+function playSounds(list: Result["fx"], outcome: Outcome) {
+  const names = new Set<SfxName>();
+  for (const f of list) {
+    if (f.type === "slash") names.add("slash");
+    else if (f.type === "hit") names.add(f.onPlayer ? "hurt" : f.crit ? "crit" : "hit");
+    else if (f.type === "bolt") names.add("bolt");
+    else if (f.type === "heal") names.add("heal");
+    else if (f.type === "die") names.add("die");
+    else if (f.type === "summon") names.add("summon");
+    else if (f.type === "text" && f.tone === "loot") names.add("pickup");
+  }
+  if (outcome === "won") names.add("gong");
+  names.forEach((n) => sfx(n));
+}
+
 export function RunScreen({ game, update, dark }: Props) {
   const r = game.run!;
   const p = game.player;
@@ -96,6 +88,7 @@ export function RunScreen({ game, update, dark }: Props) {
   const [ending, setEnding] = useState<Outcome | null>(null);
   const walking = useRef<Pos[] | null>(null);
   const seen = useMemo(() => visible(game), [game]);
+  useEffect(() => setMusic(r.kind === "tribulation" ? "tribulation" : "realm"), [r.kind]);
   const here = r.floor.things.find((x) => same(x.pos, r.pos) && (x.kind === "stairs" || x.kind === "portal"));
 
   const reasonText = (reason?: string) =>
@@ -126,6 +119,7 @@ export function RunScreen({ game, update, dark }: Props) {
         return res;
       }
       setFx({ id: performance.now(), list: res.fx });
+      playSounds(res.fx, res.outcome);
       if (res.outcome !== "continue") {
         walking.current = null;
         setAim(null);
@@ -213,9 +207,9 @@ export function RunScreen({ game, update, dark }: Props) {
         key: id,
         label: t(a.vi, a.en),
         icon: ABILITY_ICON[id],
-        cost: a.qi,
+        cost: abilityQi(p, id),
         cooldown: r.cooldowns[id] ?? 0,
-        disabled: p.qi < a.qi || (r.cooldowns[id] ?? 0) > 0,
+        disabled: p.qi < abilityQi(p, id) || (r.cooldowns[id] ?? 0) > 0,
         onUse: () => startAim("ability", id, a.target, a.range),
       };
     }),
@@ -270,8 +264,11 @@ export function RunScreen({ game, update, dark }: Props) {
     r.kind === "tribulation"
       ? r.demon
         ? t("Thiên kiếp · Tâm Ma", "Tribulation · Heart Demon")
-        : t(`Thiên kiếp · ${r.survived}/${r.goal} lượt`, `Tribulation · ${r.survived}/${r.goal} turns`)
-      : t(`${SECRET_REALMS[r.realm].vi} · tầng ${r.floor.depth}`, `${SECRET_REALMS[r.realm].en} · floor ${r.floor.depth}`);
+        : t(
+            `Thiên kiếp ${MAJOR_REALMS[(r.from ?? 0) + 1].vi} · ${r.survived}/${r.goal} lượt`,
+            `${MAJOR_REALMS[(r.from ?? 0) + 1].en} tribulation · ${r.survived}/${r.goal} turns`,
+          )
+      : t(`${realmInfo(r.realm).vi} · tầng ${r.floor.depth}`, `${realmInfo(r.realm).en} · floor ${r.floor.depth}`);
 
   return (
     <div className="flex flex-col gap-3">
@@ -288,8 +285,8 @@ export function RunScreen({ game, update, dark }: Props) {
           <Bar label={t("Linh lực", "Qi")} value={p.qi} max={s.qi} pct={qiPct} color="bg-sky-600" />
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted sm:flex-col sm:items-end">
-          <span title={t("Kiếm ý: mỗi điểm +3% sát thương", "Sword intent: +3% damage per point")} className="flex items-center gap-1">
-            {t("Kiếm ý", "Intent")}
+          <span title={t(PATHS[p.path].resource.about, PATHS[p.path].resource.aboutEn)} className="flex items-center gap-1">
+            {t(PATHS[p.path].resource.vi, PATHS[p.path].resource.en)}
             <span className="flex gap-0.5" aria-label={`${p.intent} / ${MAX_INTENT}`}>
               {Array.from({ length: MAX_INTENT }, (_, i) => (
                 <span key={i} className={cn("h-2.5 w-1.5 rounded-full", i < p.intent ? "bg-primary" : "bg-surface-muted ring-1 ring-border")} />
@@ -317,6 +314,7 @@ export function RunScreen({ game, update, dark }: Props) {
       <div className="relative overflow-hidden rounded-3xl border border-border shadow-card">
         <Board
           run={r}
+          path={p.path}
           seen={seen}
           dark={dark}
           fx={fx}
@@ -510,7 +508,14 @@ function BagButton({ game, t, onUse }: { game: Game; t: (vi: string, en: string)
 }
 
 function statusLabel(kind: string, lang: "vi" | "en") {
-  const vi: Record<string, string> = { shield: "🛡 Kiếm cương", reflect: "🪞 Phản", echo: "✨ Kiếm ảnh", block: "🐢 Chặn" };
-  const en: Record<string, string> = { shield: "🛡 Shield", reflect: "🪞 Reflect", echo: "✨ Echo", block: "🐢 Block" };
+  const vi: Record<string, string> = { shield: "🛡 Lá chắn", reflect: "🪞 Phản", echo: "✨ Kiếm ảnh", block: "🐢 Chặn", empower: "💪 Cường", burn: "🔥 Bỏng" };
+  const en: Record<string, string> = {
+    shield: "🛡 Shield",
+    reflect: "🪞 Reflect",
+    echo: "✨ Echo",
+    block: "🐢 Block",
+    empower: "💪 Empowered",
+    burn: "🔥 Burning",
+  };
   return (lang === "vi" ? vi : en)[kind] ?? kind;
 }
