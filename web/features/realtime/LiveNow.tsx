@@ -5,8 +5,10 @@
 import {
   Activity as ActivityIcon,
   Flame,
+  Headphones,
   Hourglass,
   Leaf,
+  ListMusic,
   MoonStar,
   Repeat,
   Sprout,
@@ -22,7 +24,7 @@ import { cn } from "@/lib/cn";
 import { useRealtime } from "./RealtimeProvider";
 
 // The server names an icon; only these are drawn (it never sends markup).
-const ICONS: Record<string, LucideIcon> = { Timer, UserPlus, Sprout, Leaf, TreePine, Repeat, Flame, Hourglass, Sunrise, MoonStar };
+const ICONS: Record<string, LucideIcon> = { Timer, UserPlus, Sprout, Leaf, TreePine, Repeat, Flame, Hourglass, Sunrise, MoonStar, Headphones, ListMusic };
 
 export function LivePill({ className }: { className?: string }) {
   const { connected, presence } = useRealtime();

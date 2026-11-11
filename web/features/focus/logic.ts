@@ -2,11 +2,40 @@
 
 import type { DaySummary, Mode } from "@/lib/api/sessions";
 
-export const MODES: Record<Mode, { label: string; short: string; minutes: number }> = {
-  focus: { label: "Focus", short: "Focus", minutes: 25 },
-  short: { label: "Short break", short: "Break", minutes: 5 },
-  long: { label: "Long break", short: "Long", minutes: 15 },
+export const MODES: Record<Mode, { label: string; short: string }> = {
+  focus: { label: "Focus", short: "Focus" },
+  short: { label: "Short break", short: "Break" },
+  long: { label: "Long break", short: "Long" },
 };
+
+// Stage 7: you choose how long each mode lasts.
+export type Durations = Record<Mode, number>; // minutes
+
+export const DEFAULT_DURATIONS: Durations = { focus: 25, short: 5, long: 15 };
+
+// The same limits the API checks (api/src/routes/me.ts)
+export const LIMITS: Record<Mode, { min: number; max: number }> = {
+  focus: { min: 1, max: 120 },
+  short: { min: 1, max: 60 },
+  long: { min: 1, max: 60 },
+};
+
+export const PRESETS: { name: string; hint: string; durations: Durations }[] = [
+  { name: "Classic", hint: "Pomodoro", durations: { focus: 25, short: 5, long: 15 } },
+  { name: "Quick", hint: "For tired days", durations: { focus: 15, short: 3, long: 10 } },
+  { name: "Deep", hint: "Longer stretches", durations: { focus: 50, short: 10, long: 30 } },
+  { name: "Flow", hint: "90-minute cycles", durations: { focus: 90, short: 20, long: 30 } },
+];
+
+// Whole minutes inside the limits; anything odd (text, NaN) falls back to the default.
+export function cleanDurations(input: Partial<Record<Mode, unknown>> | null | undefined): Durations {
+  const out = { ...DEFAULT_DURATIONS };
+  for (const mode of Object.keys(LIMITS) as Mode[]) {
+    const n = Math.round(Number(input?.[mode]));
+    if (Number.isFinite(n)) out[mode] = Math.min(LIMITS[mode].max, Math.max(LIMITS[mode].min, n));
+  }
+  return out;
+}
 
 export const MODE_OPTIONS = (Object.keys(MODES) as Mode[]).map((value) => ({ value, label: MODES[value].short }));
 

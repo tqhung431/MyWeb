@@ -41,6 +41,21 @@ const schema = z.object({
   // With Mailpit from docker-compose: SMTP_URL=smtp://127.0.0.1:1025 (inbox at http://localhost:8025)
   SMTP_URL: z.string().optional(),
   MAIL_FROM: z.string().default("MyWeb <hello@myweb.local>"),
+
+  // --- Stage 7 ---
+  // Is there a trusted proxy (Caddy) in front that sets X-Forwarded-For / -Proto?
+  //   false (default): no, ignore those headers (a browser could fake them)
+  //   1: yes, exactly one proxy hop (docker-compose sets this). Then req.ip is the visitor's
+  //      real IP, so per-IP rate limits work again, and req.secure knows about HTTPS.
+  TRUST_PROXY: z
+    .string()
+    .default("false")
+    .transform((v): boolean | number | string => (v === "false" ? false : v === "true" ? true : /^\d+$/.test(v) ? Number(v) : v)),
+
+  // Music: the official "oEmbed" services that confirm a link exists and may be embedded.
+  // Only changed in tests, to point at a fake.
+  SOUNDCLOUD_OEMBED_URL: z.url().default("https://soundcloud.com/oembed"),
+  YOUTUBE_OEMBED_URL: z.url().default("https://www.youtube.com/oembed"),
 });
 
 export const config = schema.parse(process.env);

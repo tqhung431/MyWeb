@@ -14,6 +14,7 @@ import { Aurora } from "@/components/shell/Aurora";
 import { BottomNav } from "@/components/shell/BottomNav";
 import { Brand } from "@/components/shell/Brand";
 import { MiniPlayer } from "@/components/shell/MiniPlayer";
+import { MusicDock } from "@/features/music/MusicDock";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { UserMenu } from "@/features/auth/UserMenu";
 import { themeScript } from "@/features/theme/theme";
@@ -76,6 +77,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </div>
 
           <MiniPlayer />
+          <MusicDock />
           <BottomNav />
         </AppProviders>
       </body>

@@ -57,6 +57,11 @@ export function ownerRoom({ userId, clientId }: Owner): string {
   return userId ? `user:${userId}` : `client:${clientId}`;
 }
 
+// A small signal to every open page, e.g. "music:changed" → charts reload themselves.
+export function broadcast(event: string, payload: unknown = {}): void {
+  target()?.emit(event, payload);
+}
+
 export function notifyOwner(owner: Owner, event: string, payload: unknown): void {
   target()?.to(ownerRoom(owner)).emit(event, payload);
 }

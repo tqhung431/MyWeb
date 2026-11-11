@@ -15,7 +15,7 @@ export async function resetDatabase() {
     await waitForValkey();
     migrated = true;
   }
-  await pool.query("truncate tips, focus_sessions, achievements, auth_sessions, users restart identity cascade");
+  await pool.query("truncate tips, focus_sessions, achievements, auth_sessions, songs, song_plays, song_likes, users restart identity cascade");
   await valkey.flushdb(); // only database 1 (see vitest.config.ts)
   await seed();
 }

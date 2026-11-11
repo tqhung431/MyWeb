@@ -19,9 +19,13 @@ const SESSION_DAYS = 30;
 const cookieOptions: CookieOptions = {
   httpOnly: true, // JavaScript in the page can't read it, so an XSS bug can't steal it
   sameSite: "lax", // not sent with requests started by other websites (except plain links)
-  secure: config.NODE_ENV === "production", // HTTPS only in production
   path: "/",
 };
+
+// Secure = "only send over HTTPS". We set it when the visitor actually came over HTTPS
+// (https://localhost through Caddy). Plain http://192.168.x.x on your network must still work,
+// and browsers refuse Secure cookies there.
+const optionsFor = (res: Response): CookieOptions => ({ ...cookieOptions, secure: res.req?.secure ?? false });
 
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 
@@ -29,7 +33,7 @@ export async function startSession(res: Response, userId: string, userAgent?: st
   const token = randomBytes(32).toString("base64url"); // 256 random bits: impossible to guess
   const expiresAt = new Date(Date.now() + SESSION_DAYS * DAY);
   await db.insert(authSessions).values({ id: hashToken(token), userId, expiresAt, userAgent: userAgent?.slice(0, 300) });
-  res.cookie(COOKIE_NAME, token, { ...cookieOptions, expires: expiresAt });
+  res.cookie(COOKIE_NAME, token, { ...optionsFor(res), expires: expiresAt });
 }
 
 export async function endSession(res: Response, token: string | undefined): Promise<void> {
@@ -37,14 +41,19 @@ export async function endSession(res: Response, token: string | undefined): Prom
     await db.delete(authSessions).where(eq(authSessions.id, hashToken(token)));
     await forget(hashToken(token)); // the cached copy must go too, or the token would live on for a minute
   }
-  res.clearCookie(COOKIE_NAME, cookieOptions);
+  res.clearCookie(COOKIE_NAME, optionsFor(res));
 }
 
-export type PublicUser = Pick<User, "id" | "email" | "name" | "createdAt">;
+export type PublicUser = Pick<User, "id" | "email" | "name" | "createdAt" | "preferences">;
 
 export function publicUser(user: User): PublicUser {
   // Never send password_hash to the browser.
-  return { id: user.id, email: user.email, name: user.name, createdAt: user.createdAt };
+  return { id: user.id, email: user.email, name: user.name, createdAt: user.createdAt, preferences: user.preferences };
+}
+
+// After changing a user's details, drop this browser's cached copy so the change shows at once.
+export async function refreshCachedSession(token: string | undefined): Promise<void> {
+  if (token) await forget(hashToken(token));
 }
 
 // --- Stage 5: cache "token → user" in Valkey for 60 s --------------------------
@@ -96,7 +105,7 @@ export async function userFromToken(token: string | undefined, res?: Response): 
     const expiresAt = new Date(Date.now() + SESSION_DAYS * DAY);
     await db.update(authSessions).set({ expiresAt }).where(eq(authSessions.id, id));
     await forget(id);
-    res?.cookie(COOKIE_NAME, token, { ...cookieOptions, expires: expiresAt });
+    res?.cookie(COOKIE_NAME, token, { ...optionsFor(res), expires: expiresAt });
   }
   return row.user;
 }

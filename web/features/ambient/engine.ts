@@ -28,10 +28,8 @@ import {
   snare,
   type StopFn,
 } from "./synth";
-import { DRILL_SONGS, drillGenerator, type DrillId } from "./drill";
 
-// The original tracks; the 10 Vietnamese drill instrumentals are added from drill.ts
-type BaseTrack =
+export type TrackName =
   | "lofi-beats"
   | "keys"
   | "night-piano"
@@ -43,8 +41,6 @@ type BaseTrack =
   | "forest"
   | "stream"
   | "brown-noise";
-
-export type TrackName = BaseTrack | DrillId;
 type Generator = (ac: AudioContext, out: AudioNode, fx: Fx) => StopFn;
 type Fx = { reverb: AudioNode }; // send a signal here to add room echo
 
@@ -85,7 +81,7 @@ const PROGRESSION = [
 // The tracks
 // ---------------------------------------------------------------------------
 
-const baseGenerators: Record<BaseTrack, Generator> = {
+const generators: Record<TrackName, Generator> = {
   // --- Music ---
 
   "lofi-beats"(ac, out) {
@@ -362,11 +358,6 @@ const baseGenerators: Record<BaseTrack, Generator> = {
     return () => src.stop();
   },
 };
-
-const generators = {
-  ...baseGenerators,
-  ...Object.fromEntries(DRILL_SONGS.map((song) => [song.id, drillGenerator(song)])),
-} as Record<TrackName, Generator>;
 
 export const TRACK_NAMES = Object.keys(generators) as TrackName[];
 

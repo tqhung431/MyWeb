@@ -1,5 +1,5 @@
 // Building blocks for generated music: notes, noise, filters, a step sequencer and instruments.
-// Used by engine.ts (the original tracks) and drill.ts (the Vietnamese drill instrumentals).
+// Used by engine.ts.
 
 export type StopFn = () => void;
 

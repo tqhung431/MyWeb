@@ -45,13 +45,6 @@ export function SoundPanel() {
         />
       </div>
 
-      {category === "drill" && (
-        <p className="mb-3 text-sm text-muted">
-          10 original instrumentals in Vietnamese drill style, composed by code: sliding 808s and triplet hi-hats, with
-          melodies on đàn bầu, đàn tranh and sáo trúc. One plays at a time; layer it with rain if you like.
-        </p>
-      )}
-
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" role="group" aria-label="Sounds">
         {TRACKS.filter((t) => t.category === category).map((track) => (
           <TrackCard

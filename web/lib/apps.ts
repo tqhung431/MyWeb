@@ -5,7 +5,7 @@
 // (tests/apps.test.ts fails if a "live" app has no page.)
 
 import type { LucideIcon } from "lucide-react";
-import { Clapperboard, Gamepad2, ListChecks, Moon, Sparkles, Swords, Users } from "lucide-react";
+import { Clapperboard, Disc3, Gamepad2, ListChecks, Moon, Sparkles, Swords, Users } from "lucide-react";
 
 export type AppStatus = "live" | "soon";
 
@@ -34,6 +34,20 @@ export const APPS: AppInfo[] = [
     links: [
       { href: "/chill", label: "Focus" },
       { href: "/chill/tips", label: "Tips" },
+    ],
+  },
+  {
+    id: "music",
+    name: "Music",
+    tagline: "Drill, Remix, Pop and Lofi with vocals: community charts",
+    href: "/music",
+    icon: Disc3,
+    accent: "from-rose-500 to-orange-400",
+    status: "live",
+    phase: "Stage 7",
+    links: [
+      { href: "/music", label: "Charts" },
+      { href: "/music/add", label: "Add a song" },
     ],
   },
   {

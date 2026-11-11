@@ -13,12 +13,15 @@ import { Equalizer } from "@/features/ambient/Equalizer";
 import { getTrack } from "@/features/ambient/tracks";
 import { useFocus } from "@/features/focus/FocusProvider";
 import { MODES } from "@/features/focus/logic";
+import { useMusic } from "@/features/music/MusicProvider";
 import { getApp } from "@/lib/apps";
+import { cn } from "@/lib/cn";
 
 export function MiniPlayer() {
   const pathname = usePathname();
   const ambient = useAmbient();
   const focus = useFocus();
+  const music = useMusic();
 
   const tracks = ambient.playing.map((n) => getTrack(n)).filter((t) => t !== undefined);
   const track = tracks[0]; // the first one sets the icon
@@ -30,7 +33,11 @@ export function MiniPlayer() {
   return (
     <section
       aria-label="Now playing"
-      className="fixed inset-x-3 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-30 mx-auto flex max-w-xl items-center gap-3 rounded-2xl border border-border bg-surface-strong/90 p-2.5 pr-3 shadow-card backdrop-blur-xl lg:bottom-6 lg:left-[calc(17rem+1.5rem)]"
+      className={cn(
+        "fixed inset-x-3 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-30 mx-auto flex max-w-xl items-center gap-3 rounded-2xl border border-border bg-surface-strong/90 p-2.5 pr-3 shadow-card backdrop-blur-xl lg:bottom-6 lg:left-[calc(17rem+1.5rem)]",
+        // With the music player open: hidden on phones (no room), moved left on desktop
+        music.current && "hidden lg:flex lg:right-[calc(24rem+3rem)] lg:mx-0",
+      )}
     >
       <Link href="/chill" className="flex min-w-0 flex-1 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
         <AppIcon icon={track?.icon ?? chill.icon} accent={track?.accent ?? chill.accent} size="md" />

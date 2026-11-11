@@ -6,6 +6,7 @@
 import cookieParser from "cookie-parser";
 import express from "express";
 import helmet from "helmet";
+import { config } from "./config.js";
 import { pool } from "./db/client.js";
 import { loadUser } from "./middleware/auth.js";
 import { errorHandler, notFound } from "./middleware/errors.js";
@@ -13,6 +14,8 @@ import { sameOrigin } from "./middleware/security.js";
 import { achievementsRouter } from "./routes/achievements.js";
 import { activityRouter } from "./routes/activity.js";
 import { authRouter } from "./routes/auth.js";
+import { meRouter } from "./routes/me.js";
+import { musicRouter } from "./routes/music.js";
 import { sessionsRouter } from "./routes/sessions.js";
 import { tipsRouter } from "./routes/tips.js";
 import { valkey, valkeyReady } from "./valkey/client.js";
@@ -24,7 +27,7 @@ export function createApp() {
   // so it's the same origin and CORS isn't needed any more. Every PC on the network uses
   // the same website address, and only the website talks to the API.
   // We don't trust X-Forwarded-For: the Next.js proxy passes on whatever the browser sent.
-  app.set("trust proxy", false);
+  app.set("trust proxy", config.TRUST_PROXY); // Stage 7: Caddy in front → 1 (see config.ts)
 
   app.use(helmet()); // safe default security headers
   app.use(cookieParser()); // req.cookies
@@ -44,6 +47,8 @@ export function createApp() {
   app.use("/api/sessions", sessionsRouter);
   app.use("/api/achievements", achievementsRouter);
   app.use("/api/activity", activityRouter);
+  app.use("/api/me", meRouter);
+  app.use("/api/songs", musicRouter);
 
   app.use(notFound);
   app.use(errorHandler); // must be last

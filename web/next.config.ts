@@ -6,6 +6,9 @@ import type { NextConfig } from "next";
 const API_URL = process.env.API_URL ?? "http://127.0.0.1:4000";
 
 const nextConfig: NextConfig = {
+  // Stage 7: build a small self-contained server (.next/standalone) for the Docker image.
+  output: "standalone",
+
   // Dev mode (npm run dev) only: let other PCs on a home/office network load the
   // live-reload scripts. `npm start` (production) doesn't need this.
   // Each * is one part of the address: 192.168.*.* matches 192.168.1.20.

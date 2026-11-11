@@ -44,8 +44,11 @@ const perEmailLimit = rateLimit({
   key: (req) => `email:${String(req.body?.email ?? "").trim().toLowerCase()}`,
 });
 const overallLimit = rateLimit({ name: "auth-all", windowMs: WINDOW, max: config.AUTH_RATE_LIMIT * 30, key: () => "all" });
+// Stage 7: behind Caddy (TRUST_PROXY set), req.ip is the visitor's real IP, so we can limit per IP again.
+const perIpLimit = rateLimit({ name: "auth-ip", windowMs: WINDOW, max: config.AUTH_RATE_LIMIT * 3, key: (req) => req.ip ?? "?" });
+const limits = config.TRUST_PROXY === false ? [overallLimit, perEmailLimit] : [overallLimit, perIpLimit, perEmailLimit];
 
-authRouter.post("/register", overallLimit, perEmailLimit, async (req, res) => {
+authRouter.post("/register", ...limits, async (req, res) => {
   const input = registerBody.parse(req.body);
 
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, input.email));
@@ -66,7 +69,7 @@ authRouter.post("/register", overallLimit, perEmailLimit, async (req, res) => {
   await enqueue("achievements", { userId: user.id, clientId: null, timeZone: timeZoneOf(req) });
 });
 
-authRouter.post("/login", overallLimit, perEmailLimit, async (req, res) => {
+authRouter.post("/login", ...limits, async (req, res) => {
   const input = loginBody.parse(req.body);
   const [user] = await db.select().from(users).where(eq(users.email, input.email));
 

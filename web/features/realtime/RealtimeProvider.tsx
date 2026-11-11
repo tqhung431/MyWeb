@@ -45,7 +45,10 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       path: "/api/realtime",
       addTrailingSlash: false,
       auth: { clientId: clientId() },
-      transports: ["polling"], // Stage 7: ["websocket", "polling"]
+      // Stage 7: behind Caddy (docker compose), real WebSockets work: NEXT_PUBLIC_REALTIME_WEBSOCKET=1
+      // is set when the image is built. Without Caddy, long-polling through the Next.js proxy.
+      transports: process.env.NEXT_PUBLIC_REALTIME_WEBSOCKET === "1" ? ["websocket", "polling"] : ["polling"],
+      tryAllTransports: true, // if WebSocket is blocked somewhere, fall back to polling
     });
     setSocket(s);
     s.on("connect", () => setConnected(true));

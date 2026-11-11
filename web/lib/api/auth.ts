@@ -5,7 +5,8 @@ import { apiFetch } from "./client";
 import { clientId } from "./clientId";
 import { timeZone } from "./timezone";
 
-export type User = { id: string; email: string; name: string; createdAt: string };
+export type Preferences = { timer?: { focus: number; short: number; long: number } };
+export type User = { id: string; email: string; name: string; createdAt: string; preferences?: Preferences };
 export type Me = { user: User | null };
 
 // X-Client-Id lets the API move this browser's anonymous focus sessions into the account.
@@ -31,4 +32,10 @@ export async function login(input: { email: string; password: string }): Promise
 
 export function logout(): Promise<void> {
   return apiFetch<void>("/api/auth/logout", { method: "POST" });
+}
+
+// Save settings to the account, so they follow you to other devices (signed in only).
+export async function savePreferences(preferences: Preferences): Promise<User> {
+  const res = await apiFetch<{ user: User }>("/api/me/preferences", { method: "PUT", body: JSON.stringify(preferences) });
+  return res.user;
 }

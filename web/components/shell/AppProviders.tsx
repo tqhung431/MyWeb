@@ -8,6 +8,7 @@ import { AchievementsProvider } from "@/features/achievements/AchievementsProvid
 import { AmbientProvider } from "@/features/ambient/AmbientProvider";
 import { AuthProvider } from "@/features/auth/AuthProvider";
 import { FocusProvider } from "@/features/focus/FocusProvider";
+import { MusicProvider } from "@/features/music/MusicProvider";
 import { RealtimeProvider } from "@/features/realtime/RealtimeProvider";
 import type { User } from "@/lib/api/auth";
 
@@ -17,7 +18,9 @@ export function AppProviders({ initialUser, children }: { initialUser: User | nu
       <RealtimeProvider>
         <AmbientProvider>
           <AchievementsProvider>
-            <FocusProvider>{children}</FocusProvider>
+            <FocusProvider>
+              <MusicProvider>{children}</MusicProvider>
+            </FocusProvider>
           </AchievementsProvider>
         </AmbientProvider>
       </RealtimeProvider>

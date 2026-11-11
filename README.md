@@ -3,20 +3,24 @@
 My web programming learning project for 2026. It grows one stage at a time,
 from a static page to a full system (frontend, API, database, real-time, AI).
 
-## Current: Stage 6 — real-time
+## Current: Stage 7 — one command, Caddy in front, Music
 
 MyWeb is a hub of small apps with a sidebar (desktop), a tab bar (phone) and a floating mini player.
-**Chill Corner** has a focus timer, a mixer with **21 generated tracks** (music, nature sounds and
-**10 original Vietnamese drill instrumentals**), a weekly chart, achievements and tips.
-Several people can use it at once from other PCs on your network. Everyone sees **who's online and focusing**
-and a **live activity feed**, and badges pop up the instant they're earned.
+**Chill Corner**: a focus timer with **your own lengths**, 11 generated sounds, a weekly chart, achievements and tips.
+**Music**: songs with vocals (Drill, Remix, Pop, Lofi) from SoundCloud and YouTube, with **top this week / month** charts
+made by MyWeb listeners. Several people can use it at once from other PCs, live presence and activity included.
 
 ```
-Browser ──► Next.js web (:3000) ──► API + Socket.IO (:4000) ──► PostgreSQL (:5432)
-            pages + /api/* proxy      │          └───────────► Valkey (:6379)  cache · queue · pub/sub
-                                      └ Worker ◄──────────────────┘            badges · emails · live events
+              ┌──────────── docker compose ───────────────────────────────────┐
+Browsers ──► Caddy (:80, :443) ──► web (Next.js) ──► api (+ Socket.IO) ──► db (PostgreSQL)
+              /api/* + WebSockets ─────────────────►  │      worker ─────► valkey · mailpit
+              └───────────────────────────────────────────────────────────────┘
 ```
 
+**Start everything:** `cp .env.example .env && docker compose --profile app up -d --build`, then open
+**https://localhost** (or **http://&lt;this PC's IP&gt;** from other PCs).
+
+- Docker, Caddy, Music and the adjustable timer: [docs/stage-7.md](docs/stage-7.md)
 - Real-time, presence, live feed, Vietnamese drill: [docs/stage-6.md](docs/stage-6.md)
 - Cache, job queue, worker, theme and sound mixer: [docs/stage-5.md](docs/stage-5.md)
 - Using MyWeb from other PCs, guests and accounts: [docs/stage-4.md](docs/stage-4.md)
@@ -64,7 +68,8 @@ api/                   Express API (TypeScript)
   tests/               API tests (Vitest + Supertest)
 stage-1-static/        Stage 1: the plain HTML/CSS/JS version
 docs/                  one explainer per stage
-docker-compose.yml     PostgreSQL, Valkey and Mailpit for local development
+docker-compose.yml     everything (profile "app") or just PostgreSQL, Valkey, Mailpit
+Caddyfile              the front door: HTTPS, routing, WebSockets, real IPs
 ```
 
 ## Stages
@@ -76,6 +81,6 @@ docker-compose.yml     PostgreSQL, Valkey and Mailpit for local development
 4. Many users — guests first, optional accounts, network access ✅
 5. Cache + queue + worker — Valkey ✅
 6. Real-time — Socket.IO, presence, live feed ✅
-7. Packaging — Docker Compose + Caddy
+7. Packaging — Docker Compose + Caddy ✅ (+ Music app, custom timer lengths)
 8. Automation and monitoring — GitHub Actions, OpenTelemetry, Grafana
 9. Local AI (optional) — Ollama

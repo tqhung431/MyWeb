@@ -1,45 +1,114 @@
-# Services MyWeb needs while you develop. Stage 7 will add the website, the API and Caddy.
+# MyWeb with Docker Compose (Stage 7).
 #
-#   docker compose up -d        start everything below in the background
-#   docker compose down         stop (your data stays in the volumes)
+#   docker compose up -d                       database, Valkey and Mailpit only, for `npm run dev`
+#   docker compose --profile app up -d --build EVERYTHING: + API, worker, website and Caddy
+#   docker compose --profile app down          stop (your data stays in the volumes)
+#
+# With the app profile, open https://localhost on this PC, or http://<this PC's IP> on other PCs.
+# Settings (passwords, ports) come from the .env file next to this one; see .env.example.
 
 services:
-  # The database (Stage 3)
+  # --- Data ---------------------------------------------------------------------
+
   db:
     image: postgres:16
     environment:
       POSTGRES_USER: myweb
-      POSTGRES_PASSWORD: myweb # fine for learning on your PC; never reuse this in production
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-myweb}
       POSTGRES_DB: myweb
     ports:
-      - "127.0.0.1:5432:5432" # this PC only
+      - "127.0.0.1:5432:5432" # this PC only (for npm run dev and tools)
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U myweb"]
       interval: 5s
       retries: 10
+    restart: unless-stopped
 
-  # Stage 5: cache, rate-limit counters and the job queue (BSD licence, a fork of Redis)
   valkey:
     image: valkey/valkey:8
     ports:
       - "127.0.0.1:6379:6379"
     volumes:
-      - valkey-data:/data # queued jobs survive a restart
+      - valkey-data:/data
     healthcheck:
       test: ["CMD", "valkey-cli", "ping"]
       interval: 5s
       retries: 10
+    restart: unless-stopped
 
-  # Stage 5 (optional): a pretend mail server. Emails the worker sends land in a web inbox
-  # at http://localhost:8025 instead of anyone's real mailbox. Set SMTP_URL in api/.env to use it.
+  # A pretend mail server: emails land in the web inbox at http://localhost:8025
   mailpit:
     image: axllent/mailpit:latest
     ports:
-      - "127.0.0.1:1025:1025" # SMTP
-      - "127.0.0.1:8025:8025" # inbox in the browser
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+    restart: unless-stopped
+
+  # --- The app (profile "app") ------------------------------------------------------
+
+  api:
+    profiles: [app]
+    build: ./api
+    image: myweb-api
+    environment: &api-env
+      DATABASE_URL: postgres://myweb:${POSTGRES_PASSWORD:-myweb}@db:5432/myweb
+      VALKEY_URL: redis://valkey:6379
+      HOST: 0.0.0.0 # inside Docker's private network; only Caddy can reach it
+      PORT: "4000"
+      TRUST_PROXY: "1" # Caddy is one trusted hop in front: real visitor IPs, HTTPS detection
+      SMTP_URL: ${SMTP_URL:-smtp://mailpit:1025}
+      MAIL_FROM: ${MAIL_FROM:-MyWeb <hello@myweb.local>}
+    depends_on:
+      db: { condition: service_healthy }
+      valkey: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      start_period: 20s
+      retries: 5
+    restart: unless-stopped
+
+  worker:
+    profiles: [app]
+    build: ./api
+    image: myweb-api # same code as the API...
+    command: ["node", "dist/worker.js"] # ...started as the background worker
+    environment: *api-env
+    depends_on:
+      api: { condition: service_healthy } # the API runs the database migrations first
+    restart: unless-stopped
+
+  web:
+    profiles: [app]
+    build:
+      context: ./web
+      args:
+        API_URL: http://api:4000
+        NEXT_PUBLIC_REALTIME_WEBSOCKET: "1"
+    environment:
+      API_URL: http://api:4000
+    depends_on:
+      api: { condition: service_healthy }
+    restart: unless-stopped
+
+  caddy:
+    profiles: [app]
+    image: caddy:2.11
+    ports:
+      - "${HTTP_PORT:-80}:80" # open to your network: other PCs use http://<this PC's IP>
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp" # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data # its certificates, incl. the local certificate authority
+      - caddy-config:/config
+    depends_on: [web, api]
+    restart: unless-stopped
 
 volumes:
   db-data:
   valkey-data:
+  caddy-data:
+  caddy-config:

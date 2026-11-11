@@ -28,3 +28,13 @@ describe("streak", () => {
     expect(streak([day(0), day(0)])).toBe(0);
   });
 });
+
+describe("cleanDurations", () => {
+  it("keeps whole minutes inside the limits, and fixes junk", async () => {
+    const { cleanDurations } = await import("@/features/focus/logic");
+    expect(cleanDurations({ focus: 50, short: 10, long: 30 })).toEqual({ focus: 50, short: 10, long: 30 });
+    expect(cleanDurations({ focus: 500, short: 0, long: 12.6 })).toEqual({ focus: 120, short: 1, long: 13 });
+    expect(cleanDurations({ focus: "abc" } as never)).toEqual({ focus: 25, short: 5, long: 15 });
+    expect(cleanDurations(null)).toEqual({ focus: 25, short: 5, long: 15 });
+  });
+});
