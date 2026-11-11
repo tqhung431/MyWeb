@@ -30,7 +30,7 @@ jobs:
     # Real PostgreSQL and Valkey for the tests, like on your PC
     services:
       postgres:
-        image: postgres:16
+        image: pgvector/pgvector:pg16 # Postgres + pgvector (Stage 9)
         env:
           POSTGRES_USER: myweb
           POSTGRES_PASSWORD: myweb

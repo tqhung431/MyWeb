@@ -4,7 +4,10 @@
 // The player itself (MusicDock) lives in the root layout, so it keeps playing between pages.
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { countPlay, type Song } from "@/lib/api/music";
+import { countPlay, type Song as FullSong } from "@/lib/api/music";
+
+// What the player needs. Songs from the charts have more; the Companion's song cards have just this.
+export type Song = Pick<FullSong, "id" | "title" | "artist" | "genre" | "audioUrl" | "artworkUrl"> & Partial<FullSong>;
 
 type MusicState = {
   current: Song | null;

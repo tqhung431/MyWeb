@@ -14,6 +14,7 @@ import { sameOrigin } from "./middleware/security.js";
 import { achievementsRouter } from "./routes/achievements.js";
 import { activityRouter } from "./routes/activity.js";
 import { authRouter } from "./routes/auth.js";
+import { companionRouter } from "./routes/companion.js";
 import { meRouter } from "./routes/me.js";
 import { musicRouter } from "./routes/music.js";
 import { sessionsRouter } from "./routes/sessions.js";
@@ -49,6 +50,7 @@ export function createApp() {
   app.use("/api/activity", activityRouter);
   app.use("/api/me", meRouter);
   app.use("/api/songs", musicRouter);
+  app.use("/api/companion", companionRouter);
 
   app.use(notFound);
   app.use(errorHandler); // must be last

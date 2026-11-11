@@ -50,6 +50,13 @@
       "when": 1794386911379,
       "tag": "0006_music_files",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794390479619,
+      "tag": "0007_companion_knowledge",
+      "breakpoints": true
     }
   ]
 }

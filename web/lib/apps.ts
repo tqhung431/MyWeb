@@ -103,12 +103,12 @@ export const APPS: AppInfo[] = [
   {
     id: "companion",
     name: "Free-time Companion",
-    tagline: "An AI buddy that suggests what to do next",
+    tagline: "A local AI buddy that knows MyWeb's songs and tips",
     href: "/companion",
     icon: Sparkles,
     accent: "from-fuchsia-400 to-purple-600",
-    status: "soon",
-    phase: "Phase 5",
+    status: "live",
+    phase: "Stage 9",
   },
 ];
 

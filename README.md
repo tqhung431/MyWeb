@@ -3,24 +3,28 @@
 My web programming learning project for 2026. It grows one stage at a time,
 from a static page to a full system (frontend, API, database, real-time, AI).
 
-## Current: Stage 8 — automated checks and monitoring
+## Current: Stage 9 — local AI with Ollama
 
 MyWeb is a hub of small apps with a sidebar (desktop), a tab bar (phone) and a floating mini player.
 **Chill Corner**: a focus timer with your own lengths, 11 generated sounds, a weekly chart, achievements and tips.
 **Music**: songs with vocals that **MyWeb stores and plays itself** (works behind any firewall), genre detected automatically,
 a starter pack of 12 Creative Commons songs, and top week / month charts. Several people can use it at once, live.
+**Free-time Companion**: a **local AI** chat buddy (Ollama) that suggests real MyWeb songs and tips, answering word by word.
 Every push is **tested on GitHub Actions**; **Grafana** shows traces and metrics across all services.
 
 ```
               ┌──────────── docker compose ───────────────────────────────────┐
 Browsers ──► Caddy (:80, :443) ──► web (Next.js) ──► api (+ Socket.IO) ──► db (PostgreSQL)
               /api/* + WebSockets ─────────────────►  │      worker ─────► valkey · mailpit
+              │                                     api ──► ollama (local AI, profile "ai")
               └─────────── traces + metrics ──► otel-lgtm (Grafana :3001, profile "monitoring")
 ```
 
 **Start everything:** `cp .env.example .env && docker compose --profile app up -d --build`, then open
 **https://localhost** (or **http://&lt;this PC's IP&gt;** from other PCs).
 
+- The AI Companion: embeddings, retrieval, streaming: [docs/stage-9.md](docs/stage-9.md)
+  (turn it on: `docker compose --profile app --profile ai up -d --build`)
 - CI, OpenTelemetry, Grafana, and the rebuilt Music: [docs/stage-8.md](docs/stage-8.md)
 - Docker, Caddy, Music and the adjustable timer: [docs/stage-7.md](docs/stage-7.md)
 - Real-time, presence, live feed, Vietnamese drill: [docs/stage-6.md](docs/stage-6.md)
@@ -33,7 +37,7 @@ Browsers ──► Caddy (:80, :443) ──► web (Next.js) ──► api (+ So
 
 ### Run it
 
-Needs Node.js 20.9+ and PostgreSQL 16 (easiest: Docker).
+Needs Node.js 20.9+ and PostgreSQL 16 with pgvector (easiest: Docker). The AI needs [Ollama](https://ollama.com) (optional).
 
 ```bash
 docker compose up -d                          # 1. PostgreSQL + Valkey + Mailpit
@@ -65,6 +69,7 @@ api/                   Express API (TypeScript)
   src/jobs/, worker.ts job queue and the background worker
   src/valkey/          cache and Valkey connection
   src/realtime/        Socket.IO server and live events
+  src/ai/              the AI Companion: Ollama, embeddings, search
   src/db/              schema, migrations runner, seed data
   drizzle/             generated SQL migrations
   tests/               API tests (Vitest + Supertest)
@@ -88,4 +93,4 @@ music-import/          drop song files here to import them
 6. Real-time — Socket.IO, presence, live feed ✅
 7. Packaging — Docker Compose + Caddy ✅ (+ Music app, custom timer lengths)
 8. Automation and monitoring — GitHub Actions, OpenTelemetry, Grafana ✅ (+ Music stores its own files)
-9. Local AI (optional) — Ollama
+9. Local AI — Ollama, embeddings in pgvector, streamed answers ✅ (Free-time Companion)

@@ -57,6 +57,14 @@ const schema = z.object({
   MEDIA_DIR: z.string().default("./media"),
   MAX_UPLOAD_MB: z.coerce.number().int().positive().default(30),
 
+  // --- Stage 9: local AI (Ollama). Not set → the Companion is off; everything else works. ---
+  // docker-compose (profile "ai"): http://ollama:11434 · Ollama on your PC: http://127.0.0.1:11434
+  OLLAMA_URL: z.url().optional(),
+  // Open models: qwen2.5 1.5B (Apache-2.0) chats, incl. Vietnamese; paraphrase-multilingual
+  // (Apache-2.0, 50+ languages incl. Vietnamese, 768 numbers per text) makes embeddings.
+  AI_CHAT_MODEL: z.string().default("qwen2.5:1.5b"),
+  AI_EMBED_MODEL: z.string().default("paraphrase-multilingual"),
+
   // OpenTelemetry: where traces and metrics go (Grafana's all-in-one "otel-lgtm" in docker-compose).
   // Not set → telemetry off. Read by the OpenTelemetry SDK itself; listed here so it's documented.
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().optional(),

@@ -14,6 +14,7 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  vector,
 } from "drizzle-orm/pg-core";
 
 export const tips = pgTable("tips", {
@@ -149,6 +150,32 @@ export const songLikes = pgTable(
     likedAt: timestamp("liked_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.songId, t.owner] }), index("song_likes_time_idx").on(t.likedAt)],
+);
+
+// --- Stage 9: the Companion's knowledge (embeddings) --------------------------------
+// One row per tip and per song: its text, and an EMBEDDING, a list of 768 numbers that captures
+// its meaning. Texts with similar meanings get nearby numbers, so "something calm for studying"
+// finds a lofi song even if no word matches. pgvector stores and searches them.
+
+export const EMBEDDING_DIMENSIONS = 768; // paraphrase-multilingual (change with the model, plus a migration)
+
+export const knowledge = pgTable(
+  "knowledge",
+  {
+    id: serial("id").primaryKey(),
+    kind: text("kind", { enum: ["tip", "song"] }).notNull(),
+    refId: text("ref_id").notNull(), // tip slug or song id
+    content: text("content").notNull(), // the text that was embedded
+    contentHash: text("content_hash").notNull(), // unchanged text → no need to embed again
+    model: text("model").notNull(),
+    embedding: vector("embedding", { dimensions: EMBEDDING_DIMENSIONS }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("knowledge_kind_ref_idx").on(t.kind, t.refId),
+    // HNSW: a graph index that finds the nearest meanings fast, even with many rows
+    index("knowledge_embedding_idx").using("hnsw", t.embedding.op("vector_cosine_ops")),
+  ],
 );
 
 export type Preferences = { timer?: { focus: number; short: number; long: number } };

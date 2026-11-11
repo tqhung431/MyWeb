@@ -28,3 +28,7 @@
 | OpenTelemetry JS (SDK, auto-instrumentations) | npm | Apache-2.0 |
 | @vercel/otel | npm | MIT |
 | grafana/otel-lgtm image (collector, Prometheus, Tempo, Loki, Grafana) | Docker Hub | Apache-2.0 image; Grafana, Loki, Tempo AGPL-3.0 |
+| Ollama (runs the AI models locally) | ollama.com (Docker image) | MIT |
+| Qwen2.5 1.5B Instruct (the Companion's chat model) | Alibaba Qwen, via the Ollama library | Apache-2.0 |
+| paraphrase-multilingual (embeddings, from sentence-transformers) | via the Ollama library | Apache-2.0 |
+| pgvector (vector search in PostgreSQL) | github.com/pgvector/pgvector (pgvector/pgvector Docker image) | PostgreSQL Licence |

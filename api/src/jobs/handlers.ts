@@ -7,6 +7,8 @@ import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { achievements, focusSessions, users } from "../db/schema.js";
 import { displayName, notifyOwner, publishActivity } from "../realtime/emit.js";
+import { reindex } from "../ai/knowledge.js";
+import { AiUnavailable, aiEnabled } from "../ai/ollama.js";
 import type { JobData, JobName } from "./queue.js";
 
 // --- achievements ---------------------------------------------------------------
@@ -91,6 +93,14 @@ export async function processJob(name: JobName, data: unknown) {
       return checkAchievements(data as JobData["achievements"]);
     case "welcome-email":
       return sendWelcomeEmail(data as JobData["welcome-email"]);
+    case "reindex":
+      // Embedding needs Ollama. Off, not running or models not downloaded yet: skip, it isn't an error.
+      // (GET /api/companion/status starts another reindex once the models are ready.)
+      if (!aiEnabled()) return { skipped: "AI is off" };
+      return reindex().catch((error: unknown) => {
+        if (error instanceof AiUnavailable) return { skipped: error.message };
+        throw error;
+      });
     default:
       throw new Error(`Unknown job: ${name satisfies never}`);
   }

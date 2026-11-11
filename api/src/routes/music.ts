@@ -24,6 +24,7 @@ import { songLikes, songPlays, songs, type Song } from "../db/schema.js";
 import { songPlays as songPlaysMetric, songUploads } from "../metrics.js";
 import { HttpError } from "../middleware/errors.js";
 import { rateLimit } from "../middleware/security.js";
+import { enqueue } from "../jobs/queue.js";
 import { addSongFile } from "../music/add.js";
 import { mediaPath, removeFiles } from "../music/files.js";
 import { GENRES } from "../music/genre.js";
@@ -170,6 +171,7 @@ musicRouter.post("/", addLimit, (req, res, next) => {
     await publishActivity("ListMusic", `${displayName(req.user?.name)} added “${song.title}” by ${song.artist}`);
     broadcast("music:changed");
     res.status(201).json({ ...publicSong(song), detectedGenre: detected, starterPack: starter });
+    await enqueue("reindex", {}); // Stage 9: the Companion learns about the new song
   } finally {
     await rm(file.path, { force: true }); // the temporary upload (already moved if it was accepted)
   }
@@ -222,6 +224,7 @@ musicRouter.patch("/:id", async (req, res) => {
   const [updated] = await db.update(songs).set(changes).where(eq(songs.id, song.id)).returning();
   broadcast("music:changed");
   res.json(publicSong(updated));
+  await enqueue("reindex", {});
 });
 
 musicRouter.delete("/:id", async (req, res) => {
@@ -230,6 +233,7 @@ musicRouter.delete("/:id", async (req, res) => {
   await removeFiles(song.fileName, song.artworkFile);
   broadcast("music:changed");
   res.status(204).end();
+  await enqueue("reindex", {});
 });
 
 // --- Plays and likes --------------------------------------------------------------

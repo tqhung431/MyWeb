@@ -9,6 +9,8 @@ import { config } from "./config.js";
 import { pool } from "./db/client.js";
 import { processJob } from "./jobs/handlers.js";
 import { jobDuration, jobsDone } from "./metrics.js";
+import { aiEnabled } from "./ai/ollama.js";
+import { enqueue } from "./jobs/queue.js";
 import type { JobName } from "./jobs/queue.js";
 
 // A worker waits for jobs with a long blocking command, so it must never give up retrying:
@@ -21,7 +23,11 @@ const worker = new Worker(config.QUEUE_NAME, (job) => processJob(job.name as Job
   concurrency: 5, // up to 5 jobs at the same time
 });
 
-worker.on("ready", () => console.log(`Worker ready, waiting for jobs on queue "${config.QUEUE_NAME}"`));
+worker.on("ready", () => {
+  console.log(`Worker ready, waiting for jobs on queue "${config.QUEUE_NAME}"`);
+  // Stage 9: on start, make sure the Companion knows every tip and song (unchanged ones are skipped)
+  if (aiEnabled()) void enqueue("reindex", {});
+});
 worker.on("completed", (job, result) => {
   jobsDone.add(1, { job_name: job.name, status: "completed" });
   if (job.processedOn && job.finishedOn) jobDuration.record((job.finishedOn - job.processedOn) / 1000, { job_name: job.name });

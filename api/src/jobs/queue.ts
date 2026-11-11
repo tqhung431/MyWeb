@@ -17,6 +17,8 @@ export type JobData = {
   achievements: { userId: string | null; clientId: string | null; timeZone: string };
   // Send the "welcome" email after sign-up.
   "welcome-email": { userId: string };
+  // Stage 9: update the Companion's knowledge (embeddings) after songs or tips changed.
+  reindex: Record<string, never>;
 };
 export type JobName = keyof JobData;
 

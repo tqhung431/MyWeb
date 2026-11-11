@@ -8,6 +8,8 @@
 #
 #   ... --profile app --profile monitoring up -d   + Grafana with traces and metrics (Stage 8):
 #                                                    http://localhost:3001 (see docs/stage-8.md)
+#   ... --profile app --profile ai up -d           + the local AI for the Free-time Companion (Stage 9):
+#                                                    Ollama, and its two models (~1.5 GB, first time only)
 # Settings (passwords, ports) come from the .env file next to this one; see .env.example.
 
 # Shared OpenTelemetry settings (Stage 8). Telemetry is off until OTEL_EXPORTER_OTLP_ENDPOINT is
@@ -22,7 +24,7 @@ services:
   # --- Data ---------------------------------------------------------------------
 
   db:
-    image: postgres:16
+    image: pgvector/pgvector:pg16 # PostgreSQL 16 + the pgvector extension (Stage 9: embeddings)
     environment:
       POSTGRES_USER: myweb
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-myweb}
@@ -74,6 +76,11 @@ services:
       SMTP_URL: ${SMTP_URL:-smtp://mailpit:1025}
       MAIL_FROM: ${MAIL_FROM:-MyWeb <hello@myweb.local>}
       MEDIA_DIR: /app/media
+      # Stage 9: where Ollama is. Without the ai profile it isn't running, and the Companion says so.
+      # Set OLLAMA_URL= (empty) in .env to switch the AI off completely.
+      OLLAMA_URL: ${OLLAMA_URL-http://ollama:11434}
+      AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen2.5:1.5b}
+      AI_EMBED_MODEL: ${AI_EMBED_MODEL:-paraphrase-multilingual}
     volumes:
       - media-data:/app/media # uploaded songs and their covers
       - ./music-import:/import:ro # songs to import: docker compose exec api node dist/music/import.js /import
@@ -143,7 +150,42 @@ services:
       - "127.0.0.1:3001:3000" # Grafana: http://localhost:3001
     restart: unless-stopped
 
+  # --- Local AI (profile "ai", Stage 9) -------------------------------------------------
+  # Ollama runs open models on this PC: nothing is sent to an AI company. Works on the CPU;
+  # with an NVIDIA GPU, uncomment "deploy" below (needs the NVIDIA Container Toolkit).
+  ollama:
+    profiles: [ai]
+    image: ollama/ollama:latest # pin a version once you've tried it
+    volumes:
+      - ollama-models:/root/.ollama # downloaded models stay here
+    environment:
+      OLLAMA_KEEP_ALIVE: 30m # keep the model in memory between questions
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      start_period: 10s
+      retries: 10
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices: [{ driver: nvidia, count: all, capabilities: [gpu] }]
+    restart: unless-stopped
+
+  # Downloads the two models, then exits. Fast after the first time (they're already in the volume).
+  ollama-models:
+    profiles: [ai]
+    image: ollama/ollama:latest
+    environment:
+      OLLAMA_HOST: ollama:11434 # talk to the ollama service, not itself
+      AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen2.5:1.5b}
+      AI_EMBED_MODEL: ${AI_EMBED_MODEL:-paraphrase-multilingual}
+    entrypoint: ["sh", "-c", "ollama pull \"$$AI_CHAT_MODEL\" && ollama pull \"$$AI_EMBED_MODEL\""]
+    depends_on:
+      ollama: { condition: service_healthy }
+    restart: "no"
+
 volumes:
+  ollama-models:
   media-data:
   db-data:
   valkey-data:
