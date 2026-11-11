@@ -4,6 +4,8 @@
 // (FocusProvider reads the signed-in user to reload your sessions after login/logout).
 
 import type { ReactNode } from "react";
+import { ConfirmProvider } from "@/components/ui/Dialog";
+import { ToastProvider } from "@/components/ui/Toast";
 import { AchievementsProvider } from "@/features/achievements/AchievementsProvider";
 import { AmbientProvider } from "@/features/ambient/AmbientProvider";
 import { MeProvider } from "@/features/me/MeProvider";
@@ -23,7 +25,9 @@ export function AppProviders({ initialUser, children }: { initialUser: User | nu
           <AchievementsProvider>
             <FocusProvider>
               <MusicProvider>
-                {children}
+                <ToastProvider>
+                  <ConfirmProvider>{children}</ConfirmProvider>
+                </ToastProvider>
                 <HabitReminders />
                 <OfflineSync />
                 <ServiceWorker />

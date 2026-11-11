@@ -4,6 +4,7 @@
 // draws it and sends your clicks. The countdown uses the server's clock (serverNow), so a phone whose clock
 // is a few seconds off still sees the right time.
 
+import { Select } from "@/components/ui/Select";
 import { Check, Copy, Crown, Loader2, LogOut, Play, RotateCcw, Trophy, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -182,18 +183,16 @@ function Waiting({ state, host, userId, send }: { state: QuizState; host: boolea
 
       {host ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <select
+          <Select
+            label="Questions about"
+            variant="pill"
             value={state.category}
-            onChange={(e) => void send("ao:category", { category: e.target.value })}
-            aria-label="Questions about"
-            className="h-11 rounded-full border border-border bg-surface-strong px-4 text-sm font-semibold"
-          >
-            {Object.entries(CATEGORY_NAMES).map(([id, label]) => (
-              <option key={id} value={id}>
-                {label}
-              </option>
-            ))}
-          </select>
+            onChange={(category) => void send("ao:category", { category })}
+            options={Object.entries(CATEGORY_NAMES).map(([id, label]) => ({ value: id, label }))}
+            className="sm:w-56"
+            size="md"
+            buttonClassName="border border-border bg-surface-strong"
+          />
           <Button
             variant="primary"
             size="lg"

@@ -2,6 +2,7 @@
 
 // Arcade Online's front page: start a Quiz Party room, join one by its code, or pick an open room.
 
+import { Select } from "@/components/ui/Select";
 import { Crown, Loader2, LogIn, Plus, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
@@ -68,18 +69,16 @@ export function Lobby() {
           <h2 className="mt-2 text-2xl font-extrabold sm:text-3xl">Quiz Party</h2>
           <p className="mt-1 max-w-md text-white/90">Play live against everyone on Nook: 10 questions, 15 seconds each. Right and fast wins.</p>
           <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <select
+            <Select<CategoryId>
+              label="Questions about"
+              variant="pill"
               value={category}
-              onChange={(e) => setCategory(e.target.value as CategoryId)}
-              aria-label="Questions about"
-              className="h-11 rounded-full border-0 bg-white/20 px-4 font-semibold text-white backdrop-blur focus:outline-none [&>option]:text-slate-900"
-            >
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
+              onChange={setCategory}
+              options={categories.map((c) => ({ value: c.id, label: c.label }))}
+              className="sm:w-56"
+              size="md"
+              buttonClassName="bg-white/20 text-white backdrop-blur focus-visible:ring-white"
+            />
             <Button size="md" className="bg-white text-slate-900 hover:bg-white/90" onClick={() => go("ao:create", { category })} disabled={!connected || busy}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />} Start a room
             </Button>

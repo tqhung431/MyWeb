@@ -3,6 +3,8 @@
 // Reading: the books you're reading (with quick "+10 pages" buttons), the ones you want to read,
 // the ones you finished, and how many pages you read each day.
 
+import { Select } from "@/components/ui/Select";
+import { useConfirm } from "@/components/ui/Dialog";
 import { BookOpen, CloudOff, Loader2, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Badge } from "@/components/ui/Badge";
@@ -185,28 +187,31 @@ function BookCard({ book: b, onPages, onChanged }: { book: Book; onPages: (n: nu
 }
 
 function BookMenu({ book: b, onChanged }: { book: Book; onChanged: () => void }) {
+  const confirm = useConfirm();
   return (
     <div className="flex items-center gap-1">
-      <select
+      <Select<BookStatus>
+        label={`Status of ${b.title}`}
+        variant="pill"
         value={b.status}
-        onChange={async (e) => {
-          await updateBook(b.id, { status: e.target.value as BookStatus }).catch(() => {});
+        onChange={async (status) => {
+          await updateBook(b.id, { status }).catch(() => {});
           onChanged();
         }}
-        aria-label={`Status of ${b.title}`}
-        className="h-8 cursor-pointer rounded-full bg-surface-muted px-2 text-xs font-semibold focus:outline-none"
-      >
-        <option value="want">Want to read</option>
-        <option value="reading">Reading</option>
-        <option value="finished">Finished</option>
-      </select>
+        options={[
+          { value: "want", label: "Want to read" },
+          { value: "reading", label: "Reading" },
+          { value: "finished", label: "Finished" },
+        ]}
+        size="xs"
+      />
       <Button
         variant="ghost"
         size="icon"
         className="h-8 w-8"
         aria-label={`Delete ${b.title}`}
         onClick={async () => {
-          if (!window.confirm(`Delete “${b.title}” and its reading log?`)) return;
+          if (!(await confirm({ title: `Delete “${b.title}” and its reading log?`, confirmLabel: "Delete", danger: true }))) return;
           await deleteBook(b.id).catch(() => {});
           onChanged();
         }}
@@ -266,18 +271,17 @@ function NewBook({ onDone, onCancel }: { onDone: () => void; onCancel: () => voi
       <div className="grid gap-3 sm:grid-cols-[1fr_8rem_10rem]">
         <Input label="Author (optional)" value={author} onChange={(e) => setAuthor(e.target.value)} maxLength={120} />
         <Input label="Pages" value={pages} onChange={(e) => setPages(e.target.value.replace(/\D/g, ""))} inputMode="numeric" placeholder="e.g. 320" />
-        <label className="flex flex-col gap-1.5 text-sm font-semibold">
-          Shelf
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as BookStatus)}
-            className="h-12 rounded-2xl border border-border bg-surface-strong/70 px-3 font-normal"
-          >
-            <option value="reading">Reading now</option>
-            <option value="want">Want to read</option>
-            <option value="finished">Finished</option>
-          </select>
-        </label>
+        <Select<BookStatus>
+          label="Shelf"
+          showLabel
+          value={status}
+          onChange={setStatus}
+          options={[
+            { value: "reading", label: "Reading now" },
+            { value: "want", label: "Want to read" },
+            { value: "finished", label: "Finished" },
+          ]}
+        />
       </div>
       <div className="flex gap-2">
         <Button type="submit" variant="primary" disabled={!title.trim() || pending}>

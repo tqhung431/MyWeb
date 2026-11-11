@@ -4,6 +4,7 @@
 // ("hobby:message"), so everyone with the group open sees them the moment they're sent.
 // "Linh is typing…" is sent through the socket too, and never stored.
 
+import { useConfirm } from "@/components/ui/Dialog";
 import { ArrowUp, Loader2, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { Button } from "@/components/ui/Button";
@@ -17,6 +18,7 @@ import { clockTime } from "@/lib/time";
 const TYPING_MS = 3500;
 
 export function Chat({ slug, className }: { slug: string; className?: string }) {
+  const confirm = useConfirm();
   const { user, askName } = useMe();
   const { socket } = useRealtime();
   const [messages, setMessages] = useState<Message[] | null>(null);
@@ -129,7 +131,7 @@ export function Chat({ slug, className }: { slug: string; className?: string }) 
   }
 
   async function remove(m: Message) {
-    if (!window.confirm("Delete this message?")) return;
+    if (!(await confirm({ title: "Delete this message?", confirmLabel: "Delete", danger: true }))) return;
     await deleteMessage(m.id).catch(() => {});
     setMessages((list) => list?.filter((x) => x.id !== m.id) ?? null);
   }

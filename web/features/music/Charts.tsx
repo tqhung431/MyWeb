@@ -3,6 +3,8 @@
 // The charts: songs ranked by Nook listeners (plays + 3 × likes) this week, this month or all time.
 // They update live: when anyone plays or adds a song, everyone's chart refreshes.
 
+import { Select } from "@/components/ui/Select";
+import { useConfirm } from "@/components/ui/Dialog";
 import { Check, CloudOff, Heart, ListMusic, ListPlus, Play, Plus, Shuffle, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -23,6 +25,7 @@ const PERIODS: { value: Period; label: string }[] = [
 ];
 
 export function Charts() {
+  const confirm = useConfirm();
   const [period, setPeriod] = useState<Period>("week");
   const [genre, setGenre] = useState<Genre | "all">("all");
   const [songs, setSongs] = useState<Song[] | null>(null);
@@ -59,7 +62,7 @@ export function Charts() {
   }
 
   async function remove(song: Song) {
-    if (!window.confirm(`Remove “${song.title}” from Nook?`)) return;
+    if (!(await confirm({ title: `Remove “${song.title}” from Nook?`, confirmLabel: "Remove", danger: true }))) return;
     await deleteSong(song.id).catch(() => {});
     void load();
   }
@@ -85,11 +88,7 @@ export function Charts() {
               <Button variant="primary" size="sm" onClick={() => play(songs[0], songs)}>
                 <Play className="h-4 w-4" aria-hidden="true" /> Play all
               </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => play(songs[Math.floor(Math.random() * songs.length)], songs, { shuffle: true })}
-              >
+              <Button variant="secondary" size="sm" onClick={() => play(songs[Math.floor(Math.random() * songs.length)], songs, { shuffle: true })}>
                 <Shuffle className="h-4 w-4" aria-hidden="true" /> Shuffle
               </Button>
             </>
@@ -137,8 +136,8 @@ export function Charts() {
       </Card>
 
       <p className="text-xs text-muted">
-        Ranked by Nook listeners: plays + 3 × likes {period === "all" ? "of all time" : period === "week" ? "in the last 7 days" : "in the last 30 days"}.
-        Songs are stored and played by Nook itself, so they work on any network that can open Nook.
+        Ranked by Nook listeners: plays + 3 × likes {period === "all" ? "of all time" : period === "week" ? "in the last 7 days" : "in the last 30 days"}. Songs
+        are stored and played by Nook itself, so they work on any network that can open Nook.
       </p>
     </div>
   );
@@ -196,18 +195,16 @@ function Row({ rank, song, period, playing, queued, onPlay, onQueue, onLike, onG
       <span className="hidden sm:block">
         {song.mine ? (
           // You added it: you can fix the genre Nook guessed
-          <select
+          <Select<Genre>
+            label={`Genre of ${song.title}`}
+            variant="pill"
+            searchable={GENRES.length > 8}
             value={song.genre}
-            onChange={(e) => onGenre(e.target.value as Genre)}
-            aria-label={`Genre of ${song.title}`}
-            className="cursor-pointer rounded-full border border-border bg-surface-strong px-2 py-0.5 text-xs font-semibold"
-          >
-            {GENRES.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.label}
-              </option>
-            ))}
-          </select>
+            onChange={onGenre}
+            options={GENRES.map((x) => ({ value: x.id, label: x.label }))}
+            size="xs"
+            buttonClassName="border border-border bg-surface-strong"
+          />
         ) : (
           <Badge>{g.label}</Badge>
         )}

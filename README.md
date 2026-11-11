@@ -267,5 +267,6 @@ stage-1-static/        Stage 1: the plain HTML/CSS/JS version
 12. Other websites' data — WatchList (TVmaze + Jikan, caching, fallbacks); song upload fixes ✅ · [docs](docs/stage-12.md)
 13. Every day, even offline — Habit & Reading Tracker (time zones, a reminder job, offline queue, service worker) ✅ · [docs](docs/stage-13.md)
 14. Multiplayer — Arcade Online: Quiz Party, a game the server runs (rooms, state machine, fair play) ✅ · [docs](docs/stage-14.md)
+15. Design system — 6 colour themes, Nook's own dropdowns and dialogs, a /design page, a Figma library ✅ · [docs](docs/stage-15.md)
 
 Credits and licences: [CREDITS.md](CREDITS.md)

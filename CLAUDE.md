@@ -1,6 +1,6 @@
 # Nook: notes for Claude
 
-Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–14).
+Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–15).
 
 ## The project
 
@@ -15,7 +15,13 @@ Read this first in every session. It carries the context from the sessions that 
   12 WatchList (TVmaze + Jikan, no keys) + song upload fixes (Next proxy 10 MB body limit, UTF-8 file names) ·
   13 Habit & Reading Tracker (calendar days in the user's time zone, reminder job every minute, offline queue, PWA) ·
   14 Arcade Online: Quiz Party (server-run game state machine in memory, Socket.IO rooms `ao:<code>`, results in DB).
-  Every app in the plan is now live; what's left in the plan is weeks 51–52: portfolio polish (README, CREDITS, case studies).
+  15 Design system: 6 palettes × light/dark (`web/app/palettes.css`, `data-palette` on <html>, contrast test), own `Select`
+  (no native `<select>` anymore), `Dialog`/`useConfirm()` (no `window.confirm`), `Toast`/`useToast()`, `/design` gallery,
+  Figma library "Nook design system" (https://www.figma.com/design/G3numOlj2x4L7kiiSlBuGT; owner's Starter plan:
+  few Figma MCP calls allowed, batch work into one big `use_figma` script).
+  Next (plan doc "Nook: Games, Themes and Design System plan", https://claude.ai/artifact/Y1ay2pTtsr6T3a7pDDV24d):
+  Stage 16 Nook Games: original cultivation roguelite (Kiếm tu first; công pháp, thần thông, pháp bảo, equipment),
+  turn-based grid, ink-wash art, own Canvas engine. Don't copy names/characters/plots from existing novels or films.
   Each stage has an explainer in `docs/stage-N.md`; write one for every new stage and update the README's stage list.
 - Apps: **Chill Corner** (focus timer, generated sounds, tips, achievements), **Music** (uploaded songs
   stored and streamed by Nook, auto genre, charts, queue/shuffle/repeat/volume), **Mini Arcade** (6 games in

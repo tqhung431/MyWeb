@@ -1,0 +1,231 @@
+/*
+  Stage 15: colour themes ("palettes"). Each palette sets the same tokens, once for light and once for dark.
+
+    <html data-palette="bamboo" data-theme="dark">
+
+  The selectors use [data-palette] rather than :root, so any element can show another palette inside the
+  page (the theme picker and the /design page draw small previews this way).
+  The list of palettes, with names for the picker, is in features/theme/palettes.ts.
+  tests/palettes.test.ts checks every palette for readable contrast.
+
+  Only solid colours (#rrggbb) for --background, --surface-strong, --text, --muted, --primary, --primary-2
+  and --on-primary: the contrast test reads those.
+*/
+
+/* Nook: the original look (also the fallback before the theme script runs) */
+:root,
+[data-palette="nook"] {
+  --background: #f5f3fb;
+  --surface: rgb(255 255 255 / 0.7);
+  --surface-strong: #ffffff;
+  --surface-muted: rgb(28 24 48 / 0.045);
+  --border: rgb(28 24 48 / 0.09);
+  --text: #1c1830;
+  --muted: #645e80;
+  --primary: #6e51ff;
+  --primary-2: #e2509c;
+  --on-primary: #ffffff;
+  --glow-1: #c3b4ff;
+  --glow-2: #ffc6e0;
+  --glow-3: #b5e8ff;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 18px 40px -20px rgb(40 20 90 / 0.25);
+  color-scheme: light;
+}
+:root:not([data-palette])[data-theme="dark"],
+[data-palette="nook"][data-theme="dark"] {
+  --background: #0b0915;
+  --surface: rgb(255 255 255 / 0.045);
+  --surface-strong: #18152b;
+  --surface-muted: rgb(255 255 255 / 0.06);
+  --border: rgb(255 255 255 / 0.09);
+  --text: #efecfa;
+  --muted: #a39dbf;
+  --primary: #9d87ff;
+  --primary-2: #ff7fbd;
+  --on-primary: #0b0915;
+  --glow-1: #3f2bb0;
+  --glow-2: #7a2160;
+  --glow-3: #0f4870;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 20px 50px -24px rgb(0 0 0 / 0.7);
+  color-scheme: dark;
+}
+
+/* Bamboo: fresh green and warm white */
+[data-palette="bamboo"] {
+  --background: #f1f6ee;
+  --surface: rgb(255 255 255 / 0.72);
+  --surface-strong: #ffffff;
+  --surface-muted: rgb(20 48 28 / 0.05);
+  --border: rgb(20 48 28 / 0.1);
+  --text: #15241a;
+  --muted: #536a59;
+  --primary: #23733f;
+  --primary-2: #0f766e;
+  --on-primary: #ffffff;
+  --glow-1: #bfe8bd;
+  --glow-2: #e3efb0;
+  --glow-3: #b8e4d8;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 18px 40px -20px rgb(20 70 40 / 0.22);
+  color-scheme: light;
+}
+[data-palette="bamboo"][data-theme="dark"] {
+  --background: #08110b;
+  --surface: rgb(255 255 255 / 0.045);
+  --surface-strong: #132018;
+  --surface-muted: rgb(255 255 255 / 0.06);
+  --border: rgb(255 255 255 / 0.09);
+  --text: #e6f2e8;
+  --muted: #93b29b;
+  --primary: #4ade80;
+  --primary-2: #a3e635;
+  --on-primary: #08110b;
+  --glow-1: #14532d;
+  --glow-2: #3f5212;
+  --glow-3: #134e4a;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 20px 50px -24px rgb(0 0 0 / 0.7);
+  color-scheme: dark;
+}
+
+/* Ink & Paper (Thủy mặc): black ink on rice paper, with a red seal */
+[data-palette="ink"] {
+  --background: #f3eee3;
+  --surface: rgb(255 252 245 / 0.75);
+  --surface-strong: #fffcf5;
+  --surface-muted: rgb(40 32 20 / 0.05);
+  --border: rgb(40 32 20 / 0.12);
+  --text: #1d1a16;
+  --muted: #655d50;
+  --primary: #a8231b;
+  --primary-2: #3a3129;
+  --on-primary: #fffcf5;
+  --glow-1: #d8d0c0;
+  --glow-2: #ebcdbd;
+  --glow-3: #cdd5cf;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 18px 40px -22px rgb(40 30 20 / 0.28);
+  color-scheme: light;
+}
+[data-palette="ink"][data-theme="dark"] {
+  --background: #12110f;
+  --surface: rgb(255 248 235 / 0.04);
+  --surface-strong: #1f1d19;
+  --surface-muted: rgb(255 248 235 / 0.06);
+  --border: rgb(255 248 235 / 0.1);
+  --text: #ece6da;
+  --muted: #a69e8f;
+  --primary: #e8685c;
+  --primary-2: #d8a65e;
+  --on-primary: #12110f;
+  --glow-1: #3a342b;
+  --glow-2: #5a231d;
+  --glow-3: #2a3430;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 20px 50px -24px rgb(0 0 0 / 0.75);
+  color-scheme: dark;
+}
+
+/* Sunset: warm orange and rose */
+[data-palette="sunset"] {
+  --background: #fdf4ee;
+  --surface: rgb(255 255 255 / 0.72);
+  --surface-strong: #ffffff;
+  --surface-muted: rgb(60 24 10 / 0.05);
+  --border: rgb(60 24 10 / 0.1);
+  --text: #2a1810;
+  --muted: #77594c;
+  --primary: #c2410c;
+  --primary-2: #c0266d;
+  --on-primary: #ffffff;
+  --glow-1: #ffd0ad;
+  --glow-2: #ffc0d1;
+  --glow-3: #ffe39e;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 18px 40px -20px rgb(110 40 10 / 0.22);
+  color-scheme: light;
+}
+[data-palette="sunset"][data-theme="dark"] {
+  --background: #140c0a;
+  --surface: rgb(255 255 255 / 0.045);
+  --surface-strong: #261814;
+  --surface-muted: rgb(255 255 255 / 0.06);
+  --border: rgb(255 255 255 / 0.09);
+  --text: #f8ebe4;
+  --muted: #c0a093;
+  --primary: #fb923c;
+  --primary-2: #f472b6;
+  --on-primary: #140c0a;
+  --glow-1: #7c2d12;
+  --glow-2: #701a45;
+  --glow-3: #713f12;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 20px 50px -24px rgb(0 0 0 / 0.7);
+  color-scheme: dark;
+}
+
+/* Ocean: teal and deep blue */
+[data-palette="ocean"] {
+  --background: #eef6f8;
+  --surface: rgb(255 255 255 / 0.72);
+  --surface-strong: #ffffff;
+  --surface-muted: rgb(10 40 60 / 0.05);
+  --border: rgb(10 40 60 / 0.1);
+  --text: #0e2230;
+  --muted: #4b6676;
+  --primary: #0e7490;
+  --primary-2: #1d4ed8;
+  --on-primary: #ffffff;
+  --glow-1: #b0e4ef;
+  --glow-2: #bdd3ff;
+  --glow-3: #c3eedd;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 18px 40px -20px rgb(10 50 80 / 0.22);
+  color-scheme: light;
+}
+[data-palette="ocean"][data-theme="dark"] {
+  --background: #071218;
+  --surface: rgb(255 255 255 / 0.045);
+  --surface-strong: #10222c;
+  --surface-muted: rgb(255 255 255 / 0.06);
+  --border: rgb(255 255 255 / 0.09);
+  --text: #e3f2f7;
+  --muted: #8fb0bf;
+  --primary: #22d3ee;
+  --primary-2: #60a5fa;
+  --on-primary: #071218;
+  --glow-1: #164e63;
+  --glow-2: #1e3a8a;
+  --glow-3: #134e4a;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 20px 50px -24px rgb(0 0 0 / 0.7);
+  color-scheme: dark;
+}
+
+/* Lotus: soft pink and lavender */
+[data-palette="lotus"] {
+  --background: #fbf2f6;
+  --surface: rgb(255 255 255 / 0.72);
+  --surface-strong: #ffffff;
+  --surface-muted: rgb(60 20 45 / 0.05);
+  --border: rgb(60 20 45 / 0.1);
+  --text: #2a1424;
+  --muted: #77586d;
+  --primary: #be185d;
+  --primary-2: #7c3aed;
+  --on-primary: #ffffff;
+  --glow-1: #ffc6dd;
+  --glow-2: #d9c8ff;
+  --glow-3: #ffdcea;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 18px 40px -20px rgb(100 20 60 / 0.22);
+  color-scheme: light;
+}
+[data-palette="lotus"][data-theme="dark"] {
+  --background: #130a10;
+  --surface: rgb(255 255 255 / 0.045);
+  --surface-strong: #24141e;
+  --surface-muted: rgb(255 255 255 / 0.06);
+  --border: rgb(255 255 255 / 0.09);
+  --text: #f7e8f0;
+  --muted: #bf9db2;
+  --primary: #f472b6;
+  --primary-2: #c084fc;
+  --on-primary: #130a10;
+  --glow-1: #831843;
+  --glow-2: #4c1d95;
+  --glow-3: #5b1a3d;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 20px 50px -24px rgb(0 0 0 / 0.7);
+  color-scheme: dark;
+}

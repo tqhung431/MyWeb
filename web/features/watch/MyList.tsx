@@ -3,6 +3,7 @@
 // Your WatchList: what you want to watch, are watching, watched or dropped.
 // Changes are saved straight away (status, stars, episodes, a short note).
 
+import { useConfirm } from "@/components/ui/Dialog";
 import { CloudOff, Minus, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -105,6 +106,7 @@ export function MyList() {
 }
 
 function EntryCard({ entry: e, onChange, onRemoved }: { entry: Entry; onChange: (e: Entry) => void; onRemoved: () => void }) {
+  const confirm = useConfirm();
   const [note, setNote] = useState(e.note);
   const [error, setError] = useState("");
   const saving = useRef(Promise.resolve());
@@ -121,7 +123,7 @@ function EntryCard({ entry: e, onChange, onRemoved }: { entry: Entry; onChange: 
 
   async function changeStatus(s: Status | "remove") {
     if (s === "remove") {
-      if (!window.confirm(`Remove “${e.title}” from your list?`)) return;
+      if (!(await confirm({ title: `Remove “${e.title}” from your list?`, confirmLabel: "Remove", danger: true }))) return;
       await removeEntry(e.titleId).catch(() => {});
       return onRemoved();
     }

@@ -3,6 +3,7 @@
 // Today: your habits with a big tick for today, this week's days, and your streak.
 // Ticking works offline too: it's kept on this device and sent when the connection is back.
 
+import { useConfirm } from "@/components/ui/Dialog";
 import { Check, CloudOff, Flame, Pencil, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -17,6 +18,7 @@ import { ReminderSwitch } from "./Reminders";
 const CACHE = "nook.habits"; // the last list, shown when offline
 
 export function Today() {
+  const confirm = useConfirm();
   const { user, setUser } = useMe();
   const [habits, setHabits] = useState<Habit[] | null>(null);
   const [today, setToday] = useState(todayHere());
@@ -202,7 +204,7 @@ export function Today() {
                   className="h-8 w-8"
                   aria-label={`Delete ${h.name}`}
                   onClick={async () => {
-                    if (!window.confirm(`Delete “${h.name}” and its history?`)) return;
+                    if (!(await confirm({ title: `Delete “${h.name}” and its history?`, confirmLabel: "Delete", danger: true }))) return;
                     await deleteHabit(h.id).catch(() => {});
                     void load();
                   }}

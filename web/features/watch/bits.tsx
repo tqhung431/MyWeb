@@ -2,8 +2,9 @@
 
 // Small pieces shared by WatchList's pages: poster, stars, the status menu.
 
-import { Clapperboard, Star, Tv } from "lucide-react";
+import { Clapperboard, Star, Trash2, Tv } from "lucide-react";
 import { useState } from "react";
+import { Select, type SelectOption } from "@/components/ui/Select";
 import { STATUS_LABEL, type Source, type Status } from "@/lib/api/watch";
 import { cn } from "@/lib/cn";
 
@@ -61,7 +62,9 @@ export const STATUS_TONE: Record<Status, string> = {
   dropped: "bg-surface-muted text-muted",
 };
 
-// A native <select>: on phones it opens the system picker, which is easy to tap.
+const STATUS_ICON: Record<Status, string> = { want: "🔖", watching: "▶️", done: "✅", dropped: "💤" };
+
+// The status menu (Stage 15: Nook's own dropdown instead of the browser's <select>).
 export function StatusSelect({
   value,
   onChange,
@@ -75,24 +78,22 @@ export function StatusSelect({
   placeholder?: string;
   className?: string;
 }) {
+  const options: SelectOption<Status | "remove">[] = (Object.keys(STATUS_LABEL) as Status[]).map((s) => ({
+    value: s,
+    label: STATUS_LABEL[s],
+    icon: <span className="text-base leading-none">{STATUS_ICON[s]}</span>,
+  }));
+  if (allowRemove) options.push({ value: "remove", label: "Remove from my list", icon: <Trash2 className="h-4 w-4" />, danger: true });
   return (
-    <select
-      value={value ?? ""}
-      onChange={(e) => onChange(e.target.value as Status | "remove")}
-      aria-label="Status"
-      className={cn(
-        "h-9 cursor-pointer rounded-full border-0 px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-        value ? STATUS_TONE[value] : "bg-linear-to-r from-primary to-primary-2 text-on-primary",
-        className,
-      )}
-    >
-      {!value && <option value="">{placeholder ?? "+ Add to my list"}</option>}
-      {(Object.keys(STATUS_LABEL) as Status[]).map((s) => (
-        <option key={s} value={s}>
-          {STATUS_LABEL[s]}
-        </option>
-      ))}
-      {allowRemove && <option value="remove">Remove from my list</option>}
-    </select>
+    <Select<Status | "remove">
+      label="Status"
+      variant="pill"
+      value={value}
+      options={options}
+      onChange={onChange}
+      placeholder={placeholder ?? "+ Add to my list"}
+      className={className}
+      buttonClassName={value ? STATUS_TONE[value] : "bg-linear-to-r from-primary to-primary-2 text-on-primary"}
+    />
   );
 }

@@ -6,10 +6,10 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
 const variants = {
-  primary:
-    "bg-linear-to-r from-primary to-primary-2 text-on-primary shadow-lg shadow-primary/30 hover:brightness-110",
+  primary: "bg-linear-to-r from-primary to-primary-2 text-on-primary shadow-lg shadow-primary/30 hover:brightness-110",
   secondary: "border border-border bg-surface-strong/70 text-text hover:bg-surface-muted",
   ghost: "text-muted hover:bg-surface-muted hover:text-text",
+  danger: "bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700", // Stage 15: delete for good
 } as const;
 
 const sizes = {
