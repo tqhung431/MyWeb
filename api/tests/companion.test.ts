@@ -89,7 +89,7 @@ describe("knowledge (embeddings in pgvector)", () => {
 });
 
 describe("chat", () => {
-  it("streams sources first, then the answer piece by piece, using MyWeb's own items", async () => {
+  it("streams sources first, then the answer piece by piece, using Nook's own items", async () => {
     await upload("title-remix.mp3");
     await reindex();
     const res = await chat("Gợi ý một bài remix dance cho party"); // Vietnamese works too

@@ -1,4 +1,4 @@
-// MyWeb's own numbers (Stage 8), next to the automatic ones (request counts, durations…).
+// Nook's own numbers (Stage 8), next to the automatic ones (request counts, durations…).
 // Without telemetry switched on these are "no-op": calling them costs nothing.
 // In Grafana / Prometheus they appear as e.g. myweb_focus_sessions_total.
 

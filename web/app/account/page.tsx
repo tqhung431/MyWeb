@@ -47,7 +47,7 @@ export default async function AccountPage() {
       <p className="text-sm text-muted">
         Curious how sign-in works? It&apos;s explained step by step in <code>docs/stage-4.md</code>.{" "}
         <Link href="/about" className="font-semibold text-primary hover:underline">
-          About MyWeb
+          About Nook
         </Link>
       </p>
     </div>

@@ -47,13 +47,13 @@ export async function readSong(filePath: string, originalName = ""): Promise<Rea
   try {
     meta = await parseFile(filePath, { duration: true, skipCovers: false });
   } catch {
-    throw new HttpError(415, "That file isn't a song MyWeb can read (try MP3, M4A, OGG, FLAC or WAV)");
+    throw new HttpError(415, "That file isn't a song Nook can read (try MP3, M4A, OGG, FLAC or WAV)");
   }
   const container = (meta.format.container ?? "").toLowerCase();
   const codec = (meta.format.codec ?? "").toLowerCase();
   const type = AUDIO_TYPES[codec] ?? AUDIO_TYPES[container];
   if (!type || !meta.format.duration) {
-    throw new HttpError(415, "That file isn't a song MyWeb can read (try MP3, M4A, OGG, FLAC or WAV)");
+    throw new HttpError(415, "That file isn't a song Nook can read (try MP3, M4A, OGG, FLAC or WAV)");
   }
 
   const clean = (v: string | undefined) => v?.trim().slice(0, 200) || null;

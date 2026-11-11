@@ -2,7 +2,7 @@
 
 **Goal:** see how one person's action reaches every other open browser instantly.
 
-New in MyWeb:
+New in Nook:
 - **Live now** card on Home: how many people are here and how many are focusing, plus a **live activity feed**
   ("Linh finished a 25-min focus session", "A guest unlocked “First focus”")
 - A **"N focusing now"** pill on the timer and in the sidebar
@@ -149,7 +149,7 @@ cd api && npm run worker     # background jobs: badges are pushed live
 cd web && npm run build && npm start
 ```
 
-Open MyWeb on two PCs (or two browsers), start the timer on one, and watch "1 focusing now" on the other.
+Open Nook on two PCs (or two browsers), start the timer on one, and watch "1 focusing now" on the other.
 
 Tests: `cd api && npm test` (**52**, incl. real sockets, long-polling, two servers sharing Valkey, the worker's emitter, and
 refusing other websites) · `cd web && npm test` (**23**, incl. 10 drill songs).

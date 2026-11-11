@@ -2,7 +2,7 @@
 
 **Goal:** see why some work is done *later*, and how a cache makes reads fast.
 
-New in MyWeb:
+New in Nook:
 - **Achievements**: 8 badges, awarded by a **background worker** a moment after a focus session, with an "Achievement unlocked" pop-up
 - **Welcome email** on sign-up, sent by the worker (printed in its terminal, or caught by **Mailpit**)
 - **Cache**: tips and "who is this?" lookups come from Valkey, in well under a millisecond
@@ -117,7 +117,7 @@ Guest badges move into your account when you sign in (re-checked from the merged
 
 ## 5. When Valkey is down
 
-Valkey is a **speed-up, not a requirement**. Tested by stopping it while MyWeb runs:
+Valkey is a **speed-up, not a requirement**. Tested by stopping it while Nook runs:
 
 | Feature | Without Valkey |
 |---|---|
@@ -137,8 +137,8 @@ For must-not-lose work you'd write the job to PostgreSQL first (the "outbox" pat
 ### Theme switch (System / Light / Dark)
 
 The **"N" button** in development is **Next.js's own developer panel**. Its *Theme* option only changes that panel,
-never MyWeb, and its dropdown is a plain browser `<select>`, which is why it looked rough.
-MyWeb now has its **own** switch: in the sidebar on desktop, and a round button in the phone header (tap to cycle).
+never Nook, and its dropdown is a plain browser `<select>`, which is why it looked rough.
+Nook now has its **own** switch: in the sidebar on desktop, and a round button in the phone header (tap to cycle).
 
 - Your choice is saved in `localStorage`. **System** follows your device, live, even if it changes while the page is open.
 - A tiny script in `<head>` applies the theme **before the first paint**, so a dark page never flashes white.

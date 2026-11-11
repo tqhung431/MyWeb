@@ -1,6 +1,6 @@
 "use client";
 
-// What the Companion's answer is based on: real MyWeb songs (play them here) and tips (open them).
+// What the Companion's answer is based on: real Nook songs (play them here) and tips (open them).
 import { Lightbulb, Play } from "lucide-react";
 import Link from "next/link";
 import type { Source } from "@/lib/api/companion";
@@ -13,7 +13,7 @@ export function SourceCards({ sources }: { sources: Source[] }) {
   if (sources.length === 0) return null;
 
   return (
-    <ul className="mt-3 flex flex-wrap gap-2" aria-label="Suggestions from MyWeb">
+    <ul className="mt-3 flex flex-wrap gap-2" aria-label="Suggestions from Nook">
       {sources.map((s) =>
         s.kind === "song" ? (
           <li key={`song-${s.id}`}>

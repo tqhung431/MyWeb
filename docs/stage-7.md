@@ -85,7 +85,7 @@ The Dockerfiles themselves still need a first `docker compose build` on your PC.
 
 ## 4. Music: songs with vocals, legally
 
-Songs by artists are **copyrighted**, even when they're free to listen to on SoundCloud or YouTube. So MyWeb never
+Songs by artists are **copyrighted**, even when they're free to listen to on SoundCloud or YouTube. So Nook never
 downloads or stores audio. It stores a **link**, and plays the song in the platform's **official embedded player**:
 the artist keeps the rights and gets the plays, and a song whose owner turned embedding off simply can't be added.
 
@@ -114,7 +114,7 @@ Charts **re-sort live** for everyone when anyone plays, likes or adds a song (te
 on another PC within 2 seconds).
 
 **Why not SoundCloud's own top charts?** SoundCloud has no public charts service to read from, and copying its pages
-would break its terms. MyWeb's charts are made by its own listeners instead.
+would break its terms. Nook's charts are made by its own listeners instead.
 
 ### Playing
 

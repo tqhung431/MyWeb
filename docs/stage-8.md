@@ -6,7 +6,7 @@ Also in this stage, **Music was rebuilt** after real-world testing showed three 
 
 | Problem (Stage 7) | Fix (Stage 8) |
 |---|---|
-| SoundCloud / YouTube players are blocked by some firewalls (offices, schools) | MyWeb **stores the song files and plays them itself**: if you can open MyWeb, you can play its songs |
+| SoundCloud / YouTube players are blocked by some firewalls (offices, schools) | Nook **stores the song files and plays them itself**: if you can open Nook, you can play its songs |
 | Many YouTube videos refuse to play on other sites and open the YouTube app | No YouTube player any more: a plain `<audio>` player, with lock-screen controls on phones |
 | Charts started empty, and you had to choose a genre | A **starter pack of 12 Creative Commons songs with vocals**, and **genre detected automatically** |
 
@@ -79,7 +79,7 @@ Everything is **off unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set**, so without th
 
 ### Metrics
 
-Automatic: request counts and durations per route (`http.server.request.duration`). MyWeb's own (`api/src/metrics.ts`):
+Automatic: request counts and durations per route (`http.server.request.duration`). Nook's own (`api/src/metrics.ts`):
 
 | Metric (Prometheus name) | Meaning |
 |---|---|
@@ -94,7 +94,7 @@ It shows requests per route, response time (95th percentile), errors, cache hit 
 
 ## 3. Music, rebuilt
 
-### Songs are files MyWeb stores
+### Songs are files Nook stores
 
 ```mermaid
 sequenceDiagram
@@ -103,7 +103,7 @@ sequenceDiagram
     participant D as Disk (media volume)
     participant P as PostgreSQL
     B->>A: POST /api/songs (form: file + what allows sharing it)
-    Note over A: Origin is MyWeb? size ≤ 30 MB? really audio?<br/>read title, artist, genre tag, length, cover
+    Note over A: Origin is Nook? size ≤ 30 MB? really audio?<br/>read title, artist, genre tag, length, cover
     Note over A: fingerprint (SHA-256): already added? → 409
     A->>D: save as <random id>.mp3 (+ cover)
     A->>P: INSERT songs (… genre detected …)
@@ -115,10 +115,10 @@ sequenceDiagram
 - **No genre to choose:** it's read from the file's genre tag ("Hip-Hop" → Drill, "Dance" → Remix, "Chillout" → Lofi), else guessed from
   the title ("(Vinahouse Remix)", "Lofi Ver.", "slowed + reverb"), else Pop. The person who added a song can still change it in the chart.
 - **Only songs you may share:** the upload asks what allows it (*I made them* / *a free licence*, with licence and credit /
-  *I have permission*) and a confirmation. MyWeb shows the licence and credit with every song.
-- **Plays anywhere MyWeb opens:** files stream from MyWeb itself, with HTTP Range requests (seeking) and long browser caching.
+  *I have permission*) and a confirmation. Nook shows the licence and credit with every song.
+- **Plays anywhere Nook opens:** files stream from Nook itself, with HTTP Range requests (seeking) and long browser caching.
   The player keeps playing between pages, moves to the next song, and shows on phones' lock screens (Media Session).
-- **Safety:** uploads must come from MyWeb's own page (the Origin header is required for forms), files are checked to really be audio,
+- **Safety:** uploads must come from Nook's own page (the Origin header is required for forms), files are checked to really be audio,
   stored under random names, and the file's location on disk is never sent to browsers.
 
 ### The starter pack: 12 Creative Commons songs with vocals
@@ -134,13 +134,13 @@ Chosen from **ccMixter** by listener ratings, 3 per genre, all with singing or r
 | Lofi / chill | *Brilliant Daze* (Pat Chilla The Beat Gorilla) · *Babylon Bring Me Down* (spinningmerkaba) · *ophelia's next goodbye* (audiomesh) |
 
 **Why you download them yourself:** ccMixter only allows downloads from its own pages (direct file requests get "403 Forbidden"),
-so MyWeb doesn't fetch them behind its back. On **Music → Add songs**, each one links to its ccMixter page:
+so Nook doesn't fetch them behind its back. On **Music → Add songs**, each one links to its ccMixter page:
 
 1. Open each page, press **Download**.
 2. Either drop the 12 files on the Add songs page, or put them in `music-import/` and run
    `docker compose exec api node dist/music/import.js /import` (without Docker: `cd api && npm run music:import -- ../music-import`).
 
-MyWeb recognises them **by file name** and fills in title, artist, genre, licence, credit and source.
+Nook recognises them **by file name** and fills in title, artist, genre, licence, credit and source.
 Vietnamese songs with vocals under free licences are rare; for Vietnamese drill, remix, pop or lofi, upload songs you have the right to share.
 
 ## 4. API changes
@@ -156,4 +156,4 @@ Migrations `0005` + `0006`: the songs table holds files now. Songs that were onl
 
 ## 5. Next: Stage 9
 
-**Local AI with Ollama (optional):** a small open model on your own PC suggests what to watch, read or play, and answers from MyWeb's own data.
+**Local AI with Ollama (optional):** a small open model on your own PC suggests what to watch, read or play, and answers from Nook's own data.

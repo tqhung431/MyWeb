@@ -1,10 +1,10 @@
 # Stage 4 — Many users, guests first, optional accounts
 
-**Goal:** several people on different PCs (and phones) use MyWeb at the same time, from your home or office network.
+**Goal:** several people on different PCs (and phones) use Nook at the same time, from your home or office network.
 Everyone can do **everything as a guest first**. An account is optional: it only adds "my history on every device".
 
 What's new:
-- **Open MyWeb from other PCs** at `http://<your-PC's-IP>:3000`
+- **Open Nook from other PCs** at `http://<your-PC's-IP>:3000`
 - **Guests**: each PC or browser automatically gets its own private history, with no sign-up needed
 - **Optional accounts** (email + password): sign in on any device to see the same history.
   What you did as a guest moves into your account.
@@ -13,7 +13,7 @@ What's new:
 > Earlier drafts of this stage had "Continue with GitHub". It was removed, because guests-first use on
 > your own network matters more and needs no outside service.
 
-## 1. Use MyWeb from other PCs
+## 1. Use Nook from other PCs
 
 ```mermaid
 flowchart LR
@@ -21,7 +21,7 @@ flowchart LR
         PC1["PC 1 (guest)"]
         PC2["PC 2 (signed in as Linh)"]
         PH["Phone (signed in as Linh)"]
-        subgraph Host["The PC running MyWeb (e.g. 192.168.1.20)"]
+        subgraph Host["The PC running Nook (e.g. 192.168.1.20)"]
             N["Website :3000<br/>open to the network"]
             A["API :4000<br/>this PC only (127.0.0.1)"]
             D[("PostgreSQL :5432")]
@@ -158,13 +158,13 @@ any GitHub-only test accounts are deleted, because they have no password and cou
 | Database stolen → passwords | **scrypt** + random salt per user | `api/src/auth/password.ts` |
 | Database stolen → sign in as someone | Only **sha256(token)** is stored | `api/src/auth/sessions.ts` |
 | A script on the page steals the cookie | **HttpOnly** cookie | cookie options |
-| Another website makes your browser POST to MyWeb (CSRF) | **SameSite=Lax** + **Origin must match the address you opened** + **JSON only** | `api/src/middleware/security.ts` |
+| Another website makes your browser POST to Nook (CSRF) | **SameSite=Lax** + **Origin must match the address you opened** + **JSON only** | `api/src/middleware/security.ts` |
 | Password guessing | 10 tries / 15 min **per email**, plus a shared cap for floods | `api/src/routes/auth.ts` |
 | Learning which emails have accounts (via login) | Same message and timing for "unknown email" and "wrong password" | `burnTime()` |
 | Redirect to a fake site after sign-in | `next` must start with one `/` | `safeNext()` |
 | The API or database reached from the network | API listens on **127.0.0.1** only; only port 3000 is open | `api/.env` `HOST` |
 
-**The address check.** People can open MyWeb as `localhost:3000`, `192.168.1.20:3000` or `mypc.local:3000`.
+**The address check.** People can open Nook as `localhost:3000`, `192.168.1.20:3000` or `mypc.local:3000`.
 So instead of one fixed address, the API compares the request's `Origin` with the address the browser
 actually opened (the Next.js proxy passes it on as `X-Forwarded-Host`). A bad website can't fake either one,
 because the browser sets both. For a special case, list extra addresses in `ALLOWED_ORIGINS`.

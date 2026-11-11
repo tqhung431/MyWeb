@@ -1,4 +1,4 @@
-// Music (Stage 8): songs are files MyWeb stores and streams itself.
+// Music (Stage 8): songs are files Nook stores and streams itself.
 // Uses tiny test songs in tests/fixtures (2 seconds of tone, made with ffmpeg).
 
 import { randomUUID } from "node:crypto";
@@ -18,7 +18,7 @@ const fixture = (name: string) => new URL(`./fixtures/${name}`, import.meta.url)
 beforeEach(resetDatabase);
 afterAll(closeAll);
 
-// Upload like the browser does: a form from MyWeb's own page.
+// Upload like the browser does: a form from Nook's own page.
 function upload(file: string, opts: { client?: string; as?: string; fields?: Record<string, string> } = {}) {
   const req = request(app)
     .post("/api/songs")

@@ -1,4 +1,4 @@
--- Stage 8: songs are now files MyWeb stores itself. Songs that were only SoundCloud/YouTube links
+-- Stage 8: songs are now files Nook stores itself. Songs that were only SoundCloud/YouTube links
 -- have no file to keep, so they are removed (with their plays and likes).
 DELETE FROM "songs";--> statement-breakpoint
 ALTER TABLE "songs" DROP CONSTRAINT "songs_url_unique";--> statement-breakpoint

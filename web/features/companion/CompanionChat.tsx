@@ -1,6 +1,6 @@
 "use client";
 
-// The Free-time Companion (Stage 9): chat with a local AI (Ollama) that knows MyWeb's songs and tips.
+// The Free-time Companion (Stage 9): chat with a local AI (Ollama) that knows Nook's songs and tips.
 // The answer streams in word by word; the songs and tips it used appear as cards under it.
 
 import { ArrowUp, Loader2, RotateCcw, Sparkles, Square } from "lucide-react";
@@ -93,7 +93,7 @@ export function CompanionChat() {
             </span>
             <h2 className="mt-3 text-lg font-bold">What do you feel like doing?</h2>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-              Ask in English or Vietnamese. I suggest songs and tips that are really in MyWeb, and I run on this computer, so your chat stays here.
+              Ask in English or Vietnamese. I suggest songs and tips that are really in Nook, and I run on this computer, so your chat stays here.
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
               {SUGGESTIONS.map((s) => (

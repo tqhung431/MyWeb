@@ -2,7 +2,7 @@
 //
 // Valkey keeps data in memory, so reads take well under a millisecond. It's an optional
 // speed-up: if it's down, every caller falls back (to PostgreSQL, or to in-memory counters),
-// and MyWeb keeps working, only a little slower.
+// and Nook keeps working, only a little slower.
 
 import { Redis } from "ioredis"; // Valkey speaks the same protocol as Redis, so the Redis client works
 import { config } from "../config.js";
@@ -18,7 +18,7 @@ export const valkey = new Redis(config.VALKEY_URL, {
 
 let warned = false;
 valkey.on("error", (err) => {
-  if (!warned) console.warn(`Valkey unavailable (${err.message}). Falling back; MyWeb keeps working.`);
+  if (!warned) console.warn(`Valkey unavailable (${err.message}). Falling back; Nook keeps working.`);
   warned = true;
 });
 valkey.on("ready", () => {

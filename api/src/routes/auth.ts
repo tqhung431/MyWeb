@@ -3,7 +3,7 @@
 // POST /api/auth/logout     sign out (deletes the session)
 // GET  /api/auth/me         who am I? → { user } or { user: null }
 //
-// Accounts are optional: everything in MyWeb works as a guest. An account only adds
+// Accounts are optional: everything in Nook works as a guest. An account only adds
 // "your history on every device".
 
 import { eq } from "drizzle-orm";
@@ -63,7 +63,7 @@ authRouter.post("/register", ...limits, async (req, res) => {
   await claimAnonymousSessions(user.id, req.get("x-client-id"));
   res.status(201).json({ user: publicUser(user) });
 
-  await publishActivity("UserPlus", `${displayName(user.name)} joined MyWeb`);
+  await publishActivity("UserPlus", `${displayName(user.name)} joined Nook`);
   // Stage 5: slow or optional work happens in the background worker.
   await enqueue("welcome-email", { userId: user.id });
   await enqueue("achievements", { userId: user.id, clientId: null, timeZone: timeZoneOf(req) });

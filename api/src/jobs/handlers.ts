@@ -67,20 +67,20 @@ export async function sendWelcomeEmail({ userId }: JobData["welcome-email"]) {
   const info = await transport.sendMail({
     from: config.MAIL_FROM,
     to: `${user.name} <${user.email}>`,
-    subject: "Welcome to MyWeb",
+    subject: "Welcome to Nook",
     text: [
       `Hi ${user.name},`,
       "",
-      "Your MyWeb account is ready. Your focus history now follows you to any PC or phone.",
+      "Your Nook account is ready. Your focus history now follows you to any PC or phone.",
       "Start a session whenever you like. Your first badge is one focus session away.",
       "",
       "Take care,",
-      "MyWeb",
+      "Nook",
     ].join("\n"),
   });
 
   if (!config.SMTP_URL) {
-    console.log(`[email not sent: no SMTP_URL] To: ${user.email} · Subject: Welcome to MyWeb`);
+    console.log(`[email not sent: no SMTP_URL] To: ${user.email} · Subject: Welcome to Nook`);
   }
   return { messageId: info.messageId };
 }

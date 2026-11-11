@@ -168,6 +168,6 @@ function useTabTitle(time: string, running: boolean, finished: boolean) {
       return;
     }
     saved.current ??= document.title;
-    document.title = running ? `${time} · Focus` : "Time's up! · MyWeb";
+    document.title = running ? `${time} · Focus` : "Time's up! · Nook";
   }, [time, running, finished]);
 }

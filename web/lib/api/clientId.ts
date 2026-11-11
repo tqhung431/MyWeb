@@ -5,7 +5,7 @@ const KEY = "clientId";
 let memoryId: string | null = null; // used when storage is blocked
 
 // crypto.randomUUID() only exists on "secure" pages: https:// or http://localhost.
-// Other PCs open MyWeb as http://192.168.x.x:3000, which browsers treat as NOT secure,
+// Other PCs open Nook as http://192.168.x.x:3000, which browsers treat as NOT secure,
 // so we build the UUID ourselves from crypto.getRandomValues(), which works everywhere.
 export function randomUUID(): string {
   if (typeof crypto.randomUUID === "function") return crypto.randomUUID();

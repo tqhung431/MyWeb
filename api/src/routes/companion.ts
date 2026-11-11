@@ -46,11 +46,11 @@ const chatBody = z.object({
 const chatLimit = rateLimit({ name: "companion", windowMs: 60_000, max: 20, key: (req) => ownerRoom(owner(req)) });
 
 companionRouter.post("/chat", chatLimit, async (req, res) => {
-  if (!aiEnabled()) throw new HttpError(503, "The Companion is off on this MyWeb (no Ollama configured)");
+  if (!aiEnabled()) throw new HttpError(503, "The Companion is off on this Nook (no Ollama configured)");
   const { messages } = chatBody.parse(req.body);
   const o = owner(req);
 
-  // 1. Find the MyWeb items closest in meaning to the question (before streaming starts,
+  // 1. Find the Nook items closest in meaning to the question (before streaming starts,
   //    so problems like "model not downloaded" can still be a normal 503 answer).
   let found;
   try {

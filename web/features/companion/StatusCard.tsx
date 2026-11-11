@@ -1,5 +1,5 @@
 // Shown when the Companion can't answer yet: AI off, Ollama not running, or models still downloading.
-// The rest of MyWeb works without it.
+// The rest of Nook works without it.
 
 import { RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -8,12 +8,12 @@ import type { CompanionStatus } from "@/lib/api/companion";
 
 export function StatusCard({ status, onRetry }: { status: CompanionStatus | null; onRetry: () => void }) {
   let title = "The Companion is resting";
-  let text = "MyWeb's API didn't answer. Check that it's running, then try again.";
+  let text = "Nook's API didn't answer. Check that it's running, then try again.";
   let command: string | null = null;
 
   if (status && !status.enabled) {
     title = "The Companion is turned off";
-    text = "It runs a small AI model on this computer with Ollama. Everything else in MyWeb works without it. To turn it on:";
+    text = "It runs a small AI model on this computer with Ollama. Everything else in Nook works without it. To turn it on:";
     command = "docker compose --profile app --profile ai up -d";
   } else if (status && !status.reachable) {
     title = "Can't reach Ollama";

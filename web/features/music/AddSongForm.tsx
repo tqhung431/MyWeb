@@ -170,7 +170,7 @@ export function AddSongForm() {
 
         <label className="flex items-start gap-3 text-sm">
           <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} className="mt-1" />
-          <span>I may share these songs with everyone on MyWeb, as chosen above.</span>
+          <span>I may share these songs with everyone on Nook, as chosen above.</span>
         </label>
 
         <Button variant="primary" size="lg" onClick={uploadAll} disabled={!confirmed || waiting === 0 || busy}>
@@ -202,7 +202,7 @@ export function AddSongForm() {
           ))}
         </ul>
         <p className="mt-3 text-xs text-muted">
-          Running MyWeb yourself? Put the downloads in a folder and run <code>npm run music:import -- folder</code> in <code>api/</code>.
+          Running Nook yourself? Put the downloads in a folder and run <code>npm run music:import -- folder</code> in <code>api/</code>.
         </p>
         <Link href="/music" className={buttonClasses("ghost", "sm", "mt-3 -ml-3")}>
           ← Back to the charts

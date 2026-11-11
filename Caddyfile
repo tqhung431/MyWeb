@@ -1,4 +1,4 @@
-# Caddy: MyWeb's front door (Stage 7). Every visitor's request arrives here first.
+# Caddy: Nook's front door (Stage 7). Every visitor's request arrives here first.
 #
 #   /api/*  (data, sign-in, live events) → the API, WebSockets included
 #   everything else (pages)             → the website
@@ -43,7 +43,7 @@
 	}
 }
 
-# On the PC running MyWeb: https://localhost (http://localhost redirects here)
+# On the PC running Nook: https://localhost (http://localhost redirects here)
 localhost {
 	tls internal
 	import myweb

@@ -1,4 +1,4 @@
-// Home: the hub for every MyWeb app. The grid is built from lib/apps.ts,
+// Home: the hub for every Nook app. The grid is built from lib/apps.ts,
 // so a new app appears here as soon as it's added to the registry.
 
 import { ArrowRight } from "lucide-react";

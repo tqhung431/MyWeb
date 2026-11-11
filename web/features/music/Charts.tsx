@@ -1,6 +1,6 @@
 "use client";
 
-// The charts: songs ranked by MyWeb listeners (plays + 3 × likes) this week, this month or all time.
+// The charts: songs ranked by Nook listeners (plays + 3 × likes) this week, this month or all time.
 // They update live: when anyone plays or adds a song, everyone's chart refreshes.
 
 import { CloudOff, Heart, ListMusic, Play, Plus, Trash2 } from "lucide-react";
@@ -59,7 +59,7 @@ export function Charts() {
   }
 
   async function remove(song: Song) {
-    if (!window.confirm(`Remove “${song.title}” from MyWeb?`)) return;
+    if (!window.confirm(`Remove “${song.title}” from Nook?`)) return;
     await deleteSong(song.id).catch(() => {});
     void load();
   }
@@ -126,8 +126,8 @@ export function Charts() {
       </Card>
 
       <p className="text-xs text-muted">
-        Ranked by MyWeb listeners: plays + 3 × likes {period === "all" ? "of all time" : period === "week" ? "in the last 7 days" : "in the last 30 days"}.
-        Songs are stored and played by MyWeb itself, so they work on any network that can open MyWeb.
+        Ranked by Nook listeners: plays + 3 × likes {period === "all" ? "of all time" : period === "week" ? "in the last 7 days" : "in the last 30 days"}.
+        Songs are stored and played by Nook itself, so they work on any network that can open Nook.
       </p>
     </div>
   );
@@ -182,7 +182,7 @@ function Row({ rank, song, period, playing, onPlay, onLike, onGenre, onRemove }:
       </div>
       <span className="hidden sm:block">
         {song.mine ? (
-          // You added it: you can fix the genre MyWeb guessed
+          // You added it: you can fix the genre Nook guessed
           <select
             value={song.genre}
             onChange={(e) => onGenre(e.target.value as Genre)}

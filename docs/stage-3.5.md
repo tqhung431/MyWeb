@@ -1,6 +1,6 @@
 # Stage 3.5 — Frontend review, structure for many apps, and a new design
 
-**Question:** can MyWeb take the other apps in the plan (Mini Arcade, WatchList, Hobby Hub, Habit Tracker,
+**Question:** can Nook take the other apps in the plan (Mini Arcade, WatchList, Hobby Hub, Habit Tracker,
 Arcade Online, Free-time Companion) without turning into a mess?
 
 **Short answer:** not with the Stage 3 layout. It was built for one app. Stage 3.5 reorganises the frontend

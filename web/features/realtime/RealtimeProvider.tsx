@@ -11,7 +11,7 @@
 // real WebSockets by allowing the "websocket" transport.
 //
 // What comes in: who's online and focusing ("presence"), the live activity feed, and your badges.
-// If the connection drops, socket.io reconnects by itself, and the rest of MyWeb keeps working.
+// If the connection drops, socket.io reconnects by itself, and the rest of Nook keeps working.
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { io, type Socket } from "socket.io-client";

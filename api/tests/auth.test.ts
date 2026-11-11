@@ -132,7 +132,7 @@ describe("CSRF protection", () => {
     expect(res.status).toBe(403);
   });
 
-  it("allows another PC that opened MyWeb by its network address", async () => {
+  it("allows another PC that opened Nook by its network address", async () => {
     // The browser on the other PC opened http://192.168.1.20:3000; the Next.js proxy passes that on.
     const res = await request(app)
       .post("/api/auth/register")

@@ -96,7 +96,7 @@ jobs:
           curl -fsS http://127.0.0.1/api/songs -H "X-Client-Id: 3f1c2b6e-9d5a-4c8e-8f00-123456789abc" -o /dev/null
           # the API reports a healthy database and Valkey
           docker compose exec -T api node -e "fetch('http://127.0.0.1:4000/health').then(r=>r.json()).then(j=>{console.log(j);process.exit(j.valkey==='up'?0:1)})"
-          echo "✓ MyWeb answers through Caddy"
+          echo "✓ Nook answers through Caddy"
       - name: Show logs if something failed
         if: failure()
         run: docker compose --profile app logs --tail 80

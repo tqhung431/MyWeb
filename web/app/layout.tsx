@@ -26,7 +26,7 @@ import "./globals.css";
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin", "vietnamese"], variable: "--font-jakarta", display: "swap" });
 
 export const metadata: Metadata = {
-  title: { default: "MyWeb", template: "%s · MyWeb" },
+  title: { default: "Nook", template: "%s · Nook" },
   description: "Small, calm apps for your free time: focus, games, watch-lists and more.",
 };
 

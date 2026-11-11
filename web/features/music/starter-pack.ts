@@ -1,6 +1,6 @@
 // The 12 Creative Commons songs WITH VOCALS suggested to start the charts (3 per genre),
 // chosen by their ratings on ccMixter. Same list as api/seed/starter-pack.json.
-// Download each from its ccMixter page, then upload the files: MyWeb recognises them
+// Download each from its ccMixter page, then upload the files: Nook recognises them
 // by file name and fills in the credit and licence.
 
 import type { Genre } from "@/lib/api/music";

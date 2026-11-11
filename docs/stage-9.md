@@ -4,7 +4,7 @@
 most AI features today: **embeddings**, **retrieval** (RAG) and **streaming**.
 
 The **Free-time Companion** (`/companion`) is a chat buddy. Ask it, in English or Vietnamese, for a song,
-a focus tip or a plan for your evening. It answers word by word, and the **real MyWeb songs and tips** it
+a focus tip or a plan for your evening. It answers word by word, and the **real Nook songs and tips** it
 used appear as cards under the answer: press a song card to play it, press a tip card to open it.
 
 ## 1. Turn it on
@@ -14,7 +14,7 @@ docker compose --profile app --profile ai up -d --build
 docker compose logs -f ollama-models      # the first time: downloads ~1.5 GB of models, then exits
 ```
 
-Then open **https://localhost/companion**. Without the `ai` profile, MyWeb works exactly as before and the
+Then open **https://localhost/companion**. Without the `ai` profile, Nook works exactly as before and the
 Companion page explains how to turn it on. To switch the AI off completely, put `OLLAMA_URL=` in `.env`.
 
 | | Model | Size | What it does |
@@ -51,7 +51,7 @@ sequenceDiagram
 
 ### Embeddings and retrieval (RAG)
 
-A small model knows nothing about *your* MyWeb, and it happily invents songs. So before it answers, we
+A small model knows nothing about *your* Nook, and it happily invents songs. So before it answers, we
 **retrieve** the items that matter and put them in its instructions ("Retrieval-Augmented Generation"):
 
 1. **Indexing** (`api/src/ai/knowledge.ts`, run by the worker): every tip and song becomes a short text,

@@ -24,7 +24,7 @@ export async function addSongFile(input: AddSongInput): Promise<{ song: Song; de
   const read = await readSong(input.path, input.originalName);
 
   const [existing] = await db.select().from(songs).where(eq(songs.sha256, read.sha256));
-  if (existing) throw new HttpError(409, `That song is already in MyWeb: “${existing.title}”`);
+  if (existing) throw new HttpError(409, `That song is already in Nook: “${existing.title}”`);
 
   // A starter-pack song: use its known title, artist, credit and licence.
   const starter = findStarterSong(input.originalName);

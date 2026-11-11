@@ -14,7 +14,7 @@ export function GuestNotice() {
     <p className="flex items-start gap-3 rounded-2xl border border-border bg-surface p-4 text-sm text-muted backdrop-blur-xl">
       <UserRoundCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
       <span>
-        You&apos;re using MyWeb as a <strong className="text-text">guest</strong>. Everything works, and your history is
+        You&apos;re using Nook as a <strong className="text-text">guest</strong>. Everything works, and your history is
         kept on this device.{" "}
         <Link href="/register" className="font-semibold text-primary hover:underline">
           Create an account

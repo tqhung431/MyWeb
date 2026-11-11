@@ -5,7 +5,7 @@
 // Searching (when someone asks something):
 //   question → embed → the rows whose numbers are CLOSEST (cosine distance, pgvector) → best matches
 //
-// This is "retrieval": the model then answers using these real MyWeb items,
+// This is "retrieval": the model then answers using these real Nook items,
 // instead of making up songs that don't exist here.
 
 import { createHash } from "node:crypto";

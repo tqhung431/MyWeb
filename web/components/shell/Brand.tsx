@@ -7,7 +7,7 @@ export function Brand() {
       <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-primary to-primary-2 text-white shadow-md shadow-primary/30">
         <Moon className="h-5 w-5" aria-hidden="true" />
       </span>
-      <span className="text-lg">MyWeb</span>
+      <span className="text-lg">Nook</span>
     </Link>
   );
 }

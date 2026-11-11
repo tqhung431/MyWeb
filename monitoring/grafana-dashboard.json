@@ -8,7 +8,7 @@
       "pluginName": "Prometheus"
     }
   ],
-  "title": "MyWeb",
+  "title": "Nook",
   "uid": "myweb",
   "tags": [
     "myweb"
@@ -411,5 +411,5 @@
       }
     }
   ],
-  "description": "MyWeb (Stage 8): requests, response times, errors, cache, background jobs, focus sessions, song plays, live connections. Traces: Explore \u2192 Tempo."
+  "description": "Nook (Stage 8): requests, response times, errors, cache, background jobs, focus sessions, song plays, live connections. Traces: Explore \u2192 Tempo."
 }

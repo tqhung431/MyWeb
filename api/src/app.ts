@@ -36,7 +36,7 @@ export function createApp() {
   app.use(express.json({ limit: "10kb" })); // parse JSON bodies, refuse huge ones
   app.use(loadUser); // req.user from the login cookie
 
-  // Is everything up? PostgreSQL is required; Valkey is optional (MyWeb falls back without it).
+  // Is everything up? PostgreSQL is required; Valkey is optional (Nook falls back without it).
   app.get("/health", async (_req, res) => {
     await pool.query("select 1"); // throws → 500 if the database is down
     const valkeyUp = valkeyReady() && (await valkey.ping().then(() => true, () => false));

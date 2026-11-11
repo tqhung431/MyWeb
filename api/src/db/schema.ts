@@ -99,8 +99,8 @@ export const achievements = pgTable(
 );
 
 // --- Music (Stage 7, files since Stage 8) ---------------------------------------
-// MyWeb stores the song FILES itself and plays them in its own player, so they work on any
-// network that can open MyWeb (no SoundCloud / YouTube needed, nothing for a firewall to block).
+// Nook stores the song FILES itself and plays them in its own player, so they work on any
+// network that can open Nook (no SoundCloud / YouTube needed, nothing for a firewall to block).
 // Only songs the uploader may share: their own, or ones with a licence that allows it.
 
 export const songs = pgTable(

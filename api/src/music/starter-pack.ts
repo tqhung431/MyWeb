@@ -1,6 +1,6 @@
 // The starter pack: 12 Creative Commons songs WITH VOCALS from ccMixter, picked by their
-// ccMixter ratings (3 per genre). MyWeb can't download them for you (ccMixter only allows
-// downloads from its own pages), so you download them, and MyWeb recognises them by their
+// ccMixter ratings (3 per genre). Nook can't download them for you (ccMixter only allows
+// downloads from its own pages), so you download them, and Nook recognises them by their
 // file name and fills in the credit and licence the licence requires.
 // List: seed/starter-pack.json · How to: docs/stage-8.md
 

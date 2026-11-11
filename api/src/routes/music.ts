@@ -1,4 +1,4 @@
-// Music: songs with vocals, stored and played by MyWeb itself, ranked by MyWeb listeners.
+// Music: songs with vocals, stored and played by Nook itself, ranked by Nook listeners.
 //
 // GET    /api/songs?period=week|month|all&genre=all|drill|remix|pop|lofi   the charts
 // POST   /api/songs                 upload one song (multipart: file, license, credit?, sourceUrl?, genre?)
@@ -133,7 +133,7 @@ const upload = multer({
 }).single("file");
 
 const uploadFields = z.object({
-  // The person must confirm they may share it. MyWeb only hosts songs people have the right to share.
+  // The person must confirm they may share it. Nook only hosts songs people have the right to share.
   rights: z.literal("yes", { message: "Please confirm you may share this song" }),
   license: z.string().trim().min(2).max(80),
   licenseUrl: z.url().max(300).optional().or(z.literal("").transform(() => undefined)),

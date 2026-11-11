@@ -1,6 +1,6 @@
 "use client";
 
-// The music player (Stage 8): a plain <audio> element playing files from MyWeb itself.
+// The music player (Stage 8): a plain <audio> element playing files from Nook itself.
 // No SoundCloud / YouTube player, so nothing for a firewall to block and no app to open.
 // Desktop: bottom-right corner. Phone: a bar above the tab bar.
 // Phones also show it on the lock screen (Media Session), with play / pause / next.
@@ -39,7 +39,7 @@ export function MusicDock() {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: current.title,
       artist: current.artist,
-      album: "MyWeb",
+      album: "Nook",
       artwork: current.artworkUrl ? [{ src: current.artworkUrl }] : [],
     });
     const set = (action: MediaSessionAction, handler: MediaSessionActionHandler | null) => {

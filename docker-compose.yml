@@ -1,4 +1,4 @@
-# MyWeb with Docker Compose (Stage 7).
+# Nook with Docker Compose (Stage 7).
 #
 #   docker compose up -d                       database, Valkey and Mailpit only, for `npm run dev`
 #   docker compose --profile app up -d --build EVERYTHING: + API, worker, website and Caddy
@@ -19,6 +19,10 @@ x-otel: &otel
   OTEL_METRICS_EXPORTER: otlp
   OTEL_LOGS_EXPORTER: none
   OTEL_SEMCONV_STABILITY_OPT_IN: http # current names for HTTP metrics (http.server.request.duration)
+
+# The project name stays "myweb" (the old name): it's the prefix of the data volumes
+# (myweb_db-data, ...), so your data survives renaming the folder or the repo.
+name: myweb
 
 services:
   # --- Data ---------------------------------------------------------------------
@@ -74,7 +78,7 @@ services:
       PORT: "4000"
       TRUST_PROXY: "1" # Caddy is one trusted hop in front: real visitor IPs, HTTPS detection
       SMTP_URL: ${SMTP_URL:-smtp://mailpit:1025}
-      MAIL_FROM: ${MAIL_FROM:-MyWeb <hello@myweb.local>}
+      MAIL_FROM: ${MAIL_FROM:-Nook <hello@myweb.local>}
       MEDIA_DIR: /app/media
       # Stage 9: where Ollama is. Without the ai profile it isn't running, and the Companion says so.
       # Set OLLAMA_URL= (empty) in .env to switch the AI off completely.
@@ -159,7 +163,7 @@ services:
     volumes:
       - ollama-models:/root/.ollama # downloaded models stay here
     environment:
-      OLLAMA_KEEP_ALIVE: 30m # keep the model in memory between questions
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m} # keep the model in memory between questions
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 10s

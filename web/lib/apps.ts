@@ -1,4 +1,4 @@
-// The app registry: ONE list of every app in MyWeb.
+// The app registry: ONE list of every app in Nook.
 // The sidebar, the phone tab bar, the Home grid and each app's sub-tabs are all built from it.
 //
 // To add an app: add an entry here, then create app/<href>/page.tsx.
@@ -39,7 +39,7 @@ export const APPS: AppInfo[] = [
   {
     id: "music",
     name: "Music",
-    tagline: "Songs with vocals, played by MyWeb itself: community charts",
+    tagline: "Songs with vocals, played by Nook itself: community charts",
     href: "/music",
     icon: Disc3,
     accent: "from-rose-500 to-orange-400",
@@ -103,7 +103,7 @@ export const APPS: AppInfo[] = [
   {
     id: "companion",
     name: "Free-time Companion",
-    tagline: "A local AI buddy that knows MyWeb's songs and tips",
+    tagline: "A local AI buddy that knows Nook's songs and tips",
     href: "/companion",
     icon: Sparkles,
     accent: "from-fuchsia-400 to-purple-600",

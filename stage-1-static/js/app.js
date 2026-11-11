@@ -53,7 +53,7 @@ function format(ms) {
 const timer = createTimer({
   onTick(ms) {
     timeEl.textContent = format(ms);
-    document.title = timer.isRunning() ? `${format(ms)} · Chill Corner` : "Chill Corner · MyWeb";
+    document.title = timer.isRunning() ? `${format(ms)} · Chill Corner` : "Chill Corner · Nook";
   },
   onDone() {
     Ambient.chime();

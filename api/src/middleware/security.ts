@@ -12,7 +12,7 @@ import { HttpError } from "./errors.js";
 //  2. Only JSON bodies: an HTML form on another site can't send Content-Type: application/json
 //  3. Origin check (below): the page that sent the request must be on the site the browser opened
 //
-// MyWeb can be opened as localhost:3000, 192.168.1.20:3000, mypc.local:3000... so instead of one
+// Nook can be opened as localhost:3000, 192.168.1.20:3000, mypc.local:3000... so instead of one
 // fixed address we compare the Origin with the Host the browser asked for. The Next.js proxy keeps
 // that in X-Forwarded-Host. A bad site can't change either: the browser sets both.
 
@@ -29,7 +29,7 @@ export const sameOrigin: RequestHandler = (req, _res, next) => {
   // File uploads (Stage 8) are forms, which other sites CAN send. So for them the Origin
   // header is required, not just checked when present: no Origin, no upload.
   if (hasBody && req.is("multipart/form-data")) {
-    if (!origin) throw new HttpError(403, "Uploads must come from MyWeb's own page");
+    if (!origin) throw new HttpError(403, "Uploads must come from Nook's own page");
     return next();
   }
   if (hasBody && !req.is("application/json")) throw new HttpError(415, "Send JSON");
