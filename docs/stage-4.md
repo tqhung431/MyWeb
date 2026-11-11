@@ -102,7 +102,7 @@ sequenceDiagram
     Note over A: token = 32 random bytes
     A->>D: INSERT auth_sessions (id = sha256(token), user_id, expires_at)
     A->>D: UPDATE focus_sessions SET user_id … WHERE client_id = this guest
-    A-->>B: 200 {user}<br/>Set-Cookie: myweb_session=token; HttpOnly; SameSite=Lax
+    A-->>B: 200 {user}<br/>Set-Cookie: nook_session=token; HttpOnly; SameSite=Lax
 ```
 
 On **every later request** the browser sends the cookie. The API hashes the token, finds the session row and

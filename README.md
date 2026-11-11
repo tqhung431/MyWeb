@@ -19,6 +19,12 @@ HTML page to a full system. Every stage has an explainer in [docs/](#stages).
 
 ---
 
+## Contents
+
+[Install](#install-from-scratch) · [Settings](#settings-the-env-file) · [Extras: AI and Grafana](#optional-extras-ai-and-grafana) ·
+[Upgrade](#upgrade-to-the-latest-version) · [Stop and clean up](#stop-and-clean-up) · [Problems?](#problems) ·
+[What runs, and why](#what-runs-and-why) · [Coming from MyWeb](#coming-from-myweb) · [For developers](#for-developers) · [Stages](#stages)
+
 ## Install from scratch
 
 You need two free programs:
@@ -28,41 +34,68 @@ You need two free programs:
 | **Git** | to download Nook and its updates | https://git-scm.com/downloads |
 | **Docker Desktop** | runs every part of Nook in "containers", so you don't install them one by one | https://www.docker.com/products/docker-desktop |
 
-On Windows, Docker Desktop asks to turn on **WSL 2**: say yes and restart. Then open Docker Desktop once and
+On Windows, Docker Desktop asks to turn on **WSL 2**: say yes and restart. Then open Docker Desktop and
 wait until it says it's running.
 
-Then, in a terminal (on Windows: PowerShell):
+Download Nook (in a terminal; on Windows: PowerShell):
 
 ```bash
 git clone https://github.com/tqhung431/Nook.git
+```
+
+Then start it, **1-click**:
+
+- **Windows**: double-click **`start.cmd`** in the `Nook` folder.
+- **macOS / Linux**: run `./start.sh` in the `Nook` folder.
+
+The first start takes 5-10 minutes. The script creates your settings file (`.env`) if you don't have one,
+starts everything, and (on Windows) opens **https://localhost**. Prefer typing? These do the same thing:
+
+```bash
 cd Nook
-
-cp .env.example .env                        # Windows PowerShell: copy .env.example .env
-# Open .env in a text editor and set POSTGRES_PASSWORD (do this before the first start).
-
-docker compose --profile app up -d --build  # the first time takes 5-10 minutes
+cp .env.example .env          # Windows PowerShell: copy .env.example .env
+docker compose up -d --build
 ```
 
 Then open:
 
-- **https://localhost** on this PC. The first time, your browser warns about the certificate. That's expected:
-  see [docs/stage-7.md](docs/stage-7.md) to trust it, or click "Advanced → Continue".
+- **https://localhost** on this PC. The first time, the browser warns about the certificate. That's expected:
+  click "Advanced → Continue", or trust it for good (see [docs/stage-7.md](docs/stage-7.md)).
 - **http://&lt;this PC's IP&gt;** from other PCs and phones on the same Wi-Fi (find the IP with `ipconfig` on
   Windows, `ip addr` on Linux). If they can't connect, allow port 80 in this PC's firewall.
 
-### Optional extras
+## Settings: the .env file
 
-Add a profile to the start command to turn an extra on:
+There is **one** settings file for Docker: **`.env` in the main `Nook` folder**, next to `docker-compose.yml`.
+Docker reads it and passes the settings on to every part (API, worker, website...).
+You don't need to copy anything into `api/` or `web/`: their `.env.example` files are only for
+[developers](#for-developers).
 
-| Extra | Start command | Notes |
+```
+Nook/
+├── .env.example     ← the template, with every setting explained
+├── .env             ← YOUR settings (made by start.cmd / start.sh, or copy it yourself)
+├── start.cmd        ← 1-click start (Windows)
+├── start.sh         ← 1-click start (macOS / Linux)
+└── docker-compose.yml
+```
+
+After changing `.env`, run `docker compose up -d` (or the start script) again to apply it.
+
+> ⚠️ **Set `POSTGRES_PASSWORD` before the very first start.** The database keeps the first password it was
+> started with. If you change it later, the API can't log in ("password authentication failed" in
+> `docker compose logs api`): put the old password back, or [start over](#stop-and-clean-up).
+
+## Optional extras: AI and Grafana
+
+Turn extras on with **`COMPOSE_PROFILES`** in `.env`, then run `docker compose up -d` again:
+
+| `COMPOSE_PROFILES=` | What you get | Notes |
 |---|---|---|
-| **AI Companion** | `docker compose --profile app --profile ai up -d` | Downloads Ollama and the models once (a few GB). On a low-end PC, set `AI_CHAT_MODEL=qwen2.5:0.5b` in `.env` first. Watch the download: `docker compose logs -f ollama-models` |
-| **Grafana** (monitoring) | `docker compose --profile app --profile monitoring up -d` | First remove the `#` from the 3 monitoring lines in `.env`. Open http://localhost:3001. Needs ~1-2 GB of RAM |
-| Both | `docker compose --profile app --profile ai --profile monitoring up -d` | Needs a PC with 8 GB+ of RAM |
-
-All settings are explained in [.env.example](.env.example).
-
----
+| `app` | Nook (the default) | |
+| `app,ai` | + the **AI Companion** | Downloads Ollama and the models once (a few GB). On a low-end PC, also set `AI_CHAT_MODEL=qwen2.5:0.5b`. Watch the download: `docker compose logs -f ollama-models` |
+| `app,monitoring` | + **Grafana** at http://localhost:3001 | Also remove the `#` from the 3 monitoring lines in `.env`. Needs ~1-2 GB of RAM |
+| `app,ai,monitoring` | everything | Needs 8 GB+ of RAM |
 
 ## Upgrade to the latest version
 
@@ -70,29 +103,39 @@ Your data (accounts, songs, history, AI models) is kept in Docker volumes and **
 
 ```bash
 cd Nook
-git pull                                       # get the new code
-docker compose --profile app up -d --build     # rebuild and restart (add the same --profile ai / monitoring you use)
+git pull                      # get the new code
+docker compose up -d --build  # rebuild and restart (or run the start script)
 ```
 
-The database is updated automatically when the API starts (migrations), so there's nothing else to run.
-Read `.env.example` after an upgrade: new settings may have been added. Copy the ones you want into your `.env`.
+- The database is updated automatically when the API starts, so there's nothing else to run.
+- New settings may have been added: compare your `.env` with `.env.example` and copy what you want.
+- To also update the programs Nook builds on (PostgreSQL, Caddy, Ollama...): `docker compose pull`, then `docker compose up -d --build`.
 
-To also update the images Nook builds on (PostgreSQL, Caddy, Ollama...):
+## Stop and clean up
 
-```bash
-docker compose --profile app --profile ai pull
-docker compose --profile app --profile ai up -d --build
-```
+| What | Command | Your data |
+|---|---|---|
+| See what's running | `docker compose ps` | |
+| Stop Nook | `docker compose down` | ✅ kept |
+| Start it again | `docker compose up -d` (or the start script) | ✅ kept |
+| Free disk space from old builds | `docker builder prune -f` and `docker image prune -f` | ✅ kept |
+| Delete only the AI models (they download again when needed) | `docker volume rm nook_ollama-models` | ✅ rest kept |
+| **Start over**: delete all data | `docker compose down -v` | ❌ **everything deleted**: accounts, songs, history, AI models |
+| Also delete Nook's images | `docker compose down -v --rmi local` | ❌ everything deleted |
+| Remove Nook completely | the command above, then delete the `Nook` folder | ❌ |
 
-## Everyday commands
+`down` only stops the parts in your `COMPOSE_PROFILES`. If you removed `ai` or `monitoring` from it while they
+were running, stop them with `docker compose --profile ai --profile monitoring down`.
 
-```bash
-docker compose ps                                     # what's running
-docker compose logs -f api                            # follow one service's logs (api, worker, web, caddy, ollama...)
-docker compose --profile app --profile ai --profile monitoring down   # stop everything (data is kept)
-docker compose --profile app --profile ai --profile monitoring down -v  # ⚠️ stop AND delete all data
-docker builder prune -f && docker image prune -f      # free disk space taken by old builds
-```
+## Problems?
+
+| You see | Do this |
+|---|---|
+| `docker compose logs api` says **password authentication failed** | The database was first started with another `POSTGRES_PASSWORD`. Put that one back in `.env` (the default is `nook`), or start over with `docker compose down -v`. Coming from MyWeb? [See below](#coming-from-myweb) |
+| **Port 80 / 443 is already in use** | Set `HTTP_PORT=8080` (and `HTTPS_PORT=8443`) in `.env`, then open http://localhost:8080 |
+| **Grafana** (localhost:3001) doesn't open | Add `monitoring` to `COMPOSE_PROFILES`, run `docker compose up -d`, wait a minute. Still nothing: `docker compose logs otel-lgtm` |
+| The **Companion** says it's off or downloading | Add `ai` to `COMPOSE_PROFILES`, run `docker compose up -d`, follow `docker compose logs -f ollama-models` |
+| Something else | `docker compose ps` shows what's not running; `docker compose logs <name>` says why |
 
 ## What runs, and why
 
@@ -108,36 +151,64 @@ Browsers ──► caddy ──► web (Next.js) ──► api (+ live updates) 
 |---|---|---|
 | **caddy** | yes | The front door: HTTPS, lets other PCs in, sends `/api` to the API and pages to the website |
 | **web** | yes | The website (Next.js + React) |
-| **api** | yes | The data and the rules: accounts, timer history, songs, charts, live updates, the AI chat |
+| **api** | yes | The data and the rules: accounts, timer history, songs, charts, live updates, the AI chat. Updates the database when it starts |
 | **worker** | yes | Background jobs: welcome emails, achievements, preparing songs and tips for the AI |
 | **db** | yes | PostgreSQL: where everything is stored; pgvector lets the AI search by meaning |
 | **valkey** | yes | Fast memory store: cache, rate limits, the job queue, live updates across services |
-| **mailpit** | dev | Catches emails so you can read them at http://localhost:8025 |
+| **mailpit** | yes (small) | Catches emails so you can read them at http://localhost:8025, until you set a real `SMTP_URL` |
 | **ollama** | AI only | Runs the AI models on your PC |
 | **ollama-models** | AI only | Downloads the models, then stops (showing "Exited" is normal) |
 | **otel-lgtm** | monitoring only | Grafana with traces, metrics and logs of every request |
+
+## Coming from MyWeb
+
+Nook was called **MyWeb** until Stage 9, and its database user, database and Docker volumes were named `myweb`.
+A Nook install uses `nook` names, so it starts with a **fresh, empty** database. Your old data is still there,
+in the `myweb_...` volumes. Choose one:
+
+- **Keep your old data**: add these lines to `.env` (with your old `POSTGRES_PASSWORD`; the old default was `myweb`),
+  then `docker compose up -d --build`:
+  ```
+  COMPOSE_PROJECT_NAME=myweb
+  POSTGRES_USER=myweb
+  POSTGRES_DB=myweb
+  POSTGRES_PASSWORD=myweb
+  ```
+- **Start fresh** and delete the old data: `docker compose -p myweb down -v` (⚠️ removes the `myweb_...` volumes).
+
+Either way, people get signed out once (the sign-in cookie has a new name).
 
 ---
 
 ## For developers
 
-Run each part yourself, with live reload. Needs Node.js 20.9+; Docker provides PostgreSQL, Valkey and Mailpit.
+Run each part yourself, with live reload. Needs Node.js 20.9+ and Docker (for PostgreSQL, Valkey and Mailpit).
+Here each part has its own settings file: `api/.env` and (optional) `web/.env.local`.
 
 ```bash
-docker compose up -d                          # 1. PostgreSQL + Valkey + Mailpit only
+cp .env.example .env                          # 1. the main settings (database password)
+docker compose up -d db valkey mailpit        #    PostgreSQL + Valkey + Mailpit only
 
-cd api && cp .env.example .env && npm install # 2. API
-npm run db:migrate && npm run db:seed
+cd api && cp .env.example .env && npm install # 2. API: api/.env's DATABASE_URL must use the
+npm run db:migrate && npm run db:seed         #    same password as POSTGRES_PASSWORD (default: nook)
 npm run dev                                   #    http://localhost:4000/health
-npm run worker                                #    background jobs (new terminal)
+npm run worker                                #    background jobs (new terminal, in api/)
 
 cd web && npm install && npm run dev          # 3. website (new terminal)
                                               #    http://localhost:3000
 ```
 
-Tests: `npm test` in `api/` and in `web/`. GitHub Actions runs them, plus a full Docker start, on every push.
-For the AI, install [Ollama](https://ollama.com), pull the two models, and set `OLLAMA_URL` in `api/.env`
-(see [docs/stage-9.md](docs/stage-9.md)).
+**Tests**: create the test database once, then run `npm test` in `api/` and in `web/`:
+
+```bash
+docker compose exec db createdb -U nook nook_test
+```
+
+GitHub Actions runs all tests, plus a full Docker start, on every push.
+
+**AI**: `docker compose up -d ollama-models` starts Ollama and downloads the models (or install
+[Ollama](https://ollama.com) yourself), then set `OLLAMA_URL=http://127.0.0.1:11434` in `api/.env`.
+See [docs/stage-9.md](docs/stage-9.md).
 
 ### Folders
 
@@ -156,6 +227,8 @@ api/                   the API and the worker (Express, TypeScript)
   src/db/, drizzle/    database schema and migrations
 docs/                  one explainer per stage
 docker-compose.yml     every service, with the "app", "ai" and "monitoring" profiles
+.env.example           every setting for Docker, explained (copy to .env)
+start.cmd, start.sh    1-click start
 Caddyfile              the front door's settings
 .github/workflows/     automatic checks on every push
 monitoring/            a Grafana dashboard to import
@@ -176,4 +249,4 @@ stage-1-static/        Stage 1: the plain HTML/CSS/JS version
 8. Automation and monitoring — GitHub Actions, OpenTelemetry, Grafana ✅ · [docs](docs/stage-8.md)
 9. Local AI — Ollama, embeddings in pgvector, streamed answers ✅ · [docs](docs/stage-9.md)
 
-Nook was called **MyWeb** until Stage 9. Credits and licences: [CREDITS.md](CREDITS.md)
+Credits and licences: [CREDITS.md](CREDITS.md)

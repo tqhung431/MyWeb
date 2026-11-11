@@ -184,7 +184,7 @@ You need PostgreSQL. The easiest way is Docker (only for the database, for now):
 docker compose up -d db            # from the repo root
 ```
 
-Or install PostgreSQL 16 yourself and create a user `myweb` / password `myweb` with a database `myweb`.
+Or install PostgreSQL 16 yourself and create a user `nook` / password `nook` with a database `nook`.
 
 Then, in two terminals:
 
@@ -203,17 +203,17 @@ npm install
 npm run dev                        # http://localhost:3000
 ```
 
-Tests (they use a separate `myweb_test` database; create it once):
+Tests (they use a separate `nook_test` database; create it once):
 
 ```bash
-docker compose exec db createdb -U myweb myweb_test
+docker compose exec db createdb -U nook nook_test
 cd api && npm test                 # 10 tests: real HTTP requests against a real database
 ```
 
 Look inside the database:
 
 ```bash
-docker compose exec db psql -U myweb -c "select * from focus_sessions order by id desc limit 5;"
+docker compose exec db psql -U nook -c "select * from focus_sessions order by id desc limit 5;"
 ```
 
 ## 8. Next: Stage 4

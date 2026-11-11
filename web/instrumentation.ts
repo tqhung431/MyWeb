@@ -9,7 +9,7 @@ export async function register() {
   const { registerOTel } = await import("@vercel/otel");
   const apiUrl = process.env.API_URL ?? "http://127.0.0.1:4000";
   registerOTel({
-    serviceName: process.env.OTEL_SERVICE_NAME ?? "myweb-web",
+    serviceName: process.env.OTEL_SERVICE_NAME ?? "nook-web",
     instrumentationConfig: {
       // Only tell OUR API about traces (never third-party sites)
       fetch: { propagateContextUrls: [new RegExp(`^${apiUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`)] },

@@ -26,7 +26,7 @@ let emitter: Emitter | null = null;
 // Called by the API process once its Socket.IO server exists.
 // Valkey's publish/subscribe channels are shared by ALL its numbered databases, so two Nook setups
 // on one Valkey (e.g. your dev server and the tests) would hear each other. A per-setup channel
-// name keeps them apart: "myweb-socket.io" in dev, "myweb-test-socket.io" in tests.
+// name keeps them apart: "nook-socket.io" in dev, "nook-test-socket.io" in tests.
 export const CHANNEL_KEY = `${config.QUEUE_NAME}-socket.io`;
 
 export function setRealtimeServer(server: Server | null) {

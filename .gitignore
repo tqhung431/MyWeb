@@ -1,3 +1,6 @@
 .env
 music-import/*
 !music-import/README.md
+
+# Valkey/Redis snapshot, written when a local server runs in this folder
+dump.rdb

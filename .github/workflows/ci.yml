@@ -32,11 +32,11 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg16 # Postgres + pgvector (Stage 9)
         env:
-          POSTGRES_USER: myweb
-          POSTGRES_PASSWORD: myweb
-          POSTGRES_DB: myweb_test
+          POSTGRES_USER: nook
+          POSTGRES_PASSWORD: nook
+          POSTGRES_DB: nook_test
         ports: ["5432:5432"]
-        options: --health-cmd "pg_isready -U myweb" --health-interval 5s --health-retries 10
+        options: --health-cmd "pg_isready -U nook" --health-interval 5s --health-retries 10
       valkey:
         image: valkey/valkey:8
         ports: ["6379:6379"]
@@ -77,12 +77,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Settings
-        run: cp .env.example .env
+      - name: Settings, like a user would (with a password full of URL-unfriendly characters)
+        run: |
+          cp .env.example .env
+          sed -i 's|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=p@ss:w/rd#1|' .env
       - name: Build the images
-        run: docker compose --profile app build
-      - name: Start everything and wait until healthy
-        run: docker compose --profile app up -d --wait --wait-timeout 180
+        run: docker compose build
+      - name: Start everything and wait until healthy (the same command as start.sh)
+        run: docker compose up -d --wait --wait-timeout 180
       - name: Smoke test through Caddy
         run: |
           set -e
@@ -90,6 +92,7 @@ jobs:
           curl -fsSk https://localhost/ -o /dev/null
           curl -fsSk https://localhost/chill -o /dev/null
           curl -fsSk https://localhost/music -o /dev/null
+          curl -fsSk https://localhost/companion -o /dev/null
           # the API behind Caddy: tips come from the seeded database
           curl -fsSk https://localhost/api/tips | grep -q '"slug":"one-thing"'
           # other PCs: plain HTTP on the network address works too
@@ -99,7 +102,7 @@ jobs:
           echo "✓ Nook answers through Caddy"
       - name: Show logs if something failed
         if: failure()
-        run: docker compose --profile app logs --tail 80
+        run: docker compose logs --tail 80
       - name: Stop
         if: always()
-        run: docker compose --profile app down -v
+        run: docker compose down -v

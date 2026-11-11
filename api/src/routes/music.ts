@@ -128,7 +128,7 @@ function isAddedBy(song: Song, who: string) {
 
 // multer saves the upload to a temporary file first (never all in memory), with a size limit.
 const upload = multer({
-  dest: path.join(tmpdir(), "myweb-uploads"),
+  dest: path.join(tmpdir(), "nook-uploads"),
   limits: { fileSize: config.MAX_UPLOAD_MB * 1024 * 1024, files: 1, fields: 10 },
 }).single("file");
 

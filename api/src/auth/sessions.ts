@@ -12,7 +12,7 @@ import { db } from "../db/client.js";
 import { achievements, authSessions, focusSessions, users, type User } from "../db/schema.js";
 import { valkey, valkeyReady } from "../valkey/client.js";
 
-export const COOKIE_NAME = "myweb_session";
+export const COOKIE_NAME = "nook_session";
 const DAY = 24 * 60 * 60 * 1000;
 const SESSION_DAYS = 30;
 
