@@ -2,6 +2,7 @@
 
 // Add or change a habit: name, emoji, colour, how many days a week, an optional reminder.
 
+import { Select } from "@/components/ui/Select";
 import { Loader2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
@@ -73,21 +74,13 @@ export function HabitForm({ initial, onSave, onCancel }: { initial?: Habit; onSa
         </div>
       </fieldset>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="flex flex-col gap-1.5 text-sm font-semibold">
-          How often
-          <select
-            value={perWeek}
-            onChange={(e) => setPerWeek(Number(e.target.value))}
-            className="h-12 rounded-2xl border border-border bg-surface-strong/70 px-3 font-normal focus:border-primary focus:outline-none"
-          >
-            <option value={7}>Every day</option>
-            {[6, 5, 4, 3, 2, 1].map((n) => (
-              <option key={n} value={n}>
-                {n} {n === 1 ? "day" : "days"} a week
-              </option>
-            ))}
-          </select>
-        </label>
+        <Select<number>
+          label="How often"
+          showLabel
+          value={perWeek}
+          onChange={setPerWeek}
+          options={[7, 6, 5, 4, 3, 2, 1].map((n) => ({ value: n, label: n === 7 ? "Every day" : `${n} ${n === 1 ? "day" : "days"} a week` }))}
+        />
         <label className="flex flex-col gap-1.5 text-sm font-semibold">
           Reminder (optional)
           <input

@@ -3,6 +3,7 @@
 // One group: its members, the board of posts and the live chat.
 // Desktop: posts on the left, chat on the right. Phone: a switch between Chat and Posts.
 
+import { useConfirm } from "@/components/ui/Dialog";
 import { ArrowLeft, LogOut, Trash2, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -20,6 +21,7 @@ import { Chat } from "./Chat";
 type Tab = "chat" | "posts";
 
 export function GroupPage({ slug }: { slug: string }) {
+  const confirm = useConfirm();
   const { user, askName } = useMe();
   const { socket } = useRealtime();
   const router = useRouter();
@@ -75,7 +77,15 @@ export function GroupPage({ slug }: { slug: string }) {
   }
 
   async function remove() {
-    if (!window.confirm(`Delete ${group!.name} with all its posts and chat? This can't be undone.`)) return;
+    if (
+      !(await confirm({
+        title: `Delete ${group!.name}?`,
+        description: "All its posts and chat go too. This can't be undone.",
+        confirmLabel: "Delete",
+        danger: true,
+      }))
+    )
+      return;
     await deleteGroup(slug).catch(() => {});
     router.push("/hobby-hub");
   }

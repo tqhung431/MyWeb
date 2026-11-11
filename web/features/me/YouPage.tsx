@@ -2,6 +2,8 @@
 
 // "/account" → You (Stage 11): your name, what Nook keeps about you and for how long, and "Delete me".
 
+import { useConfirm } from "@/components/ui/Dialog";
+import { useToast } from "@/components/ui/Toast";
 import { Loader2, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
@@ -29,6 +31,8 @@ const LABELS: [keyof MyData["counts"], string][] = [
 ];
 
 export function YouPage() {
+  const confirm = useConfirm();
+  const toast = useToast();
   const { user, setUser, forget } = useMe();
   const [data, setData] = useState<MyData | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -52,14 +56,22 @@ export function YouPage() {
   const joined = new Date(user.createdAt).toLocaleDateString("en", { day: "numeric", month: "long", year: "numeric" });
 
   async function onDelete() {
-    if (!window.confirm(`Delete “${user!.name}” and everything you made on Nook? This can't be undone.`)) return;
+    if (
+      !(await confirm({
+        title: `Delete “${user!.name}”?`,
+        description: "Everything you made on Nook goes too. This can't be undone.",
+        confirmLabel: "Delete",
+        danger: true,
+      }))
+    )
+      return;
     setDeleting(true);
     try {
       await deleteMe();
       forget();
     } catch {
       setDeleting(false);
-      window.alert("Couldn't delete right now. Try again in a moment.");
+      toast("Couldn't delete right now. Try again in a moment.", { tone: "error" });
     }
   }
 

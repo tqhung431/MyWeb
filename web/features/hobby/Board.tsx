@@ -4,6 +4,7 @@
 // When anyone posts, likes or comments, the API tells everyone with the group open ("hobby:board")
 // and the board reloads itself.
 
+import { useConfirm } from "@/components/ui/Dialog";
 import { Heart, Loader2, MessageCircle, Send, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Avatar } from "@/components/ui/Avatar";
@@ -143,6 +144,7 @@ function Composer({ slug, groupName, onPosted }: { slug: string; groupName: stri
 type CardProps = { post: Post; version: number; onChange: (p: Post) => void; onDeleted: () => void };
 
 function PostCard({ post, version, onChange, onDeleted }: CardProps) {
+  const confirm = useConfirm();
   const { user, askName } = useMe();
   const [open, setOpen] = useState(false);
 
@@ -154,7 +156,7 @@ function PostCard({ post, version, onChange, onDeleted }: CardProps) {
   }
 
   async function remove() {
-    if (!window.confirm("Delete this post and its comments?")) return;
+    if (!(await confirm({ title: "Delete this post and its comments?", confirmLabel: "Delete", danger: true }))) return;
     await deletePost(post.id).catch(() => {});
     onDeleted();
   }
