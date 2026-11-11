@@ -7,7 +7,7 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { apiFetch } from "./client";
-import type { Me, Providers } from "./auth";
+import type { Me } from "./auth";
 
 async function withCookies(): Promise<HeadersInit> {
   return { cookie: (await cookies()).toString() };
@@ -18,13 +18,5 @@ export async function getMe(): Promise<Me> {
     return await apiFetch<Me>("/api/auth/me", { headers: await withCookies() });
   } catch {
     return { user: null }; // API down: treat as signed out, the page still renders
-  }
-}
-
-export async function getProviders(): Promise<Providers> {
-  try {
-    return await apiFetch<Providers>("/api/auth/providers");
-  } catch {
-    return { password: true, github: false };
   }
 }

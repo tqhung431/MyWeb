@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "About" };
 
 const CREDITS = [
   ["Sounds", "Generated live with the Web Audio API. No recordings, nothing to license."],
-  ["Icons", "Lucide (ISC licence) · GitHub mark from Simple Icons (CC0)"],
+  ["Icons", "Lucide (ISC licence)"],
   ["Font", "Plus Jakarta Sans (SIL Open Font License), self-hosted by Next.js"],
   ["Framework", "Next.js, React (MIT) · TypeScript (Apache-2.0) · Tailwind CSS (MIT)"],
   ["API & data", "Express, Zod, Drizzle ORM, node-postgres, cookie-parser · PostgreSQL (PostgreSQL Licence)"],

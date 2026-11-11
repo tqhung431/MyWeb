@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { initials } from "@/components/ui/Avatar";
-import { githubErrorMessage, safeNext } from "@/features/auth/AuthPage";
+import { safeNext } from "@/features/auth/AuthPage";
 
 describe("initials", () => {
   it("uses first and last name, or the first two letters", () => {
@@ -16,13 +16,5 @@ describe("safeNext", () => {
     expect(safeNext("//evil.example")).toBe("/");
     expect(safeNext("https://evil.example")).toBe("/");
     expect(safeNext(undefined)).toBe("/");
-  });
-});
-
-describe("githubErrorMessage", () => {
-  it("explains known errors in plain words", () => {
-    expect(githubErrorMessage("github_email")).toMatch(/verified email/);
-    expect(githubErrorMessage("something_new")).toMatch(/try again/);
-    expect(githubErrorMessage(undefined)).toBeUndefined();
   });
 });

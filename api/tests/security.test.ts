@@ -7,7 +7,7 @@ import { rateLimit } from "../src/middleware/security.js";
 describe("rateLimit", () => {
   it("allows `max` requests per window, then answers 429 with Retry-After", async () => {
     const app = express();
-    app.get("/", rateLimit({ windowMs: 60_000, max: 3 }), (_req, res) => {
+    app.get("/", rateLimit({ windowMs: 60_000, max: 3, key: () => "test" }), (_req, res) => {
       res.send("ok");
     });
     app.use(errorHandler);

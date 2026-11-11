@@ -6,21 +6,20 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Button, buttonClasses } from "@/components/ui/Button";
-import { GithubMark } from "@/components/ui/GithubMark";
+import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { githubLoginUrl, login, register } from "@/lib/api/auth";
+import { login, register } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import { useAuth } from "./AuthProvider";
 
-type Props = { mode: "login" | "register"; next: string; github: boolean; initialError?: string };
+type Props = { mode: "login" | "register"; next: string };
 
 type FieldErrors = Partial<Record<"name" | "email" | "password", string>>;
 
-export function AuthForm({ mode, next, github, initialError }: Props) {
+export function AuthForm({ mode, next }: Props) {
   const router = useRouter();
   const { signedIn } = useAuth();
-  const [error, setError] = useState(initialError ?? "");
+  const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [pending, setPending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -56,29 +55,6 @@ export function AuthForm({ mode, next, github, initialError }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
-      {github && (
-        <>
-          {/* A real link, not fetch(): the browser itself must go to GitHub and come back.
-              The browser id is added on click, because the server can't know it while rendering. */}
-          <a
-            href={`/api/auth/github?next=${encodeURIComponent(next)}`}
-            onClick={(e) => {
-              e.preventDefault();
-              window.location.assign(githubLoginUrl(next));
-            }}
-            className={buttonClasses("secondary", "lg", "w-full")}
-          >
-            <GithubMark className="h-5 w-5" />
-            Continue with GitHub
-          </a>
-          <div className="flex items-center gap-3 text-xs font-semibold tracking-wider text-muted uppercase">
-            <span className="h-px flex-1 bg-border" />
-            or with email
-            <span className="h-px flex-1 bg-border" />
-          </div>
-        </>
-      )}
-
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
         {isRegister && (
           <Input label="Name" name="name" autoComplete="name" required maxLength={60} error={fieldErrors.name} />

@@ -1,13 +1,13 @@
 // Shared frame for /login and /register: a welcome panel and the form.
 
-import { CloudSun, Laptop, ShieldCheck } from "lucide-react";
+import { Laptop, ShieldCheck, UserRoundCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { Card } from "@/components/ui/Card";
 
 const PERKS = [
-  { icon: Laptop, text: "Your focus history follows you to any device" },
-  { icon: CloudSun, text: "Sessions you finished before signing up are kept" },
-  { icon: ShieldCheck, text: "Passwords are stored as one-way hashes, never as text" },
+  { icon: UserRoundCheck, text: "Optional: everything works as a guest too" },
+  { icon: Laptop, text: "Your focus history follows you to any PC or phone" },
+  { icon: ShieldCheck, text: "Sessions you did as a guest move into your account" },
 ];
 
 export function AuthPage({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
@@ -37,20 +37,6 @@ export function AuthPage({ title, subtitle, children }: { title: string; subtitl
       </Card>
     </div>
   );
-}
-
-// Turns ?error=github_state into a sentence people understand.
-export function githubErrorMessage(code: string | undefined): string | undefined {
-  if (!code) return undefined;
-  const messages: Record<string, string> = {
-    github_off: "GitHub sign-in isn't set up on this server yet.",
-    github_expired: "The GitHub sign-in took too long. Please try again.",
-    github_state: "That GitHub sign-in link wasn't started here. Please try again.",
-    github_token: "GitHub didn't confirm the sign-in. Please try again.",
-    github_email: "Your GitHub account needs a verified email address.",
-    github_failed: "We couldn't reach GitHub. Please try again in a moment.",
-  };
-  return messages[code] ?? "Sign-in failed. Please try again.";
 }
 
 // Only allow our own pages as the "go back to" target.

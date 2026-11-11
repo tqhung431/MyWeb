@@ -17,12 +17,11 @@ import { tipsRouter } from "./routes/tips.js";
 export function createApp() {
   const app = express();
 
-  // Stage 4: the browser now reaches the API through the website (Next.js rewrites /api/*),
-  // so it's the same origin and CORS isn't needed any more.
-  // req.ip comes from X-Forwarded-For when the request arrives from a local proxy.
-  // Careful: Next.js passes that header on unchanged and doesn't add the real IP, so
-  // until Caddy (Stage 7) sets it, the IP is only a hint. Logins are also limited per email.
-  app.set("trust proxy", "loopback");
+  // Stage 4: the browser reaches the API through the website (Next.js forwards /api/*),
+  // so it's the same origin and CORS isn't needed any more. Every PC on the network uses
+  // the same website address, and only the website talks to the API.
+  // We don't trust X-Forwarded-For: the Next.js proxy passes on whatever the browser sent.
+  app.set("trust proxy", false);
 
   app.use(helmet()); // safe default security headers
   app.use(cookieParser()); // req.cookies

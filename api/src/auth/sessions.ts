@@ -36,11 +36,11 @@ export async function endSession(res: Response, token: string | undefined): Prom
   res.clearCookie(COOKIE_NAME, cookieOptions);
 }
 
-export type PublicUser = Pick<User, "id" | "email" | "name" | "avatarUrl" | "createdAt">;
+export type PublicUser = Pick<User, "id" | "email" | "name" | "createdAt">;
 
 export function publicUser(user: User): PublicUser {
   // Never send password_hash to the browser.
-  return { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl, createdAt: user.createdAt };
+  return { id: user.id, email: user.email, name: user.name, createdAt: user.createdAt };
 }
 
 // Look up who owns this token. Also renews sessions that are past halfway, so active people stay logged in.

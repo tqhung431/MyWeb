@@ -1,13 +1,11 @@
-// Login tests: real HTTP requests, real database, and a fake GitHub server.
+// Login tests: real HTTP requests against a real test database.
 
 import { randomUUID } from "node:crypto";
-import type { Server } from "node:http";
-import express from "express";
 import request from "supertest";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 import { pool } from "../src/db/client.js";
-import { ORIGIN, resetDatabase } from "./helpers.js";
+import { ORIGIN, resetDatabase, SITE_HOST } from "./helpers.js";
 
 const app = createApp();
 const alice = { email: "Alice@Example.com", password: "correct horse battery", name: "Alice" };
@@ -22,7 +20,7 @@ function sessionCookie(res: request.Response): string | undefined {
 
 describe("register", () => {
   it("creates an account and signs in with an httpOnly cookie", async () => {
-    const res = await request(app).post("/api/auth/register").set("Origin", ORIGIN).send(alice);
+    const res = await request(app).post("/api/auth/register").set("Origin", ORIGIN).set("X-Forwarded-Host", SITE_HOST).send(alice);
     expect(res.status).toBe(201);
     expect(res.body.user).toMatchObject({ email: "alice@example.com", name: "Alice" });
     expect(res.body.user.passwordHash).toBeUndefined(); // never sent to the browser
@@ -59,14 +57,13 @@ describe("login, me and logout", () => {
 
     expect((await browser.get("/api/auth/me")).body.user).toBeNull();
 
-    const login = await browser.post("/api/auth/login").set("Origin", ORIGIN).send({ email: alice.email, password: alice.password });
+    const login = await browser.post("/api/auth/login").set("Origin", ORIGIN).set("X-Forwarded-Host", SITE_HOST).send({ email: alice.email, password: alice.password });
     expect(login.status).toBe(200);
 
     const me = await browser.get("/api/auth/me");
     expect(me.body.user.email).toBe("alice@example.com");
-    expect(me.body.methods).toEqual({ password: true, providers: [] });
 
-    expect((await browser.post("/api/auth/logout").set("Origin", ORIGIN)).status).toBe(204);
+    expect((await browser.post("/api/auth/logout").set("Origin", ORIGIN).set("X-Forwarded-Host", SITE_HOST)).status).toBe(204);
     expect((await browser.get("/api/auth/me")).body.user).toBeNull();
   });
 
@@ -135,101 +132,31 @@ describe("CSRF protection", () => {
     expect(res.status).toBe(403);
   });
 
+  it("allows another PC that opened MyWeb by its network address", async () => {
+    // The browser on the other PC opened http://192.168.1.20:3000; the Next.js proxy passes that on.
+    const res = await request(app)
+      .post("/api/auth/register")
+      .set("Origin", "http://192.168.1.20:3000")
+      .set("X-Forwarded-Host", "192.168.1.20:3000")
+      .send(alice);
+    expect(res.status).toBe(201);
+  });
+
+  it("blocks a page on one address posting to another", async () => {
+    const res = await request(app)
+      .post("/api/auth/login")
+      .set("Origin", "http://192.168.1.99:3000")
+      .set("X-Forwarded-Host", "192.168.1.20:3000")
+      .send(alice);
+    expect(res.status).toBe(403);
+  });
+
   it("only accepts JSON bodies", async () => {
     const res = await request(app)
       .post("/api/auth/login")
-      .set("Origin", ORIGIN)
+      .set("Origin", ORIGIN).set("X-Forwarded-Host", SITE_HOST)
       .type("form")
       .send("email=a@b.c&password=x");
     expect(res.status).toBe(415);
-  });
-});
-
-// --- GitHub, with a fake GitHub server on port 4999 ----------------------------
-
-describe("GitHub login", () => {
-  let fakeGithub: Server;
-  let tokenRequest: Record<string, string> = {};
-
-  beforeAll(async () => {
-    const gh = express();
-    gh.use(express.json());
-    gh.post("/login/oauth/access_token", (req, res) => {
-      tokenRequest = req.body;
-      res.json(req.body.code === "good-code" ? { access_token: "gh-token" } : { error: "bad_verification_code" });
-    });
-    gh.get("/user", (_req, res) => res.json({ id: 42, login: "octo", name: "Octo Cat", avatar_url: "https://avatars.example/42" }));
-    gh.get("/user/emails", (_req, res) =>
-      res.json([
-        { email: "old@example.com", primary: false, verified: true },
-        { email: "octo@example.com", primary: true, verified: true },
-      ]),
-    );
-    await new Promise<void>((resolve) => {
-      fakeGithub = gh.listen(4999, "127.0.0.1", resolve);
-    });
-  });
-
-  afterAll(() => new Promise<void>((resolve) => fakeGithub.close(() => resolve())));
-
-  // Click "Continue with GitHub" → follow GitHub back to our callback.
-  async function githubLogin(browser: ReturnType<typeof request.agent>, code = "good-code", next = "/chill") {
-    const start = await browser.get(`/api/auth/github?next=${encodeURIComponent(next)}`);
-    expect(start.status).toBe(302);
-    const authorize = new URL(start.headers.location);
-    return browser.get(`/api/auth/github/callback?code=${code}&state=${authorize.searchParams.get("state")}`);
-  }
-
-  it("sends the browser to GitHub with state and PKCE", async () => {
-    const res = await request(app).get("/api/auth/github");
-    const url = new URL(res.headers.location);
-    expect(url.searchParams.get("client_id")).toBe("test-client");
-    expect(url.searchParams.get("redirect_uri")).toBe("http://localhost:3000/api/auth/github/callback");
-    expect(url.searchParams.get("state")).toBeTruthy();
-    expect(url.searchParams.get("code_challenge_method")).toBe("S256");
-  });
-
-  it("creates an account from the GitHub profile and signs in", async () => {
-    const browser = request.agent(app);
-    const done = await githubLogin(browser);
-    expect(done.status).toBe(302);
-    expect(done.headers.location).toBe("/chill");
-    expect(tokenRequest.code_verifier).toBeTruthy(); // PKCE secret sent only server-to-server
-
-    const me = await browser.get("/api/auth/me");
-    expect(me.body.user).toMatchObject({ email: "octo@example.com", name: "Octo Cat" });
-    expect(me.body.methods).toEqual({ password: false, providers: ["github"] });
-  });
-
-  it("links GitHub to an existing account with the same email", async () => {
-    await request(app).post("/api/auth/register").send({ ...alice, email: "octo@example.com" });
-    const browser = request.agent(app);
-    await githubLogin(browser);
-    const me = await browser.get("/api/auth/me");
-    expect(me.body.methods).toEqual({ password: true, providers: ["github"] });
-    const { rows } = await pool.query("select count(*)::int as n from users");
-    expect(rows[0].n).toBe(1);
-  });
-
-  it("rejects a callback whose state doesn't match", async () => {
-    const browser = request.agent(app);
-    await browser.get("/api/auth/github");
-    const res = await browser.get("/api/auth/github/callback?code=good-code&state=forged");
-    expect(res.headers.location).toBe("/login?error=github_state");
-  });
-
-  it("rejects a callback with no login in progress", async () => {
-    const res = await request(app).get("/api/auth/github/callback?code=good-code&state=x");
-    expect(res.headers.location).toBe("/login?error=github_expired");
-  });
-
-  it("handles a bad code from GitHub", async () => {
-    const res = await githubLogin(request.agent(app), "bad-code");
-    expect(res.headers.location).toBe("/login?error=github_token");
-  });
-
-  it("never redirects to another website after login", async () => {
-    const res = await githubLogin(request.agent(app), "good-code", "//evil.example");
-    expect(res.headers.location).toBe("/");
   });
 });

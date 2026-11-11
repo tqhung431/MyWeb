@@ -17,4 +17,3 @@
 | clsx | npm | MIT |
 | Testing Library, jsdom | npm | MIT |
 | cookie-parser, server-only | npm | MIT |
-| GitHub mark (sign-in button) | Simple Icons | CC0 1.0 |

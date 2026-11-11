@@ -1,13 +1,12 @@
 // "/account" — only for signed-in people. The check happens on the server,
 // so a signed-out visitor never even receives the page.
 
-import { CalendarDays, KeyRound, Link2, Mail } from "lucide-react";
+import { CalendarDays, Mail, MonitorSmartphone } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
-import { Badge } from "@/components/ui/Badge";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { SignOutButton } from "@/features/auth/SignOutButton";
 import { TodayStats } from "@/features/focus/TodayStats";
@@ -16,7 +15,7 @@ import { getMe } from "@/lib/api/server";
 export const metadata: Metadata = { title: "Account" };
 
 export default async function AccountPage() {
-  const { user, methods } = await getMe();
+  const { user } = await getMe();
   if (!user) redirect("/login?next=/account");
 
   const joined = new Date(user.createdAt).toLocaleDateString("en", { day: "numeric", month: "long", year: "numeric" });
@@ -24,7 +23,7 @@ export default async function AccountPage() {
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       <section className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
-        <Avatar name={user.name} src={user.avatarUrl} size="lg" />
+        <Avatar name={user.name} size="lg" />
         <div className="flex-1">
           <h1 className="text-3xl font-bold tracking-tight">{user.name}</h1>
           <p className="text-muted">{user.email}</p>
@@ -39,16 +38,7 @@ export default async function AccountPage() {
         <dl className="divide-y divide-border">
           <Row icon={Mail} label="Email" value={user.email} />
           <Row icon={CalendarDays} label="Joined" value={joined} />
-          <Row
-            icon={KeyRound}
-            label="Password"
-            value={methods?.password ? <Badge tone="success">Set</Badge> : <Badge>Not set (GitHub only)</Badge>}
-          />
-          <Row
-            icon={Link2}
-            label="GitHub"
-            value={methods?.providers.includes("github") ? <Badge tone="success">Linked</Badge> : <Badge>Not linked</Badge>}
-          />
+          <Row icon={MonitorSmartphone} label="Devices" value="Sign in on any PC or phone on your network to see this history" />
         </dl>
       </Card>
 

@@ -16,22 +16,20 @@ const schema = z.object({
   DATABASE_URL: z.string().startsWith("postgres"),
   PORT: z.coerce.number().int().default(4000),
 
-  // The address people open in their browser (the Next.js site).
-  // Used for CSRF checks and for the GitHub callback URL.
-  PUBLIC_URL: z.url().default("http://localhost:3000"),
+  // Which network address the API listens on. 127.0.0.1 = only this computer.
+  // Other PCs never talk to the API directly: they go through the website, which forwards /api/*.
+  // (Stage 7 sets 0.0.0.0 inside Docker, where the website runs in another container.)
+  HOST: z.string().default("127.0.0.1"),
 
-  // How many login/register attempts one IP may make per 15 minutes.
+  // Extra sites allowed to send POST/PUT/DELETE, comma-separated, e.g. "http://myweb.lan:3000".
+  // Normally empty: the website you opened is always allowed (see middleware/security.ts).
+  ALLOWED_ORIGINS: z
+    .string()
+    .default("")
+    .transform((v) => v.split(",").map((o) => o.trim()).filter(Boolean)),
+
+  // Sign-in attempts allowed per email address per 15 minutes.
   AUTH_RATE_LIMIT: z.coerce.number().int().positive().default(10),
-
-  // GitHub login is optional: it switches on when both values are set.
-  GITHUB_CLIENT_ID: z.string().optional(),
-  GITHUB_CLIENT_SECRET: z.string().optional(),
-  // Only changed in tests, to point at a fake GitHub.
-  GITHUB_AUTH_URL: z.url().default("https://github.com/login/oauth/authorize"),
-  GITHUB_TOKEN_URL: z.url().default("https://github.com/login/oauth/access_token"),
-  GITHUB_API_URL: z.url().default("https://api.github.com"),
 });
 
 export const config = schema.parse(process.env);
-
-export const githubEnabled = Boolean(config.GITHUB_CLIENT_ID && config.GITHUB_CLIENT_SECRET);

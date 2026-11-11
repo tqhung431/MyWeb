@@ -1,35 +1,92 @@
-# Stage 4 — Login: sessions, cookies and GitHub OAuth
+# Stage 4 — Many users, guests first, optional accounts
 
-**Goal:** see how the browser, the API and the database agree on *who you are*.
+**Goal:** several people on different PCs (and phones) use MyWeb at the same time, from your home or office network.
+Everyone can do **everything as a guest first**. An account is optional: it only adds "my history on every device".
 
-New in MyWeb:
-- **Create account / Sign in** with email and password
-- **Continue with GitHub** (OAuth), switched on when you add your own GitHub app keys
-- **Account page** (`/account`), user menu in the sidebar and phone tab bar
-- Your **focus history follows you** to any device; sessions you finished before signing up are kept
+What's new:
+- **Open MyWeb from other PCs** at `http://<your-PC's-IP>:3000`
+- **Guests**: each PC or browser automatically gets its own private history, with no sign-up needed
+- **Optional accounts** (email + password): sign in on any device to see the same history.
+  What you did as a guest moves into your account.
+- **Account page** (`/account`), and a Guest / user card in the sidebar and phone header
 
-## 1. One address for everything
+> Earlier drafts of this stage had "Continue with GitHub". It was removed, because guests-first use on
+> your own network matters more and needs no outside service.
 
-Stage 3 had the browser call the API on another port (`:4000`), which needed CORS.
-Now the browser only ever talks to the website, and Next.js forwards `/api/*` to the API:
+## 1. Use MyWeb from other PCs
 
 ```mermaid
 flowchart LR
-    B[Browser] -- "pages: /chill, /account" --> N[Next.js :3000]
-    B -- "data: /api/*  (cookie included)" --> N
-    N -- "rewrite /api/* (next.config.ts)" --> A[API :4000]
-    N -- "Server Components: getMe() + forwarded cookie" --> A
-    A --> D[(PostgreSQL)]
+    subgraph Network["Your Wi-Fi / office network"]
+        PC1["PC 1 (guest)"]
+        PC2["PC 2 (signed in as Linh)"]
+        PH["Phone (signed in as Linh)"]
+        subgraph Host["The PC running MyWeb (e.g. 192.168.1.20)"]
+            N["Website :3000<br/>open to the network"]
+            A["API :4000<br/>this PC only (127.0.0.1)"]
+            D[("PostgreSQL :5432")]
+        end
+    end
+    PC1 -- "http://192.168.1.20:3000" --> N
+    PC2 --> N
+    PH --> N
+    N -- "/api/* forwarded" --> A
+    A --> D
 ```
 
-Why: the login cookie becomes a plain **first-party cookie** for `localhost:3000`, there's no CORS to configure,
-and GitHub can send people back to `http://localhost:3000/api/auth/github/callback`.
-In Stage 7, **Caddy** takes over this forwarding job.
+Only **port 3000** is reachable from the network. The API and the database stay private on the host PC:
+other PCs can only reach them through the website. Fewer open doors means fewer ways in.
 
-> The API address in the rewrite is fixed when you run `npm run build`. If your API moves,
-> set `API_URL` and build again.
+### Step by step
 
-## 2. Sign in: what actually happens
+1. **Start everything on one PC** (the "host"):
+   ```bash
+   docker compose up -d db
+   cd api && npm run db:migrate && npm run dev
+   cd web && npm run build && npm start        # listens on all network addresses (0.0.0.0)
+   ```
+2. **Find the host PC's IP address**:
+   - Windows: `ipconfig` → "IPv4 Address" (e.g. `192.168.1.20`)
+   - macOS: System Settings → Wi-Fi → Details, or `ipconfig getifaddr en0`
+   - Linux: `hostname -I`
+3. **Allow port 3000 through the firewall** if asked (Windows shows a pop-up the first time; choose *Private networks*).
+4. On any other PC or phone on the **same network**, open **`http://192.168.1.20:3000`**.
+
+That's it: every visitor is a guest right away.
+
+**Dev mode** (`npm run dev`, with live reload) also works from other PCs. `next.config.ts` allows the usual home and
+office address ranges (`192.168.*.*`, `10.*.*.*`, `172.*.*.*`, `*.local`). For another range, start it with
+`DEV_ORIGINS="100.64.*.*" npm run dev`. When several people use it, prefer `npm run build && npm start`: it's faster.
+
+## 2. Guests first
+
+```mermaid
+sequenceDiagram
+    participant B as Browser on PC 1
+    participant N as Website
+    participant A as API
+    participant D as PostgreSQL
+
+    Note over B: first visit → make a random guest id,<br/>keep it in localStorage
+    B->>N: POST /api/sessions {focus, 25}<br/>X-Client-Id: 7c1e…
+    N->>A: (forwarded)
+    A->>D: INSERT focus_sessions (client_id = 7c1e…, user_id = null)
+    A-->>B: 201
+    Note over B: PC 2 has another guest id,<br/>so its history is separate
+```
+
+- Every page and feature works without an account.
+- The guest id is just a random UUID. It isn't secret and can't be guessed, and it only links *this browser's*
+  focus sessions together.
+- If you clear the browser data, you get a new guest.
+
+**Bug found while testing on a network address:** browsers treat `http://localhost` as "secure" but
+`http://192.168.1.20` as **not** secure, and switch off some features there, including `crypto.randomUUID()`.
+The guest id used it, so on other PCs the stats stayed empty and sign-up failed.
+`lib/api/clientId.ts` now builds the UUID from `crypto.getRandomValues()`, which works everywhere, and a test simulates the non-secure page.
+(Stage 7 adds HTTPS, which makes every page secure.)
+
+## 3. Optional accounts: what actually happens
 
 ```mermaid
 sequenceDiagram
@@ -37,107 +94,44 @@ sequenceDiagram
     participant A as API
     participant D as PostgreSQL
 
-    B->>A: POST /api/auth/login {email, password}<br/>Origin: http://localhost:3000
-    Note over A: CSRF check (Origin + JSON) → rate limits (IP, email)<br/>→ Zod validates the body
+    B->>A: POST /api/auth/login {email, password}<br/>Origin: http://192.168.1.20:3000
+    Note over A: Origin matches the site the browser opened? (CSRF check)<br/>→ rate limits → Zod validates
     A->>D: SELECT * FROM users WHERE email = $1
-    D-->>A: row with password_hash = "scrypt$16384$8$1$salt$hash"
-    Note over A: scrypt(password, salt) == hash?<br/>(compared in constant time)
+    D-->>A: password_hash = "scrypt$16384$8$1$salt$hash"
+    Note over A: scrypt(password, salt) == hash?  (constant-time compare)
     Note over A: token = 32 random bytes
-    A->>D: INSERT INTO auth_sessions (id = sha256(token), user_id, expires_at)
-    A->>D: UPDATE focus_sessions SET user_id … WHERE client_id = this browser
-    A-->>B: 200 {user}<br/>Set-Cookie: myweb_session=token; HttpOnly; SameSite=Lax; Path=/
+    A->>D: INSERT auth_sessions (id = sha256(token), user_id, expires_at)
+    A->>D: UPDATE focus_sessions SET user_id … WHERE client_id = this guest
+    A-->>B: 200 {user}<br/>Set-Cookie: myweb_session=token; HttpOnly; SameSite=Lax
 ```
 
-And on **every later request**:
+On **every later request** the browser sends the cookie. The API hashes the token, finds the session row and
+the user, and sets `req.user`. **Sign out** deletes the row, so the token is dead immediately, even if someone copied it.
 
-```mermaid
-sequenceDiagram
-    participant B as Browser
-    participant A as API
-    participant D as PostgreSQL
-    B->>A: GET /api/sessions/summary<br/>Cookie: myweb_session=token
-    Note over A: loadUser middleware: sha256(token)
-    A->>D: SELECT users.* FROM auth_sessions JOIN users … WHERE id = $1 AND expires_at > now()
-    D-->>A: Hung Tran
-    Note over A: req.user = Hung → summary of HIS sessions
-    A-->>B: 200 {...}
-```
+**Sessions or JWT?** We use server sessions (a random token plus a database row) rather than JWTs (signed user data in the cookie).
+With sessions, signing out or blocking someone takes effect **instantly**. A JWT stays valid until it expires.
+The cost is one fast, indexed lookup per request, which Stage 5 can cache in Valkey.
 
-**Sign out** deletes the `auth_sessions` row and clears the cookie, so the token is dead at once,
-even if someone copied it.
+## 4. Who sees what
 
-## 3. Sessions or JWT?
+| You are | You see |
+|---|---|
+| A guest on PC 1 | Only PC 1's guest sessions |
+| A guest on PC 2 | Only PC 2's guest sessions |
+| Signed in as Linh (any device) | All of Linh's sessions, including guest sessions done before signing up/in |
+| A guest on PC 2 *after* Linh signs out there | Nothing of Linh's: signed out, you only see sessions that were never moved into an account |
 
-| | **Server sessions (what we use)** | JWT in a cookie |
-|---|---|---|
-| What the cookie holds | a random token, meaningless alone | the user data, signed |
-| Server checks | a database lookup per request | the signature only, no lookup |
-| Log out / ban a user | delete the row: works **instantly** | the token stays valid until it expires |
-| Good for | one app with a database (us) | many services that can't share a database |
-
-We pick sessions because instant logout matters more than saving one fast indexed lookup.
-Stage 5 can cache that lookup in Valkey.
-
-## 4. "Continue with GitHub" (OAuth 2.0 + PKCE)
-
-```mermaid
-sequenceDiagram
-    participant B as Browser
-    participant A as Our API
-    participant G as GitHub
-
-    B->>A: GET /api/auth/github?next=/chill
-    Note over A: make state + PKCE verifier,<br/>keep them in a 10-minute httpOnly cookie
-    A-->>B: 302 → github.com/login/oauth/authorize?client_id…&state…&code_challenge…
-    B->>G: "Authorize MyWeb?" → you click Authorize
-    G-->>B: 302 → localhost:3000/api/auth/github/callback?code=…&state=…
-    B->>A: (through Next.js) callback + the temporary cookie
-    Note over A: state matches the cookie? (else: forged → stop)
-    A->>G: POST access_token {code, client_secret, code_verifier}  (server to server)
-    G-->>A: access_token
-    A->>G: GET /user, GET /user/emails
-    G-->>A: id 42 "Octo Cat", octo@example.com (verified)
-    Note over A: GitHub id linked before? → that user<br/>same verified email? → link to it<br/>else → new user (no password)
-    A-->>B: 302 → /chill + Set-Cookie: myweb_session=…
-```
-
-- We **never see the GitHub password**. GitHub only tells us who you are.
-- **state** stops "login CSRF" (someone tricking your browser into finishing *their* login).
-- **PKCE** means a stolen `code` is useless without the secret verifier, which never leaves our server.
-- The **client secret** stays on the server too; the browser never sees it.
-- After login we only redirect to **our own pages** (`/chill`), never to `https://anything`. This prevents "open redirect" tricks.
-
-### Set it up (5 minutes)
-
-1. Go to **github.com → Settings → Developer settings → OAuth Apps → New OAuth App**.
-2. Fill in:
-   - Application name: `MyWeb (local)`
-   - Homepage URL: `http://localhost:3000`
-   - Authorization callback URL: `http://localhost:3000/api/auth/github/callback`
-3. Create it, then **Generate a new client secret**.
-4. Put both values in `api/.env` (this file is git-ignored, so it is never committed):
-   ```
-   GITHUB_CLIENT_ID=Ov23li...
-   GITHUB_CLIENT_SECRET=...
-   ```
-5. Restart the API. The "Continue with GitHub" button appears on `/login` and `/register`.
-
-Without keys, the button is simply hidden. The tests use a **fake GitHub** (`api/tests/auth.test.ts`),
-so the whole flow is tested without real keys.
-
-## 5. The database, now with accounts
+## 5. The database
 
 ```mermaid
 erDiagram
-    users ||--o{ auth_sessions : "is logged in on"
-    users ||--o{ oauth_accounts : "can sign in with"
+    users ||--o{ auth_sessions : "is signed in on"
     users ||--o{ focus_sessions : "owns"
     users {
         uuid id PK
         text email UK "lower-case"
         text name
-        text password_hash "null = GitHub only"
-        text avatar_url
+        text password_hash "scrypt, never the password"
     }
     auth_sessions {
         text id PK "sha256(token), never the token"
@@ -145,81 +139,77 @@ erDiagram
         timestamptz expires_at "30 days, renewed when active"
         text user_agent
     }
-    oauth_accounts {
-        text provider PK "github"
-        text provider_user_id PK
-        uuid user_id FK
-    }
     focus_sessions {
         serial id PK
         uuid user_id FK "signed in"
-        uuid client_id "signed out (Stage 3)"
+        uuid client_id "guest"
         text mode
         integer minutes
     }
 ```
 
-- `ON DELETE CASCADE`: deleting a user removes their sessions, links and focus history.
-- `focus_sessions` has a CHECK: every row has an owner (a user **or** a browser id).
-- Migration: `api/drizzle/0001_auth.sql` (generated from `schema.ts`).
+Migrations: `0001_auth.sql` (accounts), `0002_guests_first.sql` (removes the GitHub table and column;
+any GitHub-only test accounts are deleted, because they have no password and could never sign in).
 
-## 6. Security checklist
+## 6. Security, with many people on one network
 
 | Threat | Protection | Where |
 |---|---|---|
-| Database stolen → passwords | **scrypt** with a random salt per user; only the hash is stored | `api/src/auth/password.ts` |
-| Database stolen → log in as someone | Only **sha256(token)** is stored, not the token | `api/src/auth/sessions.ts` |
-| Malicious script on the page steals the cookie | **HttpOnly** cookie: JavaScript can't read it | cookie options |
-| Another site makes your browser POST to us (CSRF) | **SameSite=Lax** + **Origin check** + **JSON only** | `api/src/middleware/security.ts` |
-| Password guessing | **Rate limits**: 10 tries / 15 min per IP *and* per email | `api/src/routes/auth.ts` |
-| Learning which emails have accounts | Same message and same timing for "unknown email" and "wrong password" | `burnTime()` |
-| Redirect to a fake site after login | `next` must start with a single `/` | `safeNext()` (API and web) |
-| Shared computer after logout | Signed out, you only see sessions that were never claimed by an account | `ownedBy()` in sessions route |
-| Cookie sent over plain HTTP | `Secure` flag in production | cookie options |
+| Database stolen → passwords | **scrypt** + random salt per user | `api/src/auth/password.ts` |
+| Database stolen → sign in as someone | Only **sha256(token)** is stored | `api/src/auth/sessions.ts` |
+| A script on the page steals the cookie | **HttpOnly** cookie | cookie options |
+| Another website makes your browser POST to MyWeb (CSRF) | **SameSite=Lax** + **Origin must match the address you opened** + **JSON only** | `api/src/middleware/security.ts` |
+| Password guessing | 10 tries / 15 min **per email**, plus a shared cap for floods | `api/src/routes/auth.ts` |
+| Learning which emails have accounts (via login) | Same message and timing for "unknown email" and "wrong password" | `burnTime()` |
+| Redirect to a fake site after sign-in | `next` must start with one `/` | `safeNext()` |
+| The API or database reached from the network | API listens on **127.0.0.1** only; only port 3000 is open | `api/.env` `HOST` |
 
-**Two honest trade-offs:**
-- *Register* says "That email already has an account". It's friendlier, but it does reveal that an email is registered.
-  Big sites hide this by emailing instead. We'll revisit it when we add email in Stage 5.
-- **Real IPs:** we found that Next.js passes the browser's `X-Forwarded-For` header on unchanged and doesn't add the real IP.
-  So right now the per-IP limit can be dodged with a fake header, and that's why there's also a **per-email** limit.
-  In Stage 7, Caddy will set the real IP.
+**The address check.** People can open MyWeb as `localhost:3000`, `192.168.1.20:3000` or `mypc.local:3000`.
+So instead of one fixed address, the API compares the request's `Origin` with the address the browser
+actually opened (the Next.js proxy passes it on as `X-Forwarded-Host`). A bad website can't fake either one,
+because the browser sets both. For a special case, list extra addresses in `ALLOWED_ORIGINS`.
 
-## 7. The frontend side
+**Why rate limits aren't per IP.** Behind the Next.js proxy, every visitor reaches the API from `127.0.0.1`.
+Next.js also passes the browser's `X-Forwarded-For` header on unchanged, so a visitor could fake any IP.
+A per-IP limit would either lump **everyone on your network into one counter** (one person's typos would lock
+out everybody) or be easy to dodge. So we limit **per email** for sign-in, and **per user or guest** for saving
+sessions. Stage 7's Caddy will provide real IPs.
 
-- **`AuthProvider`** (client) holds `user`. The **root layout asks the API on the server** (`getMe()` forwards the
-  visitor's cookie), so the first HTML already shows your name: no flash of "Sign in".
-- Because of that, every page is now **rendered per visitor** (`ƒ` in the build table). That's the price of
-  personalised pages. Public content can be cached again in Stage 5.
-- **`/account` is protected on the server**: signed out → `redirect("/login?next=/account")` before any HTML is sent.
-- **`app/(auth)/`** is a *route group*: it groups `/login` and `/register` in one folder without adding `(auth)` to the URL.
-- After signing in: `router.refresh()` re-runs Server Components with the new cookie, and `FocusProvider`
-  reloads your sessions because `user.id` changed.
-- Forms show the API's Zod errors under each field, use proper `autocomplete` values (so password managers work),
-  and have a show/hide password button.
+**Trade-offs to know:**
+- It's plain **HTTP** on your network, so others on the same Wi-Fi could in theory read the traffic, passwords included.
+  That's fine for a home learning project. Stage 7 adds HTTPS.
+- Sign-up says "That email already has an account", which tells people that email is registered. It's friendlier, but less private.
 
-## 8. API endpoints added
+## 7. Frontend notes
+
+- **`AuthProvider`** holds `user`. The root layout asks the API on the server (forwarding the visitor's cookie),
+  so the first HTML already shows "Guest" or your name, with no flash.
+- Every page is now **rendered per visitor** (`ƒ` in the build table), because it shows who you are.
+- **`/account`** is checked on the server: a guest is redirected to `/login?next=/account` before any HTML is sent.
+- **`app/(auth)/`** is a *route group*: it holds `/login` and `/register` without adding `(auth)` to the URL.
+- Signing in or out calls `router.refresh()`, and `FocusProvider` reloads the history because `user.id` changed.
+- **`GuestNotice`** on Home and the **Guest card** in the sidebar make it clear an account is optional.
+
+## 8. API endpoints
 
 | Method | Path | Answer |
 |---|---|---|
 | POST | `/api/auth/register` | 201 `{user}` + cookie · 400 invalid · 409 email taken · 429 too many |
 | POST | `/api/auth/login` | 200 `{user}` + cookie · 401 wrong email or password · 429 |
 | POST | `/api/auth/logout` | 204, cookie cleared |
-| GET | `/api/auth/me` | `{user, methods}` or `{user: null}` |
-| GET | `/api/auth/providers` | `{password: true, github: bool}` |
-| GET | `/api/auth/github` | 302 to GitHub |
-| GET | `/api/auth/github/callback` | 302 to your page, or `/login?error=…` |
+| GET | `/api/auth/me` | `{user}` or `{user: null}` (guest) |
+| POST | `/api/sessions` | as a guest (`X-Client-Id`) or a user (cookie) |
+| GET | `/api/sessions/summary` | your history: guest or user |
 
-## 9. Run it
+## 9. Tests
 
-```bash
-docker compose up -d db
-cd api && npm install && npm run db:migrate && npm run dev   # creates the new tables
-cd web && npm install && npm run build && npm start          # or: npm run dev
-```
-
-Tests: `cd api && npm test` (32 tests, incl. a fake GitHub) · `cd web && npm test` (16 tests).
+- `cd api && npm test`: **27 tests**, including another PC's address being allowed, a page on a different address being blocked,
+  guest sessions moving into an account, history on a second device, and per-email limits.
+- `cd web && npm test`: **16 tests**, including the guest-id fallback for non-secure pages.
+- A browser run with **three simulated devices** at `http://192.0.2.2:3000`: two guests with separate histories, one signs up,
+  a phone signs in and sees the same history.
 
 ## 10. Next: Stage 5
 
-**Valkey (cache + queue + worker):** move rate-limit counters and the session lookup cache into Valkey, so several API servers can share them,
-and send a welcome email from a background worker so sign-up never waits for it.
+**Valkey (cache + queue + worker):** shared rate-limit counters and a cached session lookup (so several API servers can share them),
+plus a background worker for slow jobs.

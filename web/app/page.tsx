@@ -4,6 +4,7 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { Greeting } from "@/components/shell/Greeting";
+import { GuestNotice } from "@/features/auth/GuestNotice";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { Badge } from "@/components/ui/Badge";
 import { buttonClasses } from "@/components/ui/Button";
@@ -21,6 +22,7 @@ export default function HomePage() {
             A calm corner of the web for your free time. Pick up where you left off, or try something new.
           </p>
         </div>
+        <GuestNotice />
         <div className="flex flex-wrap gap-3">
           <Link href="/chill" className={buttonClasses("primary", "lg")}>
             Start focusing

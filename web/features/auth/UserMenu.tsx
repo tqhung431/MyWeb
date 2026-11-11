@@ -1,34 +1,45 @@
 "use client";
 
-// Signed in: your avatar and name, linking to /account. Signed out: a "Sign in" button.
+// Signed in: your initials and name, linking to /account.
+// Guest: a small card saying everything works without an account, with an optional sign-in link.
 
-import { LogIn } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
-import { buttonClasses } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import { useAuth } from "./AuthProvider";
 
 export function UserMenu({ compact = false }: { compact?: boolean }) {
   const { user } = useAuth();
   const pathname = usePathname();
+  const next = pathname === "/login" || pathname === "/register" ? "/" : pathname;
+  const signInHref = `/login?next=${encodeURIComponent(next)}`;
 
-  if (!user) {
-    const next = pathname === "/login" || pathname === "/register" ? "/" : pathname;
-    return (
-      <Link href={`/login?next=${encodeURIComponent(next)}`} className={buttonClasses("primary", compact ? "sm" : "md", compact ? "" : "w-full")}>
-        <LogIn className="h-4 w-4" aria-hidden="true" />
-        Sign in
+  if (compact) {
+    // Phone header: a small round button
+    return user ? (
+      <Link href="/account" aria-label={`Account: ${user.name}`} className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+        <Avatar name={user.name} size="sm" />
+      </Link>
+    ) : (
+      <Link href={signInHref} className="flex items-center gap-2 rounded-full py-1 pr-1 pl-3 text-xs font-semibold text-muted hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+        Guest
+        <Avatar size="sm" />
       </Link>
     );
   }
 
-  if (compact) {
+  if (!user) {
     return (
-      <Link href="/account" aria-label={`Account: ${user.name}`} className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-        <Avatar name={user.name} src={user.avatarUrl} size="sm" />
-      </Link>
+      <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface-muted p-2.5">
+        <Avatar />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Guest</p>
+          <Link href={signInHref} className="text-xs font-semibold text-primary hover:underline">
+            Sign in to sync (optional)
+          </Link>
+        </div>
+      </div>
     );
   }
 
@@ -41,7 +52,7 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
         pathname === "/account" ? "bg-primary/12" : "hover:bg-surface-muted",
       )}
     >
-      <Avatar name={user.name} src={user.avatarUrl} />
+      <Avatar name={user.name} />
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold">{user.name}</span>
         <span className="block truncate text-xs text-muted">{user.email}</span>

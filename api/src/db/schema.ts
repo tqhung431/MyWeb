@@ -7,7 +7,6 @@ import {
   index,
   integer,
   pgTable,
-  primaryKey,
   serial,
   text,
   timestamp,
@@ -30,25 +29,9 @@ export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(), // always stored lower-case
   name: text("name").notNull(),
-  // Null for people who only sign in with GitHub. Never the password itself: a scrypt hash.
-  passwordHash: text("password_hash"),
-  avatarUrl: text("avatar_url"),
+  passwordHash: text("password_hash").notNull(), // never the password itself: a scrypt hash
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
-
-// "This GitHub account belongs to this user." One user can link several providers.
-export const oauthAccounts = pgTable(
-  "oauth_accounts",
-  {
-    provider: text("provider").notNull(), // "github"
-    providerUserId: text("provider_user_id").notNull(), // GitHub's id for the person
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [primaryKey({ columns: [t.provider, t.providerUserId] }), index("oauth_accounts_user_idx").on(t.userId)],
-);
 
 // A logged-in browser. The cookie holds a random token; we store only its SHA-256 hash,
 // so someone who reads this table still can't log in as anyone.

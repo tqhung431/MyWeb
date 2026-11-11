@@ -10,8 +10,10 @@ export async function resetDatabase() {
     await runMigrations();
     migrated = true;
   }
-  await pool.query("truncate tips, focus_sessions, auth_sessions, oauth_accounts, users restart identity cascade");
+  await pool.query("truncate tips, focus_sessions, auth_sessions, users restart identity cascade");
   await seed();
 }
 
-export const ORIGIN = "http://localhost:3000"; // what a browser on our site sends
+// What a browser on our site sends: the page's Origin, and (via the Next.js proxy) the site's host.
+export const ORIGIN = "http://localhost:3000";
+export const SITE_HOST = "localhost:3000";

@@ -8,7 +8,7 @@
 // Browser: same origin ("/api/..."); next.config.ts forwards it to the API, cookies included.
 // Next.js server: call the API directly.
 function baseUrl(): string {
-  return typeof window === "undefined" ? (process.env.API_URL ?? "http://localhost:4000") : "";
+  return typeof window === "undefined" ? (process.env.API_URL ?? "http://127.0.0.1:4000") : "";
 }
 
 export class ApiError extends Error {

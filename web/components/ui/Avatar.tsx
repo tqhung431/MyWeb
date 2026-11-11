@@ -1,5 +1,6 @@
-// A round picture of the user: their GitHub photo, or their initials on a gradient.
+// A round badge with the user's initials on a gradient (or a person icon for guests).
 
+import { UserRound } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const sizes = { sm: "h-8 w-8 text-xs", md: "h-10 w-10 text-sm", lg: "h-20 w-20 text-2xl" } as const;
@@ -10,22 +11,19 @@ export function initials(name: string): string {
   return letters.toUpperCase();
 }
 
-type Props = { name: string; src?: string | null; size?: keyof typeof sizes };
+type Props = { name?: string; size?: keyof typeof sizes }; // no name = guest
 
-export function Avatar({ name, src, size = "md" }: Props) {
-  if (src) {
-    // A plain <img>: next/image would need every avatar host listed in next.config.
-    return <img src={src} alt="" className={cn("shrink-0 rounded-full object-cover ring-2 ring-border", sizes[size])} />;
-  }
+export function Avatar({ name, size = "md" }: Props) {
   return (
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-2 font-bold text-white",
+        "inline-flex shrink-0 items-center justify-center rounded-full font-bold",
+        name ? "bg-linear-to-br from-primary to-primary-2 text-white" : "border border-border bg-surface-muted text-muted",
         sizes[size],
       )}
     >
-      {initials(name)}
+      {name ? initials(name) : <UserRound className="h-1/2 w-1/2" />}
     </span>
   );
 }

@@ -4,9 +4,8 @@
 import { apiFetch } from "./client";
 import { clientId } from "./clientId";
 
-export type User = { id: string; email: string; name: string; avatarUrl: string | null; createdAt: string };
-export type Me = { user: User | null; methods?: { password: boolean; providers: string[] } };
-export type Providers = { password: boolean; github: boolean };
+export type User = { id: string; email: string; name: string; createdAt: string };
+export type Me = { user: User | null };
 
 // X-Client-Id lets the API move this browser's anonymous focus sessions into the account.
 const withClient = () => ({ "X-Client-Id": clientId() });
@@ -31,9 +30,4 @@ export async function login(input: { email: string; password: string }): Promise
 
 export function logout(): Promise<void> {
   return apiFetch<void>("/api/auth/logout", { method: "POST" });
-}
-
-// A full-page navigation (not fetch): the browser has to visit GitHub itself.
-export function githubLoginUrl(next: string): string {
-  return `/api/auth/github?${new URLSearchParams({ next, clientId: clientId() })}`;
 }

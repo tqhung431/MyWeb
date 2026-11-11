@@ -36,7 +36,14 @@ const newSession = z.object({
   minutes: z.number().int().min(1).max(120),
 });
 
-sessionsRouter.post("/", rateLimit({ windowMs: 60_000, max: 30 }), async (req, res) => {
+// 30 saves a minute per user or browser (not per IP: everyone on the network shares one IP here).
+const saveLimit = rateLimit({
+  windowMs: 60_000,
+  max: 30,
+  key: (req) => (req.user ? `user:${req.user.id}` : `client:${req.get("x-client-id") ?? "none"}`),
+});
+
+sessionsRouter.post("/", saveLimit, async (req, res) => {
   const o = owner(req);
   const input = newSession.parse(req.body); // throws → 400 with details
   const [saved] = await db
