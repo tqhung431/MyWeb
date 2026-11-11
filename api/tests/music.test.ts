@@ -120,11 +120,20 @@ describe("uploading", () => {
   });
 
   it("refuses uploads from other websites, or with no Origin at all", async () => {
-    const evil = await request(app).post("/api/songs").set("Origin", "https://evil.example").set("X-Client-Id", randomUUID())
-      .field("rights", "yes").field("license", "x").attach("file", fixture("untagged-song.mp3"));
+    const evil = await request(app)
+      .post("/api/songs")
+      .set("Origin", "https://evil.example")
+      .set("X-Client-Id", randomUUID())
+      .field("rights", "yes")
+      .field("license", "x")
+      .attach("file", fixture("untagged-song.mp3"));
     expect(evil.status).toBe(403);
-    const noOrigin = await request(app).post("/api/songs").set("X-Client-Id", randomUUID())
-      .field("rights", "yes").field("license", "x").attach("file", fixture("untagged-song.mp3"));
+    const noOrigin = await request(app)
+      .post("/api/songs")
+      .set("X-Client-Id", randomUUID())
+      .field("rights", "yes")
+      .field("license", "x")
+      .attach("file", fixture("untagged-song.mp3"));
     expect(noOrigin.status).toBe(403);
   });
 });

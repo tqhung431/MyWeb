@@ -4,7 +4,7 @@
 import { FLOOR, WALL, type Pos } from "../engine/grid";
 import { distances } from "../engine/path";
 import type { Rng } from "../engine/rng";
-import { enemyStats, realmInfo, type EnemyKind, type RealmId } from "./data";
+import { enemyStats, ITEMS, realmInfo, stonesFor, type EnemyKind, type ItemId, type RealmId } from "./data";
 import { newUid } from "./player";
 import type { Enemy, Floor, Game, Thing } from "./types";
 
@@ -117,12 +117,37 @@ export function makeFloor(g: Game, rng: Rng, realm: RealmId, depth: number): { f
     if (p) things.push({ uid: newUid(g, "x"), kind: "trap", pos: p, hidden: true });
   }
 
+  // Stage 18: urns and crates to smash, a shrine to pray at, sometimes a wandering merchant
+  for (let i = 0; i < rng.int(3, 6); i++) {
+    const p = place(rng.pick(others), 2);
+    if (p) things.push({ uid: newUid(g, "u"), kind: rng.chance(0.7) ? "urn" : "crate", pos: p });
+  }
+  if (rng.chance(0.4)) {
+    const p = place(rng.pick(others), 4);
+    if (p) things.push({ uid: newUid(g, "r"), kind: "shrine", pos: p });
+  }
+  if (depth >= 2 && rng.chance(0.35)) {
+    const p = place(rng.pick(others), 4);
+    if (p) things.push({ uid: newUid(g, "n"), kind: "merchant", pos: p, offers: merchantOffers(rng, realm, info.firstLevel) });
+  }
+
   // Stage 17: each deeper realm has its own danger on the ground (lava, whirlpools, grudge miasma)
   if (info.hazard) {
     for (let i = 0; i < 3 + depth; i++) {
       const p = place(rng.pick(others), 2);
       if (p) things.push({ uid: newUid(g, "z"), kind: "hazard", hazard: info.hazard, pos: p });
     }
+  }
+
+  // Decorations along the walls (they never block a path)
+  const nearWall = (p: { x: number; y: number }) => [-1, 0, 1].some((dy) => [-1, 0, 1].some((dx) => tiles[(p.y + dy) * MAP_W + p.x + dx] === WALL));
+  for (let tries = 0, n = 0; tries < 300 && n < 18; tries++) {
+    const room = rng.pick(rooms);
+    const p = randomTileIn(rng, room);
+    if (!free(p) || !nearWall(p)) continue;
+    taken.add(`${p.x},${p.y}`);
+    things.push({ uid: newUid(g, "d"), kind: "deco", deco: rng.pick(info.decos), pos: p });
+    n++;
   }
 
   const floor: Floor = { depth, w: MAP_W, h: MAP_H, tiles: grid.tiles, seen: "0".repeat(MAP_W * MAP_H), things, enemies };
@@ -149,4 +174,27 @@ export function makeArena(): { floor: Floor; start: Pos } {
     floor: { depth: 0, w: ARENA, h: ARENA, tiles: tiles.join(""), seen: "1".repeat(ARENA * ARENA), things: [], enemies: [] },
     start: { x: c, y: c },
   };
+}
+
+// A wandering merchant (tán tu thương nhân): three things for sale, a little dearer than the market at home
+export function merchantOffers(rng: Rng, realm: RealmId, level: number) {
+  const info = realmInfo(realm);
+  const pool: ItemId[] = [
+    level >= 10 ? "dai-hoi-xuan" : "hoi-xuan",
+    "hoi-linh",
+    "bao-linh-phu",
+    "truyen-tong-phu",
+    info.herb,
+    "yeu-dan",
+    "huyen-thiet",
+    "phu-chi",
+  ];
+  const out: { id: ItemId; price: number }[] = [];
+  while (out.length < 3) {
+    const id = rng.pick(pool);
+    if (out.some((o) => o.id === id)) continue;
+    const base = ITEMS[id].price * (level >= 10 ? stonesFor(level) / stonesFor(10) : 1);
+    out.push({ id, price: Math.max(5, Math.round(base * 1.3)) });
+  }
+  return out;
 }

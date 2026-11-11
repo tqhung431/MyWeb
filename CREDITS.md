@@ -5,7 +5,8 @@
 | All sounds (rain, waves, lo-fi keys, timer chime) | Generated in the browser with the Web Audio API | No files used, nothing to license |
 | Icons | Unicode emoji, drawn by the device's font | — |
 | Fonts | System font stack (no web fonts) | — |
-| Code | Written for Nook | — |
+| Code | Written for Nook | MIT (see LICENSE) |
+| Vân Lộ art (heroes, monsters, props, particles) and its music | Drawn and generated in code (`web/features/games/van-lo/ui/`) | Our own code, no image or audio files |
 | Next.js, React, React DOM | npm | MIT |
 | TypeScript | npm | Apache-2.0 |
 | Express, cors, helmet, pg, Zod, Drizzle ORM | npm | MIT (Drizzle: Apache-2.0) |

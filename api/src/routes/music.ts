@@ -102,7 +102,9 @@ musicRouter.get("/", async (req, res) => {
       plays: sql<number>`coalesce(${plays.n}, 0)`,
       likes: sql<number>`coalesce(${totalLikes.n}, 0)`,
       score,
-      liked: me ? sql<boolean>`exists (select 1 from ${songLikes} where ${songLikes.songId} = ${songs.id} and ${songLikes.owner} = ${me})` : sql<boolean>`false`,
+      liked: me
+        ? sql<boolean>`exists (select 1 from ${songLikes} where ${songLikes.songId} = ${songs.id} and ${songLikes.owner} = ${me})`
+        : sql<boolean>`false`,
     })
     .from(songs)
     .leftJoin(plays, eq(plays.songId, songs.id))
@@ -162,9 +164,17 @@ const uploadFields = z.object({
   // The person must confirm they may share it. Nook only hosts songs people have the right to share.
   rights: z.literal("yes", { message: "Please confirm you may share this song" }),
   license: z.string().trim().min(2).max(80),
-  licenseUrl: z.url().max(300).optional().or(z.literal("").transform(() => undefined)),
+  licenseUrl: z
+    .url()
+    .max(300)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
   credit: z.string().trim().max(200).optional(),
-  sourceUrl: z.url().max(300).optional().or(z.literal("").transform(() => undefined)),
+  sourceUrl: z
+    .url()
+    .max(300)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
   genre: z.enum(["auto", ...GENRES]).default("auto"),
 });
 
@@ -179,48 +189,58 @@ musicRouter.get("/upload-limits", (_req, res) => {
 // The limit is checked AFTER the file has arrived (Stage 12 fix). Answering while the browser is still
 // sending makes the server close the connection mid-upload, and the browser only sees "connection lost"
 // instead of our message. multer itself drains the rest of the upload when a file is too big.
-musicRouter.post("/", (req, res, next) => {
-  upload(req, res, (err: unknown) => {
-    if (err instanceof multer.MulterError) {
-      return next(new HttpError(err.code === "LIMIT_FILE_SIZE" ? 413 : 400, err.code === "LIMIT_FILE_SIZE" ? `Songs can be up to ${config.MAX_UPLOAD_MB} MB` : err.message));
-    }
-    next(err);
-  });
-}, (req, res, next) => {
-  const done = (err?: unknown) => {
-    if (err && req.file) void rm(req.file.path, { force: true }); // not kept: remove the temporary file
-    if (err instanceof HttpError && err.status === 429) {
-      const minutes = Math.max(1, Math.ceil(Number(res.getHeader("Retry-After") ?? 60) / 60));
-      return next(new HttpError(429, `Too many songs this hour (${config.SONG_UPLOADS_PER_HOUR}). Try the rest in about ${minutes} min.`));
-    }
-    next(err);
-  };
-  Promise.resolve(addLimit(req, res, done)).catch(done);
-}, async (req, res) => {
-  const file = req.file;
-  if (!file) throw new HttpError(400, "Choose a song file to upload");
-  try {
-    const fields = uploadFields.parse(req.body);
-    const o = owner(req);
-    const { song, detected, starter } = await addSongFile({
-      path: file.path,
-      originalName: file.originalname.normalize("NFC"), // a Mac's "e + ◌̂" becomes the usual "ê"
-      owner: o,
-      license: fields.license,
-      licenseUrl: fields.licenseUrl,
-      credit: fields.credit,
-      sourceUrl: fields.sourceUrl,
-      genre: fields.genre === "auto" ? undefined : fields.genre,
+musicRouter.post(
+  "/",
+  (req, res, next) => {
+    upload(req, res, (err: unknown) => {
+      if (err instanceof multer.MulterError) {
+        return next(
+          new HttpError(
+            err.code === "LIMIT_FILE_SIZE" ? 413 : 400,
+            err.code === "LIMIT_FILE_SIZE" ? `Songs can be up to ${config.MAX_UPLOAD_MB} MB` : err.message,
+          ),
+        );
+      }
+      next(err);
     });
-    songUploads.add(1, { genre: song.genre, starter_pack: starter });
-    await publishActivity("ListMusic", `${displayName(req.user?.name)} added “${song.title}” by ${song.artist}`);
-    broadcast("music:changed");
-    res.status(201).json({ ...publicSong(song), detectedGenre: detected, starterPack: starter });
-    await enqueue("reindex", {}); // Stage 9: the Companion learns about the new song
-  } finally {
-    await rm(file.path, { force: true }); // the temporary upload (already moved if it was accepted)
-  }
-});
+  },
+  (req, res, next) => {
+    const done = (err?: unknown) => {
+      if (err && req.file) void rm(req.file.path, { force: true }); // not kept: remove the temporary file
+      if (err instanceof HttpError && err.status === 429) {
+        const minutes = Math.max(1, Math.ceil(Number(res.getHeader("Retry-After") ?? 60) / 60));
+        return next(new HttpError(429, `Too many songs this hour (${config.SONG_UPLOADS_PER_HOUR}). Try the rest in about ${minutes} min.`));
+      }
+      next(err);
+    };
+    Promise.resolve(addLimit(req, res, done)).catch(done);
+  },
+  async (req, res) => {
+    const file = req.file;
+    if (!file) throw new HttpError(400, "Choose a song file to upload");
+    try {
+      const fields = uploadFields.parse(req.body);
+      const o = owner(req);
+      const { song, detected, starter } = await addSongFile({
+        path: file.path,
+        originalName: file.originalname.normalize("NFC"), // a Mac's "e + ◌̂" becomes the usual "ê"
+        owner: o,
+        license: fields.license,
+        licenseUrl: fields.licenseUrl,
+        credit: fields.credit,
+        sourceUrl: fields.sourceUrl,
+        genre: fields.genre === "auto" ? undefined : fields.genre,
+      });
+      songUploads.add(1, { genre: song.genre, starter_pack: starter });
+      await publishActivity("ListMusic", `${displayName(req.user?.name)} added “${song.title}” by ${song.artist}`);
+      broadcast("music:changed");
+      res.status(201).json({ ...publicSong(song), detectedGenre: detected, starterPack: starter });
+      await enqueue("reindex", {}); // Stage 9: the Companion learns about the new song
+    } finally {
+      await rm(file.path, { force: true }); // the temporary upload (already moved if it was accepted)
+    }
+  },
+);
 
 // --- Files ------------------------------------------------------------------------
 
@@ -305,13 +325,19 @@ musicRouter.post("/:id/play", async (req, res) => {
 });
 
 async function likeCount(songId: number) {
-  const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(songLikes).where(eq(songLikes.songId, songId));
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(songLikes)
+    .where(eq(songLikes.songId, songId));
   return row.n;
 }
 
 musicRouter.put("/:id/like", async (req, res) => {
   const song = await findSong(req);
-  await db.insert(songLikes).values({ songId: song.id, owner: ownerKey(req, true)! }).onConflictDoNothing();
+  await db
+    .insert(songLikes)
+    .values({ songId: song.id, owner: ownerKey(req, true)! })
+    .onConflictDoNothing();
   broadcast("music:changed"); // likes don't go in the feed, but the charts should re-sort
   res.json({ liked: true, likes: await likeCount(song.id) });
 });

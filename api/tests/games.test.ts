@@ -70,4 +70,19 @@ describe("game saves", () => {
     const { rows } = await pool.query("select count(*)::int as n from game_saves");
     expect(rows[0].n).toBe(0);
   });
+
+  it("ranks cultivators by realm, then by enemies defeated (Stage 18)", async () => {
+    const lan = await person("Lan");
+    const mai = await person("Mai");
+    const vy = await person("Vy");
+    await lan.put("/api/games/saves/van-lo").send({ ...save(5), board: { path: "kiem", level: 14, kills: 300 } });
+    await mai.put("/api/games/saves/van-lo").send({ ...save(5), board: { path: "binh", level: 14, kills: 420 } });
+    await vy.put("/api/games/saves/van-lo").send(save(1)); // an old save without board info: not listed
+    const board = (await mai.get("/api/games/leaderboard/van-lo")).body;
+    expect(board).toEqual([
+      expect.objectContaining({ rank: 1, name: "Mai", path: "binh", level: 14, kills: 420, me: true }),
+      expect.objectContaining({ rank: 2, name: "Lan", path: "kiem", me: false }),
+    ]);
+    expect((await request(app).get("/api/games/leaderboard/van-lo")).status).toBe(200); // public
+  });
 });

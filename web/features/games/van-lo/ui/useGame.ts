@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useMe } from "@/features/me/MeProvider";
 import { deleteSave, getSave, putSave } from "@/lib/api/games";
-import { realmName } from "../logic/player";
+import { playerLevel, realmName } from "../logic/player";
 import { clearLocal, loadLocal, newer, parseSave, saveLocal } from "../logic/save";
 import { SAVE_VERSION, type Game } from "../logic/types";
 
@@ -58,7 +58,12 @@ export function useGame() {
     if (!g || !userId) return;
     setCloud("saving");
     try {
-      await putSave("van-lo", { version: SAVE_VERSION, summary: realmName(g.player, g.lang), data: g });
+      await putSave("van-lo", {
+        version: SAVE_VERSION,
+        summary: realmName(g.player, g.lang),
+        data: g,
+        board: { path: g.player.path, level: playerLevel(g.player), kills: g.player.record.kills },
+      });
       setCloud("saved");
     } catch {
       setCloud("offline");

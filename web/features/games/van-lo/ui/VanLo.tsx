@@ -2,7 +2,8 @@
 
 // Vân Lộ: the root. No save yet → the title screen. A run going on → the map. Otherwise → the cave abode.
 
-import { Cloud, CloudOff, Loader2, Music, RotateCcw, Volume2, VolumeX } from "lucide-react";
+import { Cloud, CloudOff, Images, Loader2, Music, RotateCcw, Volume2, VolumeX } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/Button";
 import { useConfirm } from "@/components/ui/Dialog";
@@ -19,7 +20,7 @@ import { RunScreen } from "./RunScreen";
 import { getSound, setMusic, setSound, subscribeSound } from "./audio";
 import { useGame, type CloudState } from "./useGame";
 
-function useDark() {
+export function useDark() {
   return useSyncExternalStore(
     subscribeTheme,
     () => document.documentElement.dataset.theme === "dark",
@@ -49,6 +50,12 @@ export function VanLo() {
         <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4 text-sm text-muted">
           <CloudNote state={cloud} t={t} />
           <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/games/van-lo/assets"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-sm font-semibold text-muted hover:text-text"
+            >
+              <Images className="h-4 w-4" aria-hidden="true" /> {t("Kho hình", "Art gallery")}
+            </Link>
             <SoundToggles t={t} />
             <SegmentedControl<Lang>
               label={t("Ngôn ngữ", "Language")}

@@ -9,7 +9,23 @@
 // Browsers only let sound start after a tap or a key press, so the sound starts on your first one.
 
 export type Mood = "home" | "realm" | "tribulation";
-export type SfxName = "slash" | "hit" | "crit" | "hurt" | "bolt" | "heal" | "pickup" | "die" | "craft" | "fail" | "gong" | "summon" | "click";
+export type SfxName =
+  | "slash"
+  | "hit"
+  | "crit"
+  | "hurt"
+  | "bolt"
+  | "heal"
+  | "pickup"
+  | "die"
+  | "craft"
+  | "fail"
+  | "gong"
+  | "summon"
+  | "click"
+  | "break"
+  | "bless"
+  | "step";
 type Settings = { music: boolean; sfx: boolean; volume: number };
 
 const KEY = "nook.vanlo.sound";
@@ -185,6 +201,16 @@ export function sfx(name: SfxName) {
     case "die":
       noiseBurst(ac, out, t, 0.3, 0.25, "lowpass", 1200, 150);
       pluck(ac, out, midi(57), t, 0.12, 0.9);
+      break;
+    case "break":
+      noiseBurst(ac, out, t, 0.12, 0.4, "bandpass", 2600, 900);
+      pluck(ac, out, midi(64), t + 0.01, 0.08, 0.25);
+      break;
+    case "bless":
+      [79, 83, 86, 91].forEach((n, i) => pluck(ac, out, midi(n), t + i * 0.06, 0.12, 1.4));
+      break;
+    case "step":
+      noiseBurst(ac, out, t, 0.03, 0.05, "lowpass", 600, 300);
       break;
     case "craft":
       [72, 76, 79, 84].forEach((n, i) => pluck(ac, out, midi(n), t + i * 0.08, 0.15, 1));

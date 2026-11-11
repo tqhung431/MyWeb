@@ -3,6 +3,7 @@
 // Names are our own; realm names, spiritual roots and the five elements are shared ideas of the genre.
 
 import type { PathId, TechniqueId } from "./paths";
+import type { Deco } from "./types";
 import { TECHNIQUES } from "./paths";
 export * from "./paths";
 
@@ -398,6 +399,7 @@ export type RealmInfo = {
   herb: ItemId;
   hazard: Hazard | null;
   paper: { light: string; dark: string }; // tint of the map
+  decos: Deco[]; // Stage 18: what decorates its floors
   about: string;
   aboutEn: string;
   enemies: EnemyKind[][]; // per floor (the last list repeats)
@@ -413,6 +415,7 @@ export const SECRET_REALMS = {
     herb: "linh-thao",
     hazard: null,
     paper: { light: "#f3ecdc", dark: "#1b1915" },
+    decos: ["bush", "flowers", "rock", "mushroom", "torch", "lantern", "statue", "bones"],
     about: "Thung lũng sương mù, nơi yêu thú và tà tu ẩn nấp. Ở tầng sâu nhất có Mãng Vương canh giữ.",
     aboutEn: "A misty valley where beasts and rogue cultivators hide. A python king guards the deepest floor.",
     enemies: [
@@ -433,6 +436,7 @@ export const SECRET_REALMS = {
     herb: "hoa-linh-chi",
     hazard: "lava",
     paper: { light: "#f1e2d3", dark: "#211612" },
+    decos: ["rock", "crystal", "campfire", "bones", "skull", "torch", "mushroom"],
     about: "Hang động dung nham chảy như sông. Coi chừng vũng lửa; Viêm Giáp Thú Vương ngủ ở đáy.",
     aboutEn: "Caves where lava runs like rivers. Mind the fire pools; a flame-armoured king sleeps at the bottom.",
     enemies: [
@@ -453,6 +457,7 @@ export const SECRET_REALMS = {
     herb: "bang-tam-lien",
     hazard: "whirlpool",
     paper: { light: "#e6efec", dark: "#101b1c" },
+    decos: ["coral", "crystal", "rock", "statue", "lantern", "bones"],
     about: "Di tích tông môn cổ chìm dưới biển. Xoáy nước cuốn bạn đi nơi khác; Bích Lân Giao canh giữ đáy biển.",
     aboutEn: "An ancient sect's ruins under the sea. Whirlpools sweep you away; a jade-scaled dragon guards the depths.",
     enemies: [
@@ -471,6 +476,7 @@ export const SECRET_REALMS = {
     herb: "u-hon-hoa",
     hazard: "miasma",
     paper: { light: "#e9e6ea", dark: "#17141a" },
+    decos: ["spear", "skull", "bones", "banner", "campfire", "statue", "torch"],
     about: "Chiến trường vạn năm, oán khí chưa tan. Âm binh vẫn còn đánh trận; Ma Tướng đứng giữa xương trắng.",
     aboutEn: "A battlefield ten thousand years old, still full of grudges. Ghost soldiers fight on; a demon general waits among the bones.",
     enemies: [

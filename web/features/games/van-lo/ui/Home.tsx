@@ -3,7 +3,7 @@
 // The cave abode (động phủ): your home between runs. Cultivate, practise methods, choose abilities,
 // refine treasures, change gear, shop, and set off for a secret realm, or face the tribulation.
 
-import { Backpack, BookOpen, Flame, Gem, Lock, Mountain, Shirt, Sparkles, Store, Sword, X, Zap } from "lucide-react";
+import { Backpack, BookOpen, Flame, Gem, Lock, Mountain, Shirt, Sparkles, Store, Sword, Trophy, X, Zap } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -68,9 +68,10 @@ import type { RealmId } from "../logic/data";
 import { startRun, startTribulation, tribulationTurns } from "../logic/world";
 import { setMusic, sfx } from "./audio";
 import { Furnace } from "./Furnace";
+import { Leaderboard } from "./Leaderboard";
 import { ABILITY_ICON, TREASURE_ICON } from "./icons";
 
-type Tab = "cultivate" | "methods" | "abilities" | "treasures" | "gear" | "furnace" | "bag" | "realms";
+type Tab = "cultivate" | "methods" | "abilities" | "treasures" | "gear" | "furnace" | "bag" | "realms" | "ranking";
 type Props = { game: Game; update: <T>(change: (g: Game) => T, opts?: { saveNow?: boolean }) => T | undefined };
 
 const STAT_NAMES: Record<keyof Stats, [string, string]> = {
@@ -104,6 +105,7 @@ export function Home({ game, update }: Props) {
     { id: "furnace", label: t("Lò luyện", "Furnace"), icon: Flame },
     { id: "bag", label: t("Túi & chợ", "Bag & shop"), icon: Store },
     { id: "realms", label: t("Bí cảnh", "Realms"), icon: Mountain },
+    { id: "ranking", label: t("Xếp hạng", "Ranking"), icon: Trophy },
   ];
 
   const enter = (realm: RealmId = "vu-an-coc") => {
@@ -184,6 +186,7 @@ export function Home({ game, update }: Props) {
       {tab === "furnace" && <Furnace game={game} t={t} update={update} toast={toast} />}
       {tab === "bag" && <BagTab game={game} t={t} update={update} toast={toast} />}
       {tab === "realms" && <Realms game={game} t={t} onEnter={enter} />}
+      {tab === "ranking" && <Leaderboard lang={game.lang} />}
     </div>
   );
 }
