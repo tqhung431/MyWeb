@@ -10,7 +10,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import * as Ambient from "@/lib/ambient";
 import type { TrackName } from "@/lib/ambient";
 import { formatTime, useTimer } from "@/hooks/useTimer";
-import { useDailyCount } from "@/hooks/useDailyCount";
+import { useSessions } from "@/hooks/useSessions";
 
 export const MODES = {
   focus: { label: "Focus 25", minutes: 25 },
@@ -46,13 +46,13 @@ function useChillState() {
   // --- timer ---
   const [mode, setModeState] = useState<Mode>("focus");
   const [finished, setFinished] = useState(false);
-  const { count: sessions, increment } = useDailyCount();
+  const { summary, status: sessionsStatus, record } = useSessions(); // saved in PostgreSQL via the API
 
   const handleDone = useCallback(() => {
     Ambient.chime();
     setFinished(true);
-    if (mode === "focus") increment();
-  }, [mode, increment]);
+    void record(mode, MODES[mode].minutes); // POST /api/sessions
+  }, [mode, record]);
 
   const timer = useTimer(MODES[mode].minutes, handleDone);
   const time = formatTime(timer.remaining);
@@ -95,7 +95,8 @@ function useChillState() {
       setFinished(false);
       timer.reset();
     },
-    sessions,
+    sessions: summary,
+    sessionsStatus,
   };
 }
 

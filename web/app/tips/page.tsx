@@ -1,13 +1,15 @@
-// "/tips" — a Server Component. It reads data on the server and sends finished HTML.
-// No JavaScript for this list is sent to the browser.
+// "/tips" — a Server Component. On every request, the Next.js server asks the API for tips,
+// then sends finished HTML. The browser never talks to the database.
 
 import type { Metadata } from "next";
 import Link from "next/link";
-import { tips } from "@/lib/tips";
+import { getTips } from "@/lib/api";
 
 export const metadata: Metadata = { title: "Focus tips · Chill Corner" };
 
-export default function TipsPage() {
+export default async function TipsPage() {
+  const tips = await getTips(); // GET http://localhost:4000/api/tips
+
   return (
     <div className="prose">
       <h1>Focus tips</h1>

@@ -1,15 +1,10 @@
-// Focus tips. This file is only imported by Server Components,
-// so it never gets sent to the browser as JavaScript.
+// Puts the starting tips into the database. Safe to run again: existing slugs are updated.
 
-export type Tip = {
-  slug: string;
-  title: string;
-  summary: string;
-  body: string[];
-  minutes: number;
-};
+import { sql } from "drizzle-orm";
+import { db, pool } from "./client.js";
+import { tips } from "./schema.js";
 
-export const tips: Tip[] = [
+export const seedTips = [
   {
     slug: "one-thing",
     title: "Pick one thing",
@@ -52,6 +47,23 @@ export const tips: Tip[] = [
   },
 ];
 
-export function getTip(slug: string): Tip | undefined {
-  return tips.find((t) => t.slug === slug);
+export async function seed() {
+  await db
+    .insert(tips)
+    .values(seedTips)
+    .onConflictDoUpdate({
+      target: tips.slug,
+      set: {
+        title: sql`excluded.title`,
+        summary: sql`excluded.summary`,
+        body: sql`excluded.body`,
+        minutes: sql`excluded.minutes`,
+      },
+    });
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  await seed();
+  console.log(`Seeded ${seedTips.length} tips.`);
+  await pool.end();
 }

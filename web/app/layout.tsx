@@ -34,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <footer className="site-footer">
           <p>
-            Part of <strong>MyWeb</strong> · Stage 2 · <Link href="/about">Credits</Link>
+            Part of <strong>MyWeb</strong> · Stage 3 · <Link href="/about">Credits</Link>
           </p>
         </footer>
       </body>

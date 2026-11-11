@@ -4,7 +4,8 @@ import { MODES, useChill, type Mode } from "./ChillProvider";
 import { PillButton } from "./PillButton";
 
 export function FocusTimer() {
-  const { mode, setMode, time, remaining, total, running, start, pause, reset, sessions } = useChill();
+  const { mode, setMode, time, remaining, total, running, start, pause, reset, sessions, sessionsStatus } =
+    useChill();
 
   let label = "Start";
   if (running) label = "Pause";
@@ -42,8 +43,12 @@ export function FocusTimer() {
         </button>
       </div>
 
-      <p className="hint" id="sessions">
-        Focus sessions today: {sessions}
+      <p className="hint" id="sessions" aria-live="polite">
+        {sessionsStatus === "loading" && "Loading your sessions…"}
+        {sessionsStatus === "offline" && "Offline: start the API to save your sessions."}
+        {sessionsStatus === "ready" &&
+          sessions &&
+          `Focus sessions today: ${sessions.today.sessions} · this week: ${sessions.total}`}
       </p>
     </section>
   );
