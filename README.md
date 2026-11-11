@@ -3,40 +3,42 @@
 My web programming learning project for 2026. It grows one stage at a time,
 from a static page to a full system (frontend, API, database, real-time, AI).
 
-## Stage 1: Chill Corner (current)
+## Current: Stage 2 — Chill Corner in Next.js
 
-A calm page with ambient sounds (rain, waves, lo-fi keys) and a focus timer.
-Plain HTML, CSS and JavaScript only.
+A calm app with ambient sounds (rain, waves, lo-fi keys), a focus timer and focus tips,
+built with **Next.js 16, React 19 and TypeScript**.
 
-- How it works and the request flow: [docs/stage-1.md](docs/stage-1.md)
+- How it works, request flow and diagrams: [docs/stage-2.md](docs/stage-2.md)
+- Stage 1 (plain HTML/CSS/JS) explained: [docs/stage-1.md](docs/stage-1.md)
 - Credits and licences: [CREDITS.md](CREDITS.md)
 
 ### Run it
 
-Option 1: double-click `index.html` to open it in your browser.
-
-Option 2 (closer to a real website), run a small local server:
+Needs Node.js 20.9 or newer.
 
 ```bash
-npx serve .
-# then open http://localhost:3000
+cd web
+npm install
+npm run dev
+# open http://localhost:3000
 ```
 
-### Files
+### Folders
 
 ```
-index.html     the main page (content)
-about.html     about + credits page
-css/style.css  layout and theme (mobile-first)
-js/audio.js    ambient sounds made with the Web Audio API
-js/timer.js    countdown timer logic (no DOM code)
-js/app.js      connects buttons on the page to the sound and timer code
+web/                   Stage 2: the Next.js app
+  app/                 pages and layout (folders = URLs)
+  components/          React components (SoundPlayer, FocusTimer, Nav, ...)
+  hooks/               useTimer, useDailyCount
+  lib/                 ambient.ts (Web Audio), tips.ts (data)
+stage-1-static/        Stage 1: the plain HTML/CSS/JS version (open index.html)
+docs/                  one explainer per stage
 ```
 
 ## Stages
 
 1. Static page — **Chill Corner** ✅
-2. Frontend app — Next.js + React + TypeScript
+2. Frontend app — Next.js + React + TypeScript ✅
 3. API + database — Node API + PostgreSQL
 4. Login — sessions and OAuth
 5. Cache + queue + worker — Valkey

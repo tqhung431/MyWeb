@@ -1,5 +1,7 @@
 # Stage 1 — Static page: how a browser gets and shows Chill Corner
 
+> The Stage 1 files now live in [`stage-1-static/`](../stage-1-static). Open `stage-1-static/index.html` to try it.
+
 **Goal:** understand what happens between "open the page" and "the timer counts down".
 There is no server code yet. The server (or your disk) only hands out files.
 

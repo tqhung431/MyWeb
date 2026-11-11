@@ -6,3 +6,5 @@
 | Icons | Unicode emoji, drawn by the device's font | — |
 | Fonts | System font stack (no web fonts) | — |
 | Code | Written for MyWeb | — |
+| Next.js, React, React DOM | npm | MIT |
+| TypeScript | npm | Apache-2.0 |
