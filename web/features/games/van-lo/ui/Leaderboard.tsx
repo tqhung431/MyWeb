@@ -55,7 +55,7 @@ export function Leaderboard({ lang }: { lang: "vi" | "en" }) {
                   </span>
                   <span className="block truncate text-xs text-muted">
                     {path && (
-                      <span className="font-semibold" style={{ color: path.color }}>
+                      <span className="font-semibold" style={{ color: `color-mix(in srgb, ${path.color} 55%, var(--text))` }}>
                         {t(path.vi, path.en)}
                       </span>
                     )}

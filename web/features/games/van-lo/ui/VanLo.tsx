@@ -229,7 +229,7 @@ function Title({ onStart }: { onStart: (g: Game) => void }) {
                   {t(info.vi, info.en)}
                 </span>
                 <span className="text-xs text-muted">{t(info.about, info.aboutEn)}</span>
-                <span className="text-xs font-semibold" style={{ color: info.color }}>
+                <span className="text-xs font-semibold" style={{ color: `color-mix(in srgb, ${info.color} 55%, var(--text))` }}>
                   {t(info.resource.vi, info.resource.en)}
                 </span>
               </button>

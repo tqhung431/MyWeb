@@ -182,7 +182,7 @@ export function Assets() {
         <h2 className="text-lg font-bold">{t("Sáu con đường", "The six paths")}</h2>
         {p.heroes.map((h) => (
           <div key={h.id} className="flex flex-col gap-1">
-            <h3 className="text-sm font-semibold" style={{ color: PATHS[h.id].color }}>
+            <h3 className="text-sm font-semibold" style={{ color: `color-mix(in srgb, ${PATHS[h.id].color} 55%, var(--text))` }}>
               {t(PATHS[h.id].vi, PATHS[h.id].en)}
             </h3>
             <div className="flex flex-wrap gap-2">
