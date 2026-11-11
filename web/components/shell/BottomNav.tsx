@@ -1,18 +1,20 @@
 "use client";
 
-import { House, Info } from "lucide-react";
+import { House, LogIn, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/features/auth/AuthProvider";
 import { isActive, LIVE_APPS } from "@/lib/apps";
 import { cn } from "@/lib/cn";
 
 // Phone navigation: a tab bar at the bottom, within thumb reach. Built from the app registry.
 export function BottomNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
   const items = [
     { href: "/", label: "Home", icon: House },
     ...LIVE_APPS.map((app) => ({ href: app.href, label: app.name.split(" ")[0], icon: app.icon })),
-    { href: "/about", label: "About", icon: Info },
+    user ? { href: "/account", label: "Account", icon: UserRound } : { href: "/login", label: "Sign in", icon: LogIn },
   ];
 
   return (

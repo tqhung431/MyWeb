@@ -7,7 +7,8 @@ import { getSummary, saveSession, type Mode, type Summary } from "@/lib/api/sess
 
 export type SessionsStatus = "loading" | "ready" | "offline";
 
-export function useSessions() {
+// userId: reload when someone signs in or out (their history is different).
+export function useSessions(userId: string | null) {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [status, setStatus] = useState<SessionsStatus>("loading");
 
@@ -22,7 +23,7 @@ export function useSessions() {
 
   useEffect(() => {
     void refresh();
-  }, [refresh]);
+  }, [refresh, userId]);
 
   const record = useCallback(
     async (mode: Mode, minutes: number) => {

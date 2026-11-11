@@ -4,6 +4,8 @@
 //   └─ Sidebar (desktop) | page content | MiniPlayer | BottomNav (phone)
 //
 // It's a Server Component; only the pieces marked "use client" ship JavaScript.
+// Stage 4: it asks the API "who is this?" (with the visitor's cookie) on every request,
+// so pages are rendered per visitor, and the first HTML already shows your name.
 
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
@@ -13,6 +15,8 @@ import { BottomNav } from "@/components/shell/BottomNav";
 import { Brand } from "@/components/shell/Brand";
 import { MiniPlayer } from "@/components/shell/MiniPlayer";
 import { Sidebar } from "@/components/shell/Sidebar";
+import { UserMenu } from "@/features/auth/UserMenu";
+import { getMe } from "@/lib/api/server";
 import "./globals.css";
 
 // Downloaded at build time and served from our own site (no request to Google from the browser).
@@ -30,7 +34,9 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const { user } = await getMe();
+
   return (
     <html lang="en" className={jakarta.variable}>
       <body className="min-h-dvh font-sans">
@@ -42,14 +48,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         <Aurora />
 
-        <AppProviders>
+        <AppProviders initialUser={user}>
           <div className="lg:grid lg:grid-cols-[17rem_1fr]">
             <Sidebar />
 
             <div className="min-w-0">
               {/* Phone header (the sidebar replaces it on desktop) */}
-              <header className="flex items-center px-4 pt-5 lg:hidden">
+              <header className="flex items-center justify-between px-4 pt-5 lg:hidden">
                 <Brand />
+                <UserMenu compact />
               </header>
 
               <main id="main" className="mx-auto max-w-6xl px-4 pt-6 pb-44 sm:px-6 lg:px-10 lg:pt-10 lg:pb-32">

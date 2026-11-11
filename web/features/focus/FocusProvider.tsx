@@ -5,6 +5,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { chime } from "@/features/ambient/engine";
+import { useAuth } from "@/features/auth/AuthProvider";
 import type { Mode, Summary } from "@/lib/api/sessions";
 import { formatTime, MODES } from "./logic";
 import { useCountdown } from "./useCountdown";
@@ -34,7 +35,8 @@ const ms = (mode: Mode) => MODES[mode].minutes * 60 * 1000;
 export function FocusProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<Mode>("focus");
   const [finished, setFinished] = useState(false);
-  const { summary, status, record } = useSessions();
+  const { user } = useAuth();
+  const { summary, status, record } = useSessions(user?.id ?? null);
 
   const handleDone = useCallback(() => {
     chime();

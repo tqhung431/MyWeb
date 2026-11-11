@@ -1,16 +1,20 @@
 "use client";
 
-// Every app-wide provider, in one place. A future app that needs global state
-// (for example a game score or a login session in Stage 4) adds its provider here.
+// Every app-wide provider, in one place. Order matters: inner providers can use outer ones
+// (FocusProvider reads the signed-in user to reload your sessions after login/logout).
 
 import type { ReactNode } from "react";
 import { AmbientProvider } from "@/features/ambient/AmbientProvider";
+import { AuthProvider } from "@/features/auth/AuthProvider";
 import { FocusProvider } from "@/features/focus/FocusProvider";
+import type { User } from "@/lib/api/auth";
 
-export function AppProviders({ children }: { children: ReactNode }) {
+export function AppProviders({ initialUser, children }: { initialUser: User | null; children: ReactNode }) {
   return (
-    <AmbientProvider>
-      <FocusProvider>{children}</FocusProvider>
-    </AmbientProvider>
+    <AuthProvider initialUser={initialUser}>
+      <AmbientProvider>
+        <FocusProvider>{children}</FocusProvider>
+      </AmbientProvider>
+    </AuthProvider>
   );
 }

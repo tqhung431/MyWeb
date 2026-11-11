@@ -1,0 +1,235 @@
+// Login tests: real HTTP requests, real database, and a fake GitHub server.
+
+import { randomUUID } from "node:crypto";
+import type { Server } from "node:http";
+import express from "express";
+import request from "supertest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { createApp } from "../src/app.js";
+import { pool } from "../src/db/client.js";
+import { ORIGIN, resetDatabase } from "./helpers.js";
+
+const app = createApp();
+const alice = { email: "Alice@Example.com", password: "correct horse battery", name: "Alice" };
+
+beforeEach(resetDatabase);
+afterAll(() => pool.end());
+
+function sessionCookie(res: request.Response): string | undefined {
+  const cookies = ([] as string[]).concat(res.headers["set-cookie"] ?? []);
+  return cookies.find((c) => c.startsWith("myweb_session="));
+}
+
+describe("register", () => {
+  it("creates an account and signs in with an httpOnly cookie", async () => {
+    const res = await request(app).post("/api/auth/register").set("Origin", ORIGIN).send(alice);
+    expect(res.status).toBe(201);
+    expect(res.body.user).toMatchObject({ email: "alice@example.com", name: "Alice" });
+    expect(res.body.user.passwordHash).toBeUndefined(); // never sent to the browser
+
+    const cookie = sessionCookie(res)!;
+    expect(cookie).toMatch(/HttpOnly/);
+    expect(cookie).toMatch(/SameSite=Lax/);
+  });
+
+  it("stores a hash, never the password", async () => {
+    await request(app).post("/api/auth/register").send(alice);
+    const { rows } = await pool.query("select password_hash from users");
+    expect(rows[0].password_hash).toMatch(/^scrypt\$/);
+    expect(rows[0].password_hash).not.toContain(alice.password);
+  });
+
+  it("refuses a second account with the same email (any letter case)", async () => {
+    await request(app).post("/api/auth/register").send(alice);
+    const res = await request(app).post("/api/auth/register").send({ ...alice, email: "ALICE@example.com" });
+    expect(res.status).toBe(409);
+  });
+
+  it("checks the input", async () => {
+    const res = await request(app).post("/api/auth/register").send({ email: "nope", password: "short", name: "" });
+    expect(res.status).toBe(400);
+    expect(res.body.details.map((d: { path: string }) => d.path).sort()).toEqual(["email", "name", "password"]);
+  });
+});
+
+describe("login, me and logout", () => {
+  it("works end to end", async () => {
+    await request(app).post("/api/auth/register").send(alice);
+    const browser = request.agent(app); // keeps cookies between requests, like a browser
+
+    expect((await browser.get("/api/auth/me")).body.user).toBeNull();
+
+    const login = await browser.post("/api/auth/login").set("Origin", ORIGIN).send({ email: alice.email, password: alice.password });
+    expect(login.status).toBe(200);
+
+    const me = await browser.get("/api/auth/me");
+    expect(me.body.user.email).toBe("alice@example.com");
+    expect(me.body.methods).toEqual({ password: true, providers: [] });
+
+    expect((await browser.post("/api/auth/logout").set("Origin", ORIGIN)).status).toBe(204);
+    expect((await browser.get("/api/auth/me")).body.user).toBeNull();
+  });
+
+  it("gives the same answer for a wrong password and an unknown email", async () => {
+    await request(app).post("/api/auth/register").send(alice);
+    const wrong = await request(app).post("/api/auth/login").send({ email: alice.email, password: "wrong password" });
+    const unknown = await request(app).post("/api/auth/login").send({ email: "bob@example.com", password: "whatever1" });
+    expect(wrong.status).toBe(401);
+    expect(unknown.status).toBe(401);
+    expect(wrong.body).toEqual(unknown.body);
+  });
+
+  it("makes a stolen-then-logged-out cookie useless", async () => {
+    const res = await request(app).post("/api/auth/register").send(alice);
+    const cookie = sessionCookie(res)!.split(";")[0];
+    await request(app).post("/api/auth/logout").set("Cookie", cookie);
+    const me = await request(app).get("/api/auth/me").set("Cookie", cookie);
+    expect(me.body.user).toBeNull();
+  });
+
+  it("stores only a hash of the session token", async () => {
+    const res = await request(app).post("/api/auth/register").send(alice);
+    const token = sessionCookie(res)!.split(";")[0].split("=")[1];
+    const { rows } = await pool.query("select id from auth_sessions");
+    expect(rows[0].id).not.toBe(token);
+    expect(rows[0].id).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+describe("focus sessions with accounts", () => {
+  it("moves anonymous sessions into the account on sign-up", async () => {
+    const clientId = randomUUID();
+    await request(app).post("/api/sessions").set("X-Client-Id", clientId).send({ mode: "focus", minutes: 25 });
+
+    const browser = request.agent(app);
+    await browser.post("/api/auth/register").set("X-Client-Id", clientId).send(alice);
+    const summary = await browser.get("/api/sessions/summary");
+    expect(summary.body.total).toBe(1);
+  });
+
+  it("follows the user to another device", async () => {
+    const laptop = request.agent(app);
+    await laptop.post("/api/auth/register").send(alice);
+    await laptop.post("/api/sessions").send({ mode: "focus", minutes: 25 });
+
+    const phone = request.agent(app);
+    await phone.post("/api/auth/login").send({ email: alice.email, password: alice.password });
+    expect((await phone.get("/api/sessions/summary")).body.total).toBe(1);
+  });
+
+  it("hides a user's sessions from the same browser after logout", async () => {
+    const clientId = randomUUID();
+    const browser = request.agent(app);
+    await browser.post("/api/auth/register").set("X-Client-Id", clientId).send(alice);
+    await browser.post("/api/sessions").set("X-Client-Id", clientId).send({ mode: "focus", minutes: 25 });
+    await browser.post("/api/auth/logout");
+
+    const anon = await browser.get("/api/sessions/summary").set("X-Client-Id", clientId);
+    expect(anon.body.total).toBe(0);
+  });
+});
+
+describe("CSRF protection", () => {
+  it("blocks POSTs from other websites", async () => {
+    const res = await request(app).post("/api/auth/login").set("Origin", "https://evil.example").send(alice);
+    expect(res.status).toBe(403);
+  });
+
+  it("only accepts JSON bodies", async () => {
+    const res = await request(app)
+      .post("/api/auth/login")
+      .set("Origin", ORIGIN)
+      .type("form")
+      .send("email=a@b.c&password=x");
+    expect(res.status).toBe(415);
+  });
+});
+
+// --- GitHub, with a fake GitHub server on port 4999 ----------------------------
+
+describe("GitHub login", () => {
+  let fakeGithub: Server;
+  let tokenRequest: Record<string, string> = {};
+
+  beforeAll(async () => {
+    const gh = express();
+    gh.use(express.json());
+    gh.post("/login/oauth/access_token", (req, res) => {
+      tokenRequest = req.body;
+      res.json(req.body.code === "good-code" ? { access_token: "gh-token" } : { error: "bad_verification_code" });
+    });
+    gh.get("/user", (_req, res) => res.json({ id: 42, login: "octo", name: "Octo Cat", avatar_url: "https://avatars.example/42" }));
+    gh.get("/user/emails", (_req, res) =>
+      res.json([
+        { email: "old@example.com", primary: false, verified: true },
+        { email: "octo@example.com", primary: true, verified: true },
+      ]),
+    );
+    await new Promise<void>((resolve) => {
+      fakeGithub = gh.listen(4999, "127.0.0.1", resolve);
+    });
+  });
+
+  afterAll(() => new Promise<void>((resolve) => fakeGithub.close(() => resolve())));
+
+  // Click "Continue with GitHub" → follow GitHub back to our callback.
+  async function githubLogin(browser: ReturnType<typeof request.agent>, code = "good-code", next = "/chill") {
+    const start = await browser.get(`/api/auth/github?next=${encodeURIComponent(next)}`);
+    expect(start.status).toBe(302);
+    const authorize = new URL(start.headers.location);
+    return browser.get(`/api/auth/github/callback?code=${code}&state=${authorize.searchParams.get("state")}`);
+  }
+
+  it("sends the browser to GitHub with state and PKCE", async () => {
+    const res = await request(app).get("/api/auth/github");
+    const url = new URL(res.headers.location);
+    expect(url.searchParams.get("client_id")).toBe("test-client");
+    expect(url.searchParams.get("redirect_uri")).toBe("http://localhost:3000/api/auth/github/callback");
+    expect(url.searchParams.get("state")).toBeTruthy();
+    expect(url.searchParams.get("code_challenge_method")).toBe("S256");
+  });
+
+  it("creates an account from the GitHub profile and signs in", async () => {
+    const browser = request.agent(app);
+    const done = await githubLogin(browser);
+    expect(done.status).toBe(302);
+    expect(done.headers.location).toBe("/chill");
+    expect(tokenRequest.code_verifier).toBeTruthy(); // PKCE secret sent only server-to-server
+
+    const me = await browser.get("/api/auth/me");
+    expect(me.body.user).toMatchObject({ email: "octo@example.com", name: "Octo Cat" });
+    expect(me.body.methods).toEqual({ password: false, providers: ["github"] });
+  });
+
+  it("links GitHub to an existing account with the same email", async () => {
+    await request(app).post("/api/auth/register").send({ ...alice, email: "octo@example.com" });
+    const browser = request.agent(app);
+    await githubLogin(browser);
+    const me = await browser.get("/api/auth/me");
+    expect(me.body.methods).toEqual({ password: true, providers: ["github"] });
+    const { rows } = await pool.query("select count(*)::int as n from users");
+    expect(rows[0].n).toBe(1);
+  });
+
+  it("rejects a callback whose state doesn't match", async () => {
+    const browser = request.agent(app);
+    await browser.get("/api/auth/github");
+    const res = await browser.get("/api/auth/github/callback?code=good-code&state=forged");
+    expect(res.headers.location).toBe("/login?error=github_state");
+  });
+
+  it("rejects a callback with no login in progress", async () => {
+    const res = await request(app).get("/api/auth/github/callback?code=good-code&state=x");
+    expect(res.headers.location).toBe("/login?error=github_expired");
+  });
+
+  it("handles a bad code from GitHub", async () => {
+    const res = await githubLogin(request.agent(app), "bad-code");
+    expect(res.headers.location).toBe("/login?error=github_token");
+  });
+
+  it("never redirects to another website after login", async () => {
+    const res = await githubLogin(request.agent(app), "good-code", "//evil.example");
+    expect(res.headers.location).toBe("/");
+  });
+});

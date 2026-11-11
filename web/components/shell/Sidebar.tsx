@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { Badge } from "@/components/ui/Badge";
+import { UserMenu } from "@/features/auth/UserMenu";
 import { APPS, isActive } from "@/lib/apps";
 import { cn } from "@/lib/cn";
 import { Brand } from "./Brand";
@@ -47,7 +48,10 @@ export function Sidebar() {
         )}
       </nav>
 
-      <PlainLink href="/about" label="About" icon={Info} active={pathname === "/about"} />
+      <div className="flex flex-col gap-2 border-t border-border pt-4">
+        <PlainLink href="/about" label="About" icon={Info} active={pathname === "/about"} />
+        <UserMenu />
+      </div>
     </aside>
   );
 }

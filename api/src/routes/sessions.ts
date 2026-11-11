@@ -1,18 +1,32 @@
 // POST /api/sessions          → save a finished timer session
 // GET  /api/sessions/summary  → focus sessions per day, for the last N days
 //
-// Every request names its browser with the X-Client-Id header (a random UUID).
+// Who owns a session?
+//   - signed in  → the user (req.user, from the login cookie)
+//   - signed out → the browser's anonymous X-Client-Id (a random UUID, like Stage 3)
 
-import { and, eq, gte } from "drizzle-orm";
+import { and, eq, gte, isNull, type SQL } from "drizzle-orm";
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../db/client.js";
 import { focusSessions } from "../db/schema.js";
+import { rateLimit } from "../middleware/security.js";
 
 export const sessionsRouter = Router();
 
-function clientId(req: Request): string {
-  return z.uuid({ message: "X-Client-Id header must be a UUID" }).parse(req.get("x-client-id"));
+type Owner = { userId: string; clientId: null } | { userId: null; clientId: string };
+
+function owner(req: Request): Owner {
+  if (req.user) return { userId: req.user.id, clientId: null };
+  const clientId = z.uuid({ message: "Sign in, or send an X-Client-Id header (UUID)" }).parse(req.get("x-client-id"));
+  return { userId: null, clientId };
+}
+
+// Signed out, only show sessions that were never claimed by an account.
+// Otherwise, after you log out on a shared computer, the next person would see your history.
+function ownedBy(o: Owner): SQL {
+  if (o.userId !== null) return eq(focusSessions.userId, o.userId);
+  return and(eq(focusSessions.clientId, o.clientId), isNull(focusSessions.userId))!;
 }
 
 // --- POST /api/sessions ------------------------------------------------------
@@ -22,12 +36,12 @@ const newSession = z.object({
   minutes: z.number().int().min(1).max(120),
 });
 
-sessionsRouter.post("/", async (req, res) => {
-  const id = clientId(req);
+sessionsRouter.post("/", rateLimit({ windowMs: 60_000, max: 30 }), async (req, res) => {
+  const o = owner(req);
   const input = newSession.parse(req.body); // throws → 400 with details
   const [saved] = await db
     .insert(focusSessions)
-    .values({ clientId: id, ...input })
+    .values({ ...o, ...input })
     .returning();
   res.status(201).json(saved); // 201 Created
 });
@@ -49,7 +63,7 @@ const summaryQuery = z.object({
 });
 
 sessionsRouter.get("/summary", async (req, res) => {
-  const id = clientId(req);
+  const o = owner(req);
   const { tz, days } = summaryQuery.parse(req.query);
 
   // "Today" depends on where you are, so dates are computed in the caller's time zone.
@@ -62,7 +76,7 @@ sessionsRouter.get("/summary", async (req, res) => {
   const rows = await db
     .select({ minutes: focusSessions.minutes, completedAt: focusSessions.completedAt })
     .from(focusSessions)
-    .where(and(eq(focusSessions.clientId, id), eq(focusSessions.mode, "focus"), gte(focusSessions.completedAt, since)));
+    .where(and(ownedBy(o), eq(focusSessions.mode, "focus"), gte(focusSessions.completedAt, since)));
 
   const byDay = new Map(keys.map((k) => [k, { date: k, sessions: 0, minutes: 0 }]));
   for (const row of rows) {

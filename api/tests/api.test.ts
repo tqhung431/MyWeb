@@ -2,22 +2,14 @@
 
 import { randomUUID } from "node:crypto";
 import request from "supertest";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 import { pool } from "../src/db/client.js";
-import { runMigrations } from "../src/db/migrate.js";
-import { seed } from "../src/db/seed.js";
+import { resetDatabase } from "./helpers.js";
 
 const app = createApp();
 
-beforeAll(async () => {
-  await runMigrations();
-});
-
-beforeEach(async () => {
-  await pool.query("truncate tips, focus_sessions restart identity");
-  await seed();
-});
+beforeEach(resetDatabase);
 
 afterAll(async () => {
   await pool.end();
@@ -89,7 +81,7 @@ describe("sessions", () => {
     expect(res.body.details.map((d: { path: string }) => d.path)).toEqual(["mode", "minutes"]);
   });
 
-  it("requires a client id", async () => {
+  it("requires a client id when signed out", async () => {
     const res = await request(app).post("/api/sessions").send({ mode: "focus", minutes: 25 });
     expect(res.status).toBe(400);
   });

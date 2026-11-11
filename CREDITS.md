@@ -16,3 +16,5 @@
 | Plus Jakarta Sans font | Google Fonts, self-hosted by next/font | SIL Open Font License 1.1 |
 | clsx | npm | MIT |
 | Testing Library, jsdom | npm | MIT |
+| cookie-parser, server-only | npm | MIT |
+| GitHub mark (sign-in button) | Simple Icons | CC0 1.0 |
