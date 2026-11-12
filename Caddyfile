@@ -18,8 +18,8 @@
 	servers :8080 {
 		trusted_proxies static private_ranges
 	}
-	# Your own reverse proxy (nginx on a cloud server, docs/deploy-gcp.md) comes in on :8081 and passes on the
-	# visitor's real IP and "https". :8081 is published on 127.0.0.1 only, so only programs on the server reach it.
+	# Optional: your own reverse proxy (nginx on a cloud server, docs/deploy-gcp.md) comes in on :8081 and passes on
+	# the visitor's real IP and "https". :8081 is only published (on 127.0.0.1) with deploy/nginx/compose.proxy.yml.
 	servers :8081 {
 		trusted_proxies static private_ranges
 	}
@@ -84,8 +84,8 @@ localhost {
 	import nook
 }
 
-# Stage 20: Nook behind your own reverse proxy (nginx with HTTPS and a password, e.g. on a Google Cloud server).
-# Published on 127.0.0.1:${PROXY_PORT} only (docker-compose.yml): nginx on the same machine connects here.
+# Optional (Stage 20): Nook behind your own reverse proxy (nginx with HTTPS and a password, e.g. on a cloud server).
+# Not reachable by default: deploy/nginx/compose.proxy.yml publishes it on 127.0.0.1:${PROXY_PORT} for nginx.
 # The proxy must check who you are (Nook has no passwords): see deploy/nginx/nook.conf and docs/deploy-gcp.md.
 :8081 {
 	header Strict-Transport-Security "max-age=31536000"

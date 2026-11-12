@@ -122,8 +122,8 @@ Nook has no passwords (just names), so **never forward ports on your router to i
 
 Step by step, plus firewall rules for Windows, macOS and Linux: **[docs/stage-20.md](docs/stage-20.md)**.
 
-**On a cloud server** (e.g. Google Cloud, Ubuntu) behind nginx with HTTPS and a password: **[docs/deploy-gcp.md](docs/deploy-gcp.md)**
-(firewall rules, nginx config in `deploy/nginx/nook.conf`, Let's Encrypt).
+Optional, not the default: **on a cloud server** (e.g. Google Cloud, Ubuntu) behind nginx with HTTPS and a password,
+see [docs/deploy-gcp.md](docs/deploy-gcp.md).
 
 ## Upgrade to the latest version
 

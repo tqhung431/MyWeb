@@ -1,6 +1,8 @@
-# Nook on a Google Cloud server, behind nginx
+# Nook on a Google Cloud server, behind nginx (optional)
 
-How to put Nook on a Google Cloud (Compute Engine) Ubuntu machine and reach it from anywhere, safely.
+**Not the default.** Nook is made to run on a PC at home (README). This guide is an optional extra: how to put
+Nook on a Google Cloud (Compute Engine) Ubuntu machine and reach it from anywhere, safely. Nothing here is switched
+on unless you follow it.
 
 ```
 phone ──HTTPS──▶ Google Cloud firewall (only 80, 443, and SSH from Google) ──▶ nginx (certificate + password)
@@ -44,6 +46,7 @@ need them open, and with the settings below they only listen on the VM itself an
 ## 2. Nook's settings on the VM
 
 Use the `stage-20` branch (or main once Stage 20 is merged): it has the settings below.
+The nginx entrance is off by default; the `COMPOSE_FILE` line below switches it on.
 
 ```bash
 cd ~/Nook && git pull
@@ -57,6 +60,7 @@ COMPOSE_PROFILES=app
 BIND_IP=127.0.0.1      # Nook listens on the VM itself only; nginx is the only way in
 HTTP_PORT=8080         # move Caddy off 80/443: nginx uses those
 HTTPS_PORT=8443
+COMPOSE_FILE=docker-compose.yml:deploy/nginx/compose.proxy.yml   # opens the entrance for nginx (127.0.0.1 only)
 # PROXY_PORT=8081      # where nginx talks to Nook (default)
 POSTGRES_PASSWORD=...  # a long random one if this is a new install (start.sh makes one for you)
 ```

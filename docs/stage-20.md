@@ -123,11 +123,12 @@ Good to know:
 - Visitors through the tunnel are counted by their real IP for Nook's rate limits: Caddy trusts the IP that
   cloudflared reports, on that entrance only.
 
-### On a cloud server instead
+### On a cloud server instead (optional)
 
-Running Nook on a cloud VM (Google Cloud, …) with nginx in front: [deploy-gcp.md](deploy-gcp.md). nginx asks for a
+Not the default. Running Nook on a cloud VM (Google Cloud, …) with nginx in front: [deploy-gcp.md](deploy-gcp.md). nginx asks for a
 password and handles HTTPS; Nook listens only on the VM itself (`BIND_IP=127.0.0.1`) and takes nginx's requests on
-`127.0.0.1:8081`, a Caddy entrance that trusts the visitor IP and "https" nginx passes on.
+`127.0.0.1:8081`, a Caddy entrance that trusts the visitor IP and "https" nginx passes on. That entrance is only
+opened with `COMPOSE_FILE=docker-compose.yml:deploy/nginx/compose.proxy.yml`.
 
 ## 4. Your router
 

@@ -1,0 +1,10 @@
+# Optional (not used by default): lets nginx on this same machine reach Nook, for a cloud server set up as in
+# docs/deploy-gcp.md. Turn it on in .env:
+#
+#   COMPOSE_FILE=docker-compose.yml:deploy/nginx/compose.proxy.yml      (Windows: use ; instead of :)
+#
+# It publishes Caddy's ":8081" entrance on 127.0.0.1 only (this machine), where nginx connects.
+services:
+  caddy:
+    ports:
+      - "127.0.0.1:${PROXY_PORT:-8081}:8081"
