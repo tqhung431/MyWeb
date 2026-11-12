@@ -27,7 +27,7 @@ export function Furnace({ game, t, update, toast }: Props) {
   const recipes = RECIPES.filter((r) => r.minMajor <= p.major + 1); // show the next realm's recipes too, locked
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       {(Object.keys(SKILLS) as CraftSkill[]).map((skill) => {
         const c = p.craft[skill];
         const Icon = ICONS[skill];

@@ -48,7 +48,7 @@ export default function AboutPage() {
         <h2 className="text-lg font-bold">Credits and licences</h2>
         <dl className="mt-3 divide-y divide-border">
           {CREDITS.map(([term, detail]) => (
-            <div key={term} className="grid gap-1 py-3 sm:grid-cols-[8rem_1fr]">
+            <div key={term} className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-[8rem_1fr]">
               <dt className="font-semibold">{term}</dt>
               <dd className="text-muted">{detail}</dd>
             </div>

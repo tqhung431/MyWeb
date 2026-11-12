@@ -90,7 +90,7 @@ export function MyList() {
       )}
       {entries && entries.length > 0 && shown.length === 0 && <p className="text-sm text-muted">Nothing here yet.</p>}
 
-      <ul className="grid gap-4 md:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {shown.map((e) => (
           <li key={e.titleId}>
             <EntryCard

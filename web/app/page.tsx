@@ -18,9 +18,7 @@ export default function HomePage() {
       <section className="flex flex-col gap-6">
         <div>
           <Greeting />
-          <p className="mt-2 max-w-xl text-muted">
-            A calm corner of the web for your free time. Pick up where you left off, or try something new.
-          </p>
+          <p className="mt-2 max-w-xl text-muted">A calm corner of the web for your free time. Pick up where you left off, or try something new.</p>
         </div>
         <div className="flex flex-wrap gap-3">
           <Link href="/chill" className={buttonClasses("primary", "lg")}>
@@ -33,7 +31,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <section aria-labelledby="today-title">
           <h2 id="today-title" className="mb-3 text-sm font-semibold tracking-wider text-muted uppercase">
             Today
@@ -47,7 +45,7 @@ export default function HomePage() {
         <h2 id="apps-title" className="mb-3 text-sm font-semibold tracking-wider text-muted uppercase">
           Your apps
         </h2>
-        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {APPS.map((app) => (
             <li key={app.id}>
               <AppTile app={app} />
@@ -76,9 +74,7 @@ function AppTile({ app }: { app: AppInfo }) {
 
   const classes = cn(
     "block h-full rounded-3xl border border-border bg-surface p-5 shadow-card backdrop-blur-xl transition",
-    live
-      ? "hover:-translate-y-1 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-      : "opacity-75",
+    live ? "hover:-translate-y-1 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" : "opacity-75",
   );
 
   return live ? (
