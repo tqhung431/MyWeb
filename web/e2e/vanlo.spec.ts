@@ -2,6 +2,9 @@
 import { expect, test } from "@playwright/test";
 import { visit } from "./helpers";
 
+// Stage 21: a new game starts in Nook's language, which a Vietnamese browser picks (these tests click Vietnamese words)
+test.use({ locale: "vi-VN" });
+
 test("start Vân Lộ and walk in a secret realm", async ({ page }) => {
   await visit(page, "/games/van-lo");
   await page.getByRole("radio", { name: /Kiếm tu/ }).click();

@@ -1,6 +1,7 @@
 // "/arcade/worm", "/arcade/pairs"…: one game. Only the games in the list exist (others → 404).
 
 import type { Metadata } from "next";
+import { getT } from "@/lib/i18n/server";
 import { notFound } from "next/navigation";
 import { GameShell } from "@/features/arcade/GameShell";
 import { GAMES, getGame } from "@/features/arcade/games";
@@ -14,7 +15,8 @@ export function generateStaticParams() {
 export const dynamicParams = false;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  return { title: getGame((await params).game)?.name ?? "Game not found" };
+  const t = await getT();
+  return { title: t(getGame((await params).game)?.name ?? "Game not found") };
 }
 
 export default async function GamePage({ params }: Props) {

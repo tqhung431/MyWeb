@@ -12,6 +12,7 @@ import { CircleAlert, CircleCheck, Info, X } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 type Tone = "info" | "success" | "error";
 type Toast = { id: number; message: string; tone: Tone };
 type ToastFn = (message: string, options?: { tone?: Tone }) => void;
@@ -21,6 +22,7 @@ const ICONS = { info: Info, success: CircleCheck, error: CircleAlert };
 const SHOW_MS = 4000;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const t = useT();
   const [toasts, setToasts] = useState<Toast[]>([]);
   const next = useRef(1);
   const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
@@ -56,22 +58,22 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         aria-live="polite"
         className="pointer-events-none fixed inset-x-0 bottom-24 z-[80] flex flex-col items-center gap-2 px-4 lg:bottom-6 lg:left-auto lg:items-end"
       >
-        {toasts.map((t) => {
-          const Icon = ICONS[t.tone];
+        {toasts.map((item) => {
+          const Icon = ICONS[item.tone];
           return (
             <div
-              key={t.id}
+              key={item.id}
               className="pointer-events-auto flex max-w-sm animate-pop items-center gap-3 rounded-2xl border border-border bg-surface-strong py-2.5 pr-2 pl-4 text-sm font-semibold text-text shadow-xl"
             >
               <Icon
-                className={cn("h-5 w-5 shrink-0", t.tone === "success" ? "text-emerald-500" : t.tone === "error" ? "text-rose-500" : "text-primary")}
+                className={cn("h-5 w-5 shrink-0", item.tone === "success" ? "text-emerald-500" : item.tone === "error" ? "text-rose-500" : "text-primary")}
                 aria-hidden="true"
               />
-              <span className="flex-1">{t.message}</span>
+              <span className="flex-1">{item.message}</span>
               <button
                 type="button"
-                onClick={() => dismiss(t.id)}
-                aria-label="Close message"
+                onClick={() => dismiss(item.id)}
+                aria-label={t("Close message")}
                 className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted hover:bg-surface-muted hover:text-text"
               >
                 <X className="h-4 w-4" aria-hidden="true" />

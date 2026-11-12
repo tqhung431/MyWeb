@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { GamesHome } from "@/features/games/GamesHome";
 
-export const metadata: Metadata = { title: "Nook Games" };
+import { getT } from "@/lib/i18n/server";
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("Nook Games") };
+}
 
 export default function GamesPage() {
   return <GamesHome />;

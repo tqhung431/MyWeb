@@ -151,7 +151,12 @@ arcadeRouter.post("/scores", saveLimit, async (req, res) => {
     ).rows;
     if (players > 1) {
       const rule = GAMES[game];
-      await publishActivity("Trophy", `${displayName(req.user?.name)} is now #1 in ${rule.name} (${score} ${rule.unit})`);
+      await publishActivity("Trophy", "{name} is now #1 in {_game} ({score} {_unit})", {
+        name: displayName(req.user?.name),
+        _game: rule.name,
+        score,
+        _unit: rule.unit,
+      });
     }
   }
 });

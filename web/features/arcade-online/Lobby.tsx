@@ -13,9 +13,12 @@ import { useMe } from "@/features/me/MeProvider";
 import { useRealtime, useRealtimeEvent } from "@/features/realtime/RealtimeProvider";
 import { getCategories, getRooms, type Ack, type CategoryId, type OpenRoom } from "@/lib/api/arcadeOnline";
 
-const PHASE = { lobby: "Waiting to start", question: "Playing", reveal: "Playing", final: "Finished" } as const;
+import { useT } from "@/lib/i18n/I18nProvider";
+import { tx } from "@/lib/i18n/core";
+const PHASE = { lobby: tx("Waiting to start"), question: tx("Playing"), reveal: tx("Playing"), final: tx("Finished") } as const;
 
 export function Lobby() {
+  const t = useT();
   const { user, setUser } = useMe();
   const { socket, connected } = useRealtime();
   const router = useRouter();
@@ -36,8 +39,8 @@ export function Lobby() {
   if (!user) {
     return (
       <div className="max-w-xl rounded-3xl border border-border bg-surface p-6 shadow-card">
-        <h2 className="text-lg font-bold">Pick a name to play</h2>
-        <p className="mt-1 mb-4 text-sm text-muted">Everyone in the room sees it on the scoreboard.</p>
+        <h2 className="text-lg font-bold">{t("Pick a name to play")}</h2>
+        <p className="mt-1 mb-4 text-sm text-muted">{t("Everyone in the room sees it on the scoreboard.")}</p>
         <NameForm mode="pick" onDone={setUser} />
       </div>
     );
@@ -50,7 +53,7 @@ export function Lobby() {
     socket.emit(event, payload, (ack: Ack) => {
       setBusy(false);
       if (ack.ok && ack.code) router.push(`/arcade-online/${ack.code}`);
-      else setError(ack.error ?? "That didn't work");
+      else setError(ack.error ?? t("That didn't work"));
     });
   };
 
@@ -66,27 +69,27 @@ export function Lobby() {
           <p className="text-5xl" aria-hidden="true">
             🎉
           </p>
-          <h2 className="mt-2 text-2xl font-extrabold sm:text-3xl">Quiz Party</h2>
-          <p className="mt-1 max-w-md text-white/90">Play live against everyone on Nook: 10 questions, 15 seconds each. Right and fast wins.</p>
+          <h2 className="mt-2 text-2xl font-extrabold sm:text-3xl">{t("Quiz Party")}</h2>
+          <p className="mt-1 max-w-md text-white/90">{t("Play live against everyone on Nook: 10 questions, 15 seconds each. Right and fast wins.")}</p>
           <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Select<CategoryId>
-              label="Questions about"
+              label={t("Questions about")}
               variant="pill"
               value={category}
               onChange={setCategory}
-              options={categories.map((c) => ({ value: c.id, label: c.label }))}
+              options={categories.map((c) => ({ value: c.id, label: t(c.label) }))}
               className="sm:w-56"
               size="md"
               buttonClassName="bg-white/20 text-white backdrop-blur focus-visible:ring-white"
             />
             <Button variant="light" size="md" onClick={() => go("ao:create", { category })} disabled={!connected || busy}>
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />} Start a room
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />} {t("Start a room")}
             </Button>
           </div>
         </section>
 
         <Card>
-          <CardHeader title="Join with a code" subtitle="Someone started a room? Type the 4 letters they see." />
+          <CardHeader title={t("Join with a code")} subtitle={t("Someone started a room? Type the 4 letters they see.")} />
           <form onSubmit={join} className="flex gap-2">
             <input
               value={code}
@@ -99,23 +102,23 @@ export function Lobby() {
                 )
               }
               placeholder="ABCD"
-              aria-label="Room code"
+              aria-label={t("Room code")}
               autoCapitalize="characters"
               className="h-12 w-36 rounded-2xl border border-border bg-surface-strong/70 text-center text-2xl font-bold tracking-[0.3em] uppercase focus:border-primary focus:outline-none"
             />
             <Button type="submit" variant="primary" disabled={code.length !== 4 || !connected || busy}>
-              <LogIn className="h-4 w-4" aria-hidden="true" /> Join
+              <LogIn className="h-4 w-4" aria-hidden="true" /> {t("Join")}
             </Button>
           </form>
           {error && <p className="mt-2 text-sm text-rose-600 dark:text-rose-300">{error}</p>}
-          {!connected && <p className="mt-2 text-sm text-muted">Connecting to Nook…</p>}
+          {!connected && <p className="mt-2 text-sm text-muted">{t("Connecting to Nook…")}</p>}
         </Card>
       </div>
 
       <Card>
-        <CardHeader title="Open rooms" subtitle="Updates live" />
+        <CardHeader title={t("Open rooms")} subtitle={t("Updates live")} />
         {rooms.length === 0 ? (
-          <p className="text-sm text-muted">No rooms right now. Start one and tell the others the code!</p>
+          <p className="text-sm text-muted">{t("No rooms right now. Start one and tell the others the code!")}</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {rooms.map((r) => (
@@ -132,7 +135,7 @@ export function Lobby() {
                       <Crown className="h-3.5 w-3.5 text-amber-500" aria-hidden="true" /> {r.host}
                     </span>
                     <span className="block text-xs text-muted">
-                      {r.category} · {PHASE[r.phase]}
+                      {t(r.category)} · {t(PHASE[r.phase])}
                     </span>
                   </span>
                   <span className="inline-flex items-center gap-1 text-xs font-semibold text-muted">

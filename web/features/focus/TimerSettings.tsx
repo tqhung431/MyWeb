@@ -9,13 +9,15 @@ import { useMe } from "@/features/me/MeProvider";
 import { useFocus } from "./FocusProvider";
 import { LIMITS, MODES, PRESETS } from "./logic";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 export function TimerSettings() {
+  const t = useT();
   const { durations, setDurations, pendingDurations } = useFocus();
   const { user } = useMe();
 
   return (
-    <section aria-label="Timer lengths" className="rounded-2xl border border-border bg-surface-muted p-4">
-      <p className="mb-2 text-xs font-semibold tracking-wider text-muted uppercase">Presets</p>
+    <section aria-label={t("Timer lengths")} className="rounded-2xl border border-border bg-surface-muted p-4">
+      <p className="mb-2 text-xs font-semibold tracking-wider text-muted uppercase">{t("Presets")}</p>
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {PRESETS.map((p) => {
           const active = (Object.keys(p.durations) as Mode[]).every((m) => p.durations[m] === durations[m]);
@@ -47,16 +49,17 @@ export function TimerSettings() {
 
       <p className="mt-3 text-xs text-muted" aria-live="polite">
         {pendingDurations
-          ? "Your session keeps its length; the new one starts with the next session."
+          ? t("Your session keeps its length; the new one starts with the next session.")
           : user
-            ? "Saved with your name."
-            : "Saved on this device."}
+            ? t("Saved with your name.")
+            : t("Saved on this device.")}
       </p>
     </section>
   );
 }
 
 function Stepper({ mode, value, onChange }: { mode: Mode; value: number; onChange: (v: number) => void }) {
+  const t = useT();
   const { min, max } = LIMITS[mode];
   const id = `duration-${mode}`;
   const step = value >= 30 ? 5 : 1; // big numbers move in 5s
@@ -66,10 +69,16 @@ function Stepper({ mode, value, onChange }: { mode: Mode; value: number; onChang
   return (
     <div className="flex items-center justify-between gap-3">
       <label htmlFor={id} className="text-sm font-semibold">
-        {MODES[mode].label}
+        {t(MODES[mode].label)}
       </label>
       <div className="flex items-center gap-2">
-        <button type="button" className={button} onClick={() => onChange(value - step)} disabled={value <= min} aria-label={`Shorter ${MODES[mode].label.toLowerCase()}`}>
+        <button
+          type="button"
+          className={button}
+          onClick={() => onChange(value - step)}
+          disabled={value <= min}
+          aria-label={t("Shorter {what}", { what: t(MODES[mode].label).toLowerCase() })}
+        >
           <Minus className="h-4 w-4" aria-hidden="true" />
         </button>
         <div className="flex items-baseline gap-1">
@@ -83,9 +92,15 @@ function Stepper({ mode, value, onChange }: { mode: Mode; value: number; onChang
             onChange={(e) => e.target.value !== "" && onChange(Number(e.target.value))}
             className="w-14 rounded-lg border border-border bg-surface-strong px-2 py-1 text-center font-semibold tabular-nums focus:border-primary focus:outline-none"
           />
-          <span className="text-xs text-muted">min</span>
+          <span className="text-xs text-muted">{t("min")}</span>
         </div>
-        <button type="button" className={button} onClick={() => onChange(value + step)} disabled={value >= max} aria-label={`Longer ${MODES[mode].label.toLowerCase()}`}>
+        <button
+          type="button"
+          className={button}
+          onClick={() => onChange(value + step)}
+          disabled={value >= max}
+          aria-label={t("Longer {what}", { what: t(MODES[mode].label).toLowerCase() })}
+        >
           <Plus className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>

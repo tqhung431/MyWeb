@@ -14,10 +14,12 @@ import { getList, removeEntry, saveEntry, STATUS_LABEL, type Entry, type Status 
 import { cn } from "@/lib/cn";
 import { Poster, Stars, StatusSelect } from "./bits";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 type Filter = "all" | Status;
 const FILTERS: Filter[] = ["all", "watching", "want", "done", "dropped"];
 
 export function MyList() {
+  const t = useT();
   const { user, setUser } = useMe();
   const [entries, setEntries] = useState<Entry[] | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
@@ -39,8 +41,8 @@ export function MyList() {
   if (!user) {
     return (
       <div className="max-w-xl rounded-3xl border border-border bg-surface p-6 shadow-card">
-        <h2 className="text-lg font-bold">Pick a name to keep a list</h2>
-        <p className="mt-1 mb-4 text-sm text-muted">Your list is saved with your name, so others on Nook can see what you recommend.</p>
+        <h2 className="text-lg font-bold">{t("Pick a name to keep a list")}</h2>
+        <p className="mt-1 mb-4 text-sm text-muted">{t("Your list is saved with your name, so others on Nook can see what you recommend.")}</p>
         <NameForm mode="pick" onDone={setUser} />
       </div>
     );
@@ -52,7 +54,7 @@ export function MyList() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div role="group" aria-label="Show" className="flex flex-wrap gap-1.5">
+        <div role="group" aria-label={t("Show")} className="flex flex-wrap gap-1.5">
           {FILTERS.map((f) => (
             <button
               key={f}
@@ -64,31 +66,31 @@ export function MyList() {
                 filter === f ? "bg-primary text-on-primary" : "bg-surface-muted text-muted hover:text-text",
               )}
             >
-              {f === "all" ? "All" : STATUS_LABEL[f]} <span className="opacity-70 tabular-nums">{count(f)}</span>
+              {f === "all" ? t("All") : t(STATUS_LABEL[f])} <span className="opacity-70 tabular-nums">{count(f)}</span>
             </button>
           ))}
         </div>
         <Link href="/watchlist/search" className={buttonClasses("primary", "sm")}>
-          <Search className="h-4 w-4" aria-hidden="true" /> Find something
+          <Search className="h-4 w-4" aria-hidden="true" /> {t("Find something")}
         </Link>
       </div>
 
       {offline && (
         <p className="flex items-center gap-2 text-sm text-muted">
-          <CloudOff className="h-5 w-5" aria-hidden="true" /> Can&apos;t reach the API right now.
+          <CloudOff className="h-5 w-5" aria-hidden="true" /> {t("Can't reach the API right now.")}
         </p>
       )}
-      {entries === null && !offline && <p className="text-sm text-muted">Loading your list…</p>}
+      {entries === null && !offline && <p className="text-sm text-muted">{t("Loading your list…")}</p>}
       {entries?.length === 0 && (
         <div className="rounded-3xl border border-dashed border-border p-10 text-center">
           <p className="text-4xl" aria-hidden="true">
             🍿
           </p>
-          <p className="mt-2 font-semibold">Your list is empty</p>
-          <p className="text-sm text-muted">Find a show or anime and add it.</p>
+          <p className="mt-2 font-semibold">{t("Your list is empty")}</p>
+          <p className="text-sm text-muted">{t("Find a show or anime and add it.")}</p>
         </div>
       )}
-      {entries && entries.length > 0 && shown.length === 0 && <p className="text-sm text-muted">Nothing here yet.</p>}
+      {entries && entries.length > 0 && shown.length === 0 && <p className="text-sm text-muted">{t("Nothing here yet.")}</p>}
 
       <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {shown.map((e) => (
@@ -106,6 +108,7 @@ export function MyList() {
 }
 
 function EntryCard({ entry: e, onChange, onRemoved }: { entry: Entry; onChange: (e: Entry) => void; onRemoved: () => void }) {
+  const t = useT();
   const confirm = useConfirm();
   const [note, setNote] = useState(e.note);
   const [error, setError] = useState("");
@@ -117,13 +120,13 @@ function EntryCard({ entry: e, onChange, onRemoved }: { entry: Entry; onChange: 
     onChange(next);
     setError("");
     saving.current = saving.current.then(() =>
-      saveEntry(e.source, e.externalId, { status: next.status, ...changes }).then(onChange, () => setError("Not saved: can't reach Nook.")),
+      saveEntry(e.source, e.externalId, { status: next.status, ...changes }).then(onChange, () => setError(t("Not saved: can't reach Nook."))),
     );
   }
 
   async function changeStatus(s: Status | "remove") {
     if (s === "remove") {
-      if (!(await confirm({ title: `Remove “${e.title}” from your list?`, confirmLabel: "Remove", danger: true }))) return;
+      if (!(await confirm({ title: t("Remove “{title}” from your list?", { title: e.title }), confirmLabel: t("Remove"), danger: true }))) return;
       await removeEntry(e.titleId).catch(() => {});
       return onRemoved();
     }
@@ -145,7 +148,7 @@ function EntryCard({ entry: e, onChange, onRemoved }: { entry: Entry; onChange: 
           <Link href={`/watchlist/t/${e.titleId}`} className="line-clamp-2 font-semibold hover:underline">
             {e.title}
           </Link>
-          <p className="text-xs text-muted">{[e.year, e.kind, e.episodes ? `${e.episodes} episodes` : null].filter(Boolean).join(" · ")}</p>
+          <p className="text-xs text-muted">{[e.year, e.kind, e.episodes ? t("{n} episodes", { n: e.episodes }) : null].filter(Boolean).join(" · ")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <StatusSelect value={e.status} onChange={changeStatus} allowRemove />
@@ -153,13 +156,13 @@ function EntryCard({ entry: e, onChange, onRemoved }: { entry: Entry; onChange: 
         </div>
         {e.status === "watching" && (
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted">Episode</span>
+            <span className="text-muted">{t("Episode")}</span>
             <Button
               variant="secondary"
               size="icon"
               className="h-8 w-8"
               onClick={() => save({ episodesSeen: Math.max(0, seen - 1) })}
-              aria-label="One episode less"
+              aria-label={t("One episode less")}
             >
               <Minus className="h-3.5 w-3.5" aria-hidden="true" />
             </Button>
@@ -172,7 +175,7 @@ function EntryCard({ entry: e, onChange, onRemoved }: { entry: Entry; onChange: 
               size="icon"
               className="h-8 w-8"
               onClick={() => save(e.episodes && seen + 1 >= e.episodes ? { episodesSeen: e.episodes, status: "done" } : { episodesSeen: seen + 1 })}
-              aria-label="Watched one more episode"
+              aria-label={t("Watched one more episode")}
             >
               <Plus className="h-3.5 w-3.5" aria-hidden="true" />
             </Button>
@@ -183,8 +186,8 @@ function EntryCard({ entry: e, onChange, onRemoved }: { entry: Entry; onChange: 
           onChange={(ev) => setNote(ev.target.value)}
           onBlur={() => note !== e.note && save({ note })}
           maxLength={500}
-          placeholder="A short note (others on Nook can see it)"
-          aria-label={`Note about ${e.title}`}
+          placeholder={t("A short note (others on Nook can see it)")}
+          aria-label={t("Note about {title}", { title: e.title })}
           className="h-9 w-full rounded-full border border-border bg-surface-strong/70 px-3 text-sm focus:border-primary focus:outline-none"
         />
         {error && <p className="text-xs text-rose-600 dark:text-rose-300">{error}</p>}

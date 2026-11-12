@@ -14,6 +14,7 @@ import { chatBody } from "./routes/companion.js";
 import { saveBody } from "./routes/games.js";
 import { bookEdits, bookFields, dayBody, habitFields, habitsQuery, pagesBody, statsQuery } from "./routes/habits.js";
 import { beforeQuery, commentBody, messageBody, newGroup, postBody } from "./routes/hobby.js";
+import { peopleQuery } from "./routes/messages.js";
 import { nameBody, preferences } from "./routes/me.js";
 import { chartQuery, edits, uploadFields } from "./routes/music.js";
 import { newSession, summaryQuery } from "./routes/sessions.js";
@@ -114,6 +115,7 @@ export const ENDPOINTS: Endpoint[] = [
   { method: "delete", path: "/api/hobby/groups/{slug}", tag: "Hobby Hub", summary: "Delete a group you started", who: "name" },
   { method: "put", path: "/api/hobby/groups/{slug}/membership", tag: "Hobby Hub", summary: "Join a group", who: "name" },
   { method: "delete", path: "/api/hobby/groups/{slug}/membership", tag: "Hobby Hub", summary: "Leave a group", who: "name" },
+  { method: "put", path: "/api/hobby/groups/{slug}/read", tag: "Hobby Hub", summary: "Mark everything in a group as read", who: "name" },
   { method: "get", path: "/api/hobby/groups/{slug}/posts", tag: "Hobby Hub", summary: "The board, newest first, 20 at a time", query: beforeQuery },
   { method: "post", path: "/api/hobby/groups/{slug}/posts", tag: "Hobby Hub", summary: "Write a post", who: "name", body: postBody },
   { method: "delete", path: "/api/hobby/posts/{id}", tag: "Hobby Hub", summary: "Delete your post", who: "name" },
@@ -132,6 +134,15 @@ export const ENDPOINTS: Endpoint[] = [
     body: messageBody,
   },
   { method: "delete", path: "/api/hobby/messages/{id}", tag: "Hobby Hub", summary: "Delete your chat message", who: "name" },
+  { method: "get", path: "/api/hobby/unread", tag: "Hobby Hub", summary: "Unread private messages and group posts/messages (the badge)" },
+  { method: "get", path: "/api/hobby/people", tag: "Hobby Hub", summary: "People with a name, to start a private chat with", who: "name", query: peopleQuery },
+  { method: "get", path: "/api/hobby/dms", tag: "Hobby Hub", summary: "Your private chats, newest first, with unread counts", who: "name" },
+  { method: "get", path: "/api/hobby/dms/{userId}", tag: "Hobby Hub", summary: "One private chat, 50 messages at a time", who: "name", query: beforeQuery },
+  { method: "post", path: "/api/hobby/dms/{userId}", tag: "Hobby Hub", summary: "Send a private message (words, a picture, or both)", who: "name", body: messageBody },
+  { method: "put", path: "/api/hobby/dms/{userId}/read", tag: "Hobby Hub", summary: "Mark a private chat as read", who: "name" },
+  { method: "delete", path: "/api/hobby/dms/messages/{id}", tag: "Hobby Hub", summary: "Delete your private message", who: "name" },
+  { method: "post", path: "/api/hobby/images", tag: "Hobby Hub", summary: "Upload a picture for a chat (multipart: file; JPEG, PNG, WebP or GIF up to 5 MB)", who: "name" },
+  { method: "get", path: "/api/hobby/images/{id}", tag: "Hobby Hub", summary: "A chat picture (group chat: anyone; private chat: the two people)" },
 
   // WatchList
   { method: "get", path: "/api/watch/search", tag: "WatchList", summary: "Search TV shows (TVmaze) and anime (Jikan)", query: searchQuery },

@@ -8,14 +8,18 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { buttonClasses } from "@/components/ui/Button";
 import { realmName } from "./van-lo/logic/player";
+import { useLang } from "@/lib/i18n/I18nProvider";
 import { loadLocal } from "./van-lo/logic/save";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 export function GamesHome() {
+  const t = useT();
+  const lang = useLang();
   const [progress, setProgress] = useState<string | null>(null);
   useEffect(() => {
     const g = loadLocal();
-    if (g) setProgress(`${g.player.name} · ${realmName(g.player, g.lang)}`);
-  }, []);
+    if (g) setProgress(`${g.player.name} · ${realmName(g.player, lang)}`);
+  }, [lang]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -31,13 +35,13 @@ export function GamesHome() {
           <path d="M40 170 Q140 150 230 165 Q300 176 380 160" stroke="currentColor" strokeWidth="1.2" fill="none" opacity="0.35" />
         </svg>
         <div className="relative">
-          <Badge tone="primary">{progress ?? "Mới · New"}</Badge>
+          <Badge tone="primary">{progress ?? t("New")}</Badge>
           <h2 className="mt-2 text-4xl font-extrabold tracking-tight">Vân Lộ</h2>
           <p className="max-w-md text-muted">
-            Tu tiên, bí cảnh và thiên kiếp. A cultivation roguelite: train in your cave abode, explore secret realms turn by turn, survive the tribulation.
+            {t("A cultivation roguelite: train in your cave abode, explore secret realms turn by turn, survive the tribulation.")}
           </p>
           <span className={buttonClasses("primary", "md", "mt-4")}>
-            <Mountain className="h-4 w-4" aria-hidden="true" /> {progress ? "Tiếp tục · Continue" : "Bắt đầu · Play"}
+            <Mountain className="h-4 w-4" aria-hidden="true" /> {progress ? t("Continue") : t("Play")}
           </span>
         </div>
       </Link>
@@ -46,8 +50,8 @@ export function GamesHome() {
         <Link href="/arcade" className="flex items-center gap-4 rounded-3xl border border-border bg-surface p-5 shadow-card transition hover:-translate-y-0.5">
           <Gamepad2 className="h-8 w-8 text-primary" aria-hidden="true" />
           <span>
-            <span className="block font-bold">Mini Arcade</span>
-            <span className="text-sm text-muted">Six quick games with high scores</span>
+            <span className="block font-bold">{t("Mini Arcade")}</span>
+            <span className="text-sm text-muted">{t("Six quick games with high scores")}</span>
           </span>
         </Link>
         <Link
@@ -56,8 +60,8 @@ export function GamesHome() {
         >
           <Swords className="h-8 w-8 text-primary" aria-hidden="true" />
           <span>
-            <span className="block font-bold">Arcade Online</span>
-            <span className="text-sm text-muted">Quiz Party against everyone on Nook</span>
+            <span className="block font-bold">{t("Arcade Online")}</span>
+            <span className="text-sm text-muted">{t("Quiz Party against everyone on Nook")}</span>
           </span>
         </Link>
       </div>

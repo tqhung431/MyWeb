@@ -9,10 +9,13 @@ import { sfx } from "../sfx";
 import type { GameProps } from "../types";
 import { useLatest } from "../useLatest";
 
-const CHEERS = ["Eagle eyes! 🦅", "Sharp! 🔍", "Nice spot!", "Too easy? 😏", "Wow!", "Detective mode 🕵️"];
+import { useT } from "@/lib/i18n/I18nProvider";
+import { tx } from "@/lib/i18n/core";
+const CHEERS = [tx("Eagle eyes! 🦅"), tx("Sharp! 🔍"), tx("Nice spot!"), tx("Too easy? 😏"), tx("Wow!"), tx("Detective mode 🕵️")];
 const TEXT_SIZE = ["", "", "text-6xl", "text-5xl", "text-4xl", "text-3xl", "text-3xl", "text-2xl"];
 
 export default function Odd({ onFinish }: GameProps) {
+  const t = useT();
   const [found, setFound] = useState(0);
   const [round, setRound] = useState<Round>(() => newRound(0));
   const [left, setLeft] = useState(ROUND_SECONDS * 1000);
@@ -44,7 +47,7 @@ export default function Odd({ onFinish }: GameProps) {
       sfx("match");
       if (foundRef.current % 3 === 0)
         setCheer({
-          text: CHEERS[Math.floor(Math.random() * CHEERS.length)],
+          text: t(CHEERS[Math.floor(Math.random() * CHEERS.length)]),
           key: Date.now(),
         });
     } else {
@@ -79,7 +82,7 @@ export default function Odd({ onFinish }: GameProps) {
         className="grid aspect-square w-full gap-1.5 rounded-2xl bg-surface-muted p-2 sm:gap-2"
         style={{ gridTemplateColumns: `repeat(${round.size}, minmax(0, 1fr))` }}
         role="group"
-        aria-label={`Find the odd one out in this ${round.size} by ${round.size} grid`}
+        aria-label={t("Find the odd one out in this {n} by {n} grid", { n: round.size })}
       >
         {Array.from({ length: cells }, (_, i) => (
           <button

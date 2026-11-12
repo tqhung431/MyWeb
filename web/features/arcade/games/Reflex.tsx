@@ -10,9 +10,11 @@ import { sfx } from "../sfx";
 import type { GameProps } from "../types";
 import { useLatest } from "../useLatest";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 type State = { name: "waiting"; line: string } | { name: "go"; at: number } | { name: "early"; line: string } | { name: "result"; ms: number };
 
 export default function Reflex({ onFinish }: GameProps) {
+  const t = useT();
   const [state, setState] = useState<State>({
     name: "waiting",
     line: WAITING_LINES[0],
@@ -84,7 +86,7 @@ export default function Reflex({ onFinish }: GameProps) {
         <span>
           Round {Math.min(times.length + 1, ROUNDS)} of {ROUNDS}
         </span>
-        <span className="flex gap-1.5" aria-label={`Times so far: ${times.join(", ") || "none"}`}>
+        <span className="flex gap-1.5" aria-label={t("Times so far: {list}", { list: times.join(", ") || t("none") })}>
           {Array.from({ length: ROUNDS }, (_, i) => (
             <span
               key={i}
@@ -121,7 +123,7 @@ export default function Reflex({ onFinish }: GameProps) {
             <span className="text-7xl" aria-hidden="true">
               ✋
             </span>
-            <span className="text-2xl font-extrabold">{state.line}</span>
+            <span className="text-2xl font-extrabold">{t(state.line)}</span>
           </>
         )}
         {state.name === "go" && (
@@ -129,7 +131,7 @@ export default function Reflex({ onFinish }: GameProps) {
             <span className="text-7xl" aria-hidden="true">
               👆
             </span>
-            <span className="text-4xl font-black">TAP!</span>
+            <span className="text-4xl font-black">{t("TAP!")}</span>
           </>
         )}
         {state.name === "early" && (
@@ -137,8 +139,8 @@ export default function Reflex({ onFinish }: GameProps) {
             <span className="text-7xl" aria-hidden="true">
               🐔
             </span>
-            <span className="text-2xl font-extrabold">{state.line}</span>
-            <span className="text-sm font-semibold opacity-80">Tap to try this round again</span>
+            <span className="text-2xl font-extrabold">{t(state.line)}</span>
+            <span className="text-sm font-semibold opacity-80">{t("Tap to try this round again")}</span>
           </>
         )}
         {state.name === "result" && (
@@ -147,11 +149,11 @@ export default function Reflex({ onFinish }: GameProps) {
               {animalFor(state.ms).emoji}
             </span>
             <span className="text-5xl font-black tabular-nums">{state.ms} ms</span>
-            <span className="text-lg font-bold">{animalFor(state.ms).label}</span>
+            <span className="text-lg font-bold">{t(animalFor(state.ms).label)}</span>
             {times.length < ROUNDS ? (
-              <span className="text-sm font-semibold opacity-80">Tap for the next round</span>
+              <span className="text-sm font-semibold opacity-80">{t("Tap for the next round")}</span>
             ) : (
-              <span className="text-sm font-semibold opacity-80">Average: {average(times)} ms</span>
+              <span className="text-sm font-semibold opacity-80">{t("Average: {n} ms", { n: average(times) })}</span>
             )}
           </>
         )}

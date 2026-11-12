@@ -11,6 +11,7 @@ import { AmbientProvider } from "@/features/ambient/AmbientProvider";
 import { MeProvider } from "@/features/me/MeProvider";
 import { FocusProvider } from "@/features/focus/FocusProvider";
 import { HabitReminders } from "@/features/habits/Reminders";
+import { UnreadProvider } from "@/features/hobby/UnreadProvider";
 import { OfflineSync } from "@/features/habits/OfflineSync";
 import { ServiceWorker } from "@/features/habits/ServiceWorker";
 import { MusicProvider } from "@/features/music/MusicProvider";
@@ -21,20 +22,22 @@ export function AppProviders({ initialUser, children }: { initialUser: User | nu
   return (
     <MeProvider initialUser={initialUser}>
       <RealtimeProvider>
-        <AmbientProvider>
-          <AchievementsProvider>
-            <FocusProvider>
-              <MusicProvider>
-                <ToastProvider>
-                  <ConfirmProvider>{children}</ConfirmProvider>
-                </ToastProvider>
-                <HabitReminders />
-                <OfflineSync />
-                <ServiceWorker />
-              </MusicProvider>
-            </FocusProvider>
-          </AchievementsProvider>
-        </AmbientProvider>
+        <UnreadProvider>
+          <AmbientProvider>
+            <AchievementsProvider>
+              <FocusProvider>
+                <MusicProvider>
+                  <ToastProvider>
+                    <ConfirmProvider>{children}</ConfirmProvider>
+                  </ToastProvider>
+                  <HabitReminders />
+                  <OfflineSync />
+                  <ServiceWorker />
+                </MusicProvider>
+              </FocusProvider>
+            </AchievementsProvider>
+          </AmbientProvider>
+        </UnreadProvider>
       </RealtimeProvider>
     </MeProvider>
   );

@@ -20,6 +20,7 @@ import { createPortal } from "react-dom";
 import { isPhone, placeNear, useAnchorRect, useDismiss } from "@/lib/floating";
 import { cn } from "@/lib/cn";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 export type SelectOption<T extends string | number> = {
   value: T;
   label: string;
@@ -54,7 +55,7 @@ export function Select<T extends string | number>({
   value,
   options,
   onChange,
-  placeholder = "Choose…",
+  placeholder,
   variant = "field",
   size = "sm",
   searchable = false,
@@ -62,6 +63,7 @@ export function Select<T extends string | number>({
   className,
   buttonClassName,
 }: Props<T>) {
+  const t = useT();
   const id = useId();
   const listId = `${id}-list`;
   const labelId = `${id}-label`;
@@ -184,7 +186,7 @@ export function Select<T extends string | number>({
       id={listId}
       role="listbox"
       aria-labelledby={showLabel ? labelId : undefined}
-      aria-label={showLabel ? undefined : label}
+      aria-label={showLabel ? undefined : t(label)}
       tabIndex={-1}
       className={cn("flex flex-col gap-0.5 overflow-y-auto overscroll-contain p-1.5", sheet && "pb-[max(0.5rem,env(safe-area-inset-bottom))]")}
     >
@@ -212,14 +214,14 @@ export function Select<T extends string | number>({
               </span>
             )}
             <span className="min-w-0 flex-1 py-1.5">
-              <span className="block truncate">{o.label}</span>
+              <span className="block truncate">{t(o.label)}</span>
               {o.hint && <span className="block truncate text-xs font-normal text-muted">{o.hint}</span>}
             </span>
             <Check className={cn("h-4 w-4 shrink-0 text-primary", !isSelected && "invisible")} aria-hidden="true" />
           </li>
         );
       })}
-      {shown.length === 0 && <li className="px-3 py-3 text-sm text-muted">Nothing matches “{query.trim()}”.</li>}
+      {shown.length === 0 && <li className="px-3 py-3 text-sm text-muted">{t("Nothing matches “{q}”.", { q: query.trim() })}</li>}
     </ul>
   );
 
@@ -235,14 +237,14 @@ export function Select<T extends string | number>({
         aria-controls={listId}
         aria-autocomplete="list"
         aria-activedescendant={active >= 0 && shown[active] ? optionId(active) : undefined}
-        aria-label={`Search ${label.toLowerCase()}`}
+        aria-label={t("Search {what}", { what: t(label).toLowerCase() })}
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
           setActive(0);
         }}
         onKeyDown={onKeyDown}
-        placeholder="Type to search…"
+        placeholder={t("Type to search…")}
         className="h-10 w-full rounded-xl bg-surface-muted pr-3 pl-9 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       />
     </div>
@@ -256,7 +258,7 @@ export function Select<T extends string | number>({
           <div className="fixed inset-0 z-[70] flex items-end bg-black/35 backdrop-blur-[2px]">
             <div ref={panelRef} className={cn(panelClasses, "max-h-[70dvh] w-full rounded-t-3xl")}>
               <span className="mx-auto mt-3 mb-2 h-1.5 w-10 shrink-0 rounded-full bg-border" aria-hidden="true" />
-              <p className="px-5 pb-2 text-sm font-semibold text-muted">{label}</p>
+              <p className="px-5 pb-2 text-sm font-semibold text-muted">{t(label)}</p>
               {search}
               {listbox}
             </div>
@@ -280,7 +282,7 @@ export function Select<T extends string | number>({
     <div className={cn(showLabel ? "flex flex-col gap-1.5" : variant === "pill" && "inline-block", className)}>
       {showLabel && (
         <span id={labelId} className="text-sm font-semibold" onClick={() => buttonRef.current?.focus()}>
-          {label}
+          {t(label)}
         </span>
       )}
       <button
@@ -292,7 +294,7 @@ export function Select<T extends string | number>({
         aria-controls={open ? listId : undefined}
         aria-activedescendant={open && !searchable && active >= 0 && shown[active] ? optionId(active) : undefined}
         aria-labelledby={showLabel ? labelId : undefined}
-        aria-label={showLabel ? undefined : label}
+        aria-label={showLabel ? undefined : t(label)}
         disabled={disabled}
         onClick={() => (open ? close() : show())}
         onKeyDown={onKeyDown}
@@ -315,7 +317,9 @@ export function Select<T extends string | number>({
             {selected.icon}
           </span>
         )}
-        <span className={cn("min-w-0 flex-1 truncate", !selected && variant === "field" && "text-muted")}>{selected?.label ?? placeholder}</span>
+        <span className={cn("min-w-0 flex-1 truncate", !selected && variant === "field" && "text-muted")}>
+          {selected ? t(selected.label) : (placeholder ?? t("Choose…"))}
+        </span>
         <ChevronDown
           className={cn("shrink-0 opacity-70 transition-transform", variant === "field" ? "h-4 w-4" : "h-3.5 w-3.5", open && "rotate-180")}
           aria-hidden="true"

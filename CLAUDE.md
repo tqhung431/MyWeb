@@ -1,6 +1,6 @@
 # Nook: notes for Claude
 
-Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–20).
+Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–21).
 
 ## The project
 
@@ -44,7 +44,14 @@ Read this first in every session. It carries the context from the sessions that 
   Cloud VM is OPTIONAL, not the default (owner's choice: Nook runs on a home PC). docs/deploy-gcp.md: nginx (`deploy/nginx/nook.conf`: basic auth, certbot, Host $http_host, XFF=$remote_addr,
   WebSocket upgrade, 110m body, no buffering) → Caddy `:8081` (trusts private ranges; published on 127.0.0.1:PROXY_PORT only via
   `COMPOSE_FILE=docker-compose.yml:deploy/nginx/compose.proxy.yml`).
-  Next: Stage 21 (ask the owner).
+  21: Hobby Hub private chats (`direct_messages`, routes/messages.ts, events `dm:*` to `user:<id>` rooms), members-only
+  writing + `group_members.last_read_at` unread counts, `UnreadProvider` badge, chat pictures (`chat_images`, bytes checked in
+  `api/src/hobby/images.ts`, files in MEDIA_DIR/chat, swept by cleanup), shared `ChatPanel`. i18n without a library:
+  `web/lib/i18n` (`t("English text")`, `tx()` for data, `tNow()` outside React, `getT()` on the server, `vi.json`;
+  `tests/i18n.test.ts` fails on a missing text: add Vietnamese for every new t("…")). Cookie `nook_lang`; API errors
+  translated in errorHandler (`api/src/i18n.ts`); activity feed = template + params ("_" keys are translated).
+  Vân Lộ keeps its own vi/en texts. `/settings` holds language + theme (no theme buttons in the shell).
+  Next: Stage 22 (ask the owner).
   Original world only: don't copy names/characters/plots from existing novels or films.
   Each stage has an explainer in `docs/stage-N.md`; write one for every new stage and update the README's stage list.
 - Apps: **Chill Corner** (focus timer, generated sounds, tips, achievements), **Music** (uploaded songs

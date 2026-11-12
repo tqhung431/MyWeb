@@ -9,7 +9,9 @@ import { sfx } from "../sfx";
 import type { GameProps } from "../types";
 import { useLatest } from "../useLatest";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 export default function Pairs({ onFinish }: GameProps) {
+  const t = useT();
   const [deck] = useState(() => newDeck(8));
   const [open, setOpen] = useState<number[]>([]); // face up, not matched yet (0–2 cards)
   const [matched, setMatched] = useState<Set<number>>(new Set());
@@ -46,7 +48,7 @@ export default function Pairs({ onFinish }: GameProps) {
       setMatched((m) => new Set([...m, first, i]));
       setOpen([]);
       setSaid({
-        text: `${ANIMALS[deck[i].animal].emoji} ${ANIMALS[deck[i].animal].says}`,
+        text: `${ANIMALS[deck[i].animal].emoji} ${t(ANIMALS[deck[i].animal].says)}`,
         key: Date.now(),
       });
       sfx("match");
@@ -86,7 +88,7 @@ export default function Pairs({ onFinish }: GameProps) {
               key={card.id}
               type="button"
               onClick={() => flip(i)}
-              aria-label={up ? animal.emoji : `Card ${i + 1}, face down`}
+              aria-label={up ? animal.emoji : t("Card {n}, face down", { n: i + 1 })}
               aria-pressed={up}
               className={cn(
                 "aspect-square cursor-pointer perspective-distant focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl",

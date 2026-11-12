@@ -298,6 +298,7 @@ stage-1-static/        Stage 1: the plain HTML/CSS/JS version
 18. Vân Lộ comes alive — sprites for each path, hold-to-walk and a joystick, particles and lighting, urns/shrines/merchants, a leaderboard, light effects for older phones ✅ · [docs](docs/stage-18.md)
 19. Quality and speed — Playwright end-to-end tests, Lighthouse 90+ on every page, a k6 load test, OpenAPI docs; a smoother Mini Arcade ✅ · [docs](docs/stage-19.md)
 20. Going out — Nook away from home, safely: Tailscale, or a Cloudflare tunnel behind Cloudflare Access (checked by Nook itself); firewall rules ✅ · [docs](docs/stage-20.md)
+21. Hobby Hub gets personal (private chats, pictures in chats, joining that matters, unread badges) and Nook in Vietnamese, with a Settings page ✅ · [docs](docs/stage-21.md)
 
 ## Licence
 

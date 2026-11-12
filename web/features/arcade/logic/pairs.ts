@@ -1,18 +1,19 @@
+import { tx } from "@/lib/i18n/core";
 // Silly Pairs: 8 animals, each twice, shuffled.
 
 export const ANIMALS = [
-  { emoji: "🐸", says: "Ribbit!" },
-  { emoji: "🦆", says: "Quack!" },
-  { emoji: "🐙", says: "Blub blub" },
-  { emoji: "🦥", says: "…zzz…" },
-  { emoji: "🐧", says: "Waddle!" },
-  { emoji: "🦄", says: "Sparkle!" },
-  { emoji: "🐌", says: "Slooow" },
-  { emoji: "🦖", says: "RAWR!" },
-  { emoji: "🐷", says: "Oink!" },
-  { emoji: "🐔", says: "Bawk!" },
-  { emoji: "🦉", says: "Hoo?" },
-  { emoji: "🐳", says: "Splash!" },
+  { emoji: "🐸", says: tx("Ribbit!") },
+  { emoji: "🦆", says: tx("Quack!") },
+  { emoji: "🐙", says: tx("Blub blub") },
+  { emoji: "🦥", says: tx("…zzz…") },
+  { emoji: "🐧", says: tx("Waddle!") },
+  { emoji: "🦄", says: tx("Sparkle!") },
+  { emoji: "🐌", says: tx("Slooow") },
+  { emoji: "🦖", says: tx("RAWR!") },
+  { emoji: "🐷", says: tx("Oink!") },
+  { emoji: "🐔", says: tx("Bawk!") },
+  { emoji: "🦉", says: tx("Hoo?") },
+  { emoji: "🐳", says: tx("Splash!") },
 ];
 
 export type Card = { id: number; animal: number };

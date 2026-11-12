@@ -5,15 +5,17 @@ import type { LucideIcon } from "lucide-react";
 import { useFocus } from "./FocusProvider";
 import { streak } from "./logic";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 export function TodayStats() {
+  const t = useT();
   const { summary, status } = useFocus();
   const show = (n: number | undefined) => (status === "ready" && n !== undefined ? String(n) : "–");
 
   return (
     <div className="grid grid-cols-3 gap-3">
-      <Stat icon={Timer} label="Sessions today" value={show(summary?.today.sessions)} />
-      <Stat icon={Clock} label="Minutes today" value={show(summary?.today.minutes)} />
-      <Stat icon={Flame} label="Day streak" value={show(summary ? streak(summary.days) : undefined)} />
+      <Stat icon={Timer} label={t("Sessions today")} value={show(summary?.today.sessions)} />
+      <Stat icon={Clock} label={t("Minutes today")} value={show(summary?.today.minutes)} />
+      <Stat icon={Flame} label={t("Day streak")} value={show(summary ? streak(summary.days) : undefined)} />
     </div>
   );
 }

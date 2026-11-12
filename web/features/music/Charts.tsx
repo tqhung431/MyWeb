@@ -18,13 +18,16 @@ import { cn } from "@/lib/cn";
 import { genreOf, GENRES } from "./genres";
 import { useMusic } from "./MusicProvider";
 
+import { useT } from "@/lib/i18n/I18nProvider";
+import { tx } from "@/lib/i18n/core";
 const PERIODS: { value: Period; label: string }[] = [
-  { value: "week", label: "This week" },
-  { value: "month", label: "This month" },
-  { value: "all", label: "All time" },
+  { value: "week", label: tx("This week") },
+  { value: "month", label: tx("This month") },
+  { value: "all", label: tx("All time") },
 ];
 
 export function Charts() {
+  const t = useT();
   const confirm = useConfirm();
   const [period, setPeriod] = useState<Period>("week");
   const [genre, setGenre] = useState<Genre | "all">("all");
@@ -38,8 +41,8 @@ export function Charts() {
   const { play, current, queue, enqueue } = useMusic();
 
   useEffect(() => {
-    const t = setTimeout(() => setSearch(q), 350);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setSearch(q), 350);
+    return () => clearTimeout(timer);
   }, [q]);
 
   const load = useCallback(async () => {
@@ -91,7 +94,7 @@ export function Charts() {
   }
 
   async function remove(song: Song) {
-    if (!(await confirm({ title: `Remove “${song.title}” from Nook?`, confirmLabel: "Remove", danger: true }))) return;
+    if (!(await confirm({ title: t("Remove “{title}” from Nook?", { title: song.title }), confirmLabel: t("Remove"), danger: true }))) return;
     await deleteSong(song.id).catch(() => {});
     void load();
   }
@@ -110,39 +113,39 @@ export function Charts() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <SegmentedControl label="Chart period" options={PERIODS} value={period} onChange={setPeriod} />
+        <SegmentedControl label={t("Chart period")} options={PERIODS} value={period} onChange={setPeriod} />
         <div className="flex gap-2">
           {songs && songs.length > 0 && (
             <>
               <Button variant="primary" size="sm" onClick={() => play(songs[0], songs)}>
-                <Play className="h-4 w-4" aria-hidden="true" /> Play all
+                <Play className="h-4 w-4" aria-hidden="true" /> {t("Play all")}
               </Button>
               <Button variant="secondary" size="sm" onClick={() => play(songs[Math.floor(Math.random() * songs.length)], songs, { shuffle: true })}>
-                <Shuffle className="h-4 w-4" aria-hidden="true" /> Shuffle
+                <Shuffle className="h-4 w-4" aria-hidden="true" /> {t("Shuffle")}
               </Button>
             </>
           )}
           <Link href="/music/add" className={buttonClasses("secondary", "sm")}>
-            <Plus className="h-4 w-4" aria-hidden="true" /> Add songs
+            <Plus className="h-4 w-4" aria-hidden="true" /> {t("Add songs")}
           </Link>
         </div>
       </div>
 
       <SegmentedControl
-        label="Genre"
-        options={[{ value: "all" as const, label: "All" }, ...GENRES.map((g) => ({ value: g.id, label: g.label }))]}
+        label={t("Genre")}
+        options={[{ value: "all" as const, label: t("All") }, ...GENRES.map((g) => ({ value: g.id, label: t(g.label) }))]}
         value={genre}
         onChange={setGenre}
       />
 
       <label className="relative">
-        <span className="sr-only">Search songs</span>
+        <span className="sr-only">{t("Search songs")}</span>
         <Search className="pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-muted" aria-hidden="true" />
         <input
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search by title or artist…"
+          placeholder={t("Search by title or artist…")}
           className="h-11 w-full rounded-full border border-border bg-surface-strong/70 pr-4 pl-12 focus:border-primary focus:ring-4 focus:ring-primary/15 focus:outline-none"
         />
       </label>
@@ -150,11 +153,13 @@ export function Charts() {
       <Card className="p-2 sm:p-3">
         {offline && (
           <p className="flex items-center gap-2 p-4 text-sm text-muted">
-            <CloudOff className="h-5 w-5" aria-hidden="true" /> Can&apos;t reach the API right now.
+            <CloudOff className="h-5 w-5" aria-hidden="true" /> {t("Can't reach the API right now.")}
           </p>
         )}
-        {!offline && songs === null && <p className="p-4 text-sm text-muted">Loading the charts…</p>}
-        {!offline && songs?.length === 0 && (search ? <p className="p-4 text-sm text-muted">No songs match “{search}”.</p> : <Empty genre={genre} />)}
+        {!offline && songs === null && <p className="p-4 text-sm text-muted">{t("Loading the charts…")}</p>}
+        {!offline &&
+          songs?.length === 0 &&
+          (search ? <p className="p-4 text-sm text-muted">{t("No songs match “{q}”.", { q: search })}</p> : <Empty genre={genre} />)}
         {songs && songs.length > 0 && (
           <ol className="flex flex-col">
             {songs.map((song, i) => (
@@ -177,15 +182,19 @@ export function Charts() {
         {songs && hasMore && (
           <div className="flex justify-center p-3">
             <Button variant="secondary" size="sm" onClick={loadMore} disabled={loadingMore}>
-              {loadingMore && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />} Show more songs
+              {loadingMore && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />} {t("Show more songs")}
             </Button>
           </div>
         )}
       </Card>
 
       <p className="text-xs text-muted">
-        Ranked by Nook listeners: plays + 3 × likes {period === "all" ? "of all time" : period === "week" ? "in the last 7 days" : "in the last 30 days"}. Songs
-        are stored and played by Nook itself, so they work on any network that can open Nook.
+        {period === "all"
+          ? t("Ranked by Nook listeners: plays + 3 × likes of all time.")
+          : period === "week"
+            ? t("Ranked by Nook listeners: plays + 3 × likes in the last 7 days.")
+            : t("Ranked by Nook listeners: plays + 3 × likes in the last 30 days.")}{" "}
+        {t("Songs are stored and played by Nook itself, so they work on any network that can open Nook.")}
       </p>
     </div>
   );
@@ -205,6 +214,7 @@ type RowProps = {
 };
 
 function Row({ rank, song, period, playing, queued, onPlay, onQueue, onLike, onGenre, onRemove }: RowProps) {
+  const t = useT();
   const g = genreOf(song.genre);
   return (
     <li className={cn("group flex items-center gap-3 rounded-2xl p-2 transition sm:gap-4", playing ? "bg-primary/10" : "hover:bg-surface-muted")}>
@@ -219,7 +229,7 @@ function Row({ rank, song, period, playing, queued, onPlay, onQueue, onLike, onG
       <button
         type="button"
         onClick={onPlay}
-        aria-label={`Play ${song.title} by ${song.artist}`}
+        aria-label={t("Play {title} by {artist}", { title: song.title, artist: song.artist })}
         className="relative h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         {song.artworkUrl ? (
@@ -244,7 +254,7 @@ function Row({ rank, song, period, playing, queued, onPlay, onQueue, onLike, onG
         {song.mine ? (
           // You added it: you can fix the genre Nook guessed
           <Select<Genre>
-            label={`Genre of ${song.title}`}
+            label={t("Genre of {title}", { title: song.title })}
             variant="pill"
             searchable={GENRES.length > 8}
             value={song.genre}
@@ -254,18 +264,21 @@ function Row({ rank, song, period, playing, queued, onPlay, onQueue, onLike, onG
             buttonClassName="border border-border bg-surface-strong"
           />
         ) : (
-          <Badge>{g.label}</Badge>
+          <Badge>{t(g.label)}</Badge>
         )}
       </span>
-      <span className="hidden w-24 text-right text-xs text-muted tabular-nums md:block" title={`plays ${period === "all" ? "in total" : `this ${period}`}`}>
+      <span
+        className="hidden w-24 text-right text-xs text-muted tabular-nums md:block"
+        title={period === "all" ? t("plays in total") : period === "week" ? t("plays this week") : t("plays this month")}
+      >
         {song.plays} {song.plays === 1 ? "play" : "plays"}
       </span>
       <button
         type="button"
         onClick={onQueue}
         disabled={queued}
-        aria-label={queued ? `${song.title} is in the queue` : `Add ${song.title} to the queue`}
-        title={queued ? "In the queue" : "Add to the queue"}
+        aria-label={queued ? t("{title} is in the queue", { title: song.title }) : t("Add {title} to the queue", { title: song.title })}
+        title={queued ? t("In the queue") : t("Add to the queue")}
         className={cn(
           "inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
           queued ? "text-primary" : "text-muted hover:bg-surface-muted hover:text-text",
@@ -277,7 +290,7 @@ function Row({ rank, song, period, playing, queued, onPlay, onQueue, onLike, onG
         type="button"
         onClick={onLike}
         aria-pressed={song.liked}
-        aria-label={song.liked ? `Unlike ${song.title}` : `Like ${song.title}`}
+        aria-label={song.liked ? t("Unlike {title}", { title: song.title }) : t("Like {title}", { title: song.title })}
         className={cn(
           "inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-semibold tabular-nums transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
           song.liked ? "bg-rose-500/12 text-rose-600 dark:text-rose-300" : "text-muted hover:bg-surface-muted hover:text-text",
@@ -290,7 +303,7 @@ function Row({ rank, song, period, playing, queued, onPlay, onQueue, onLike, onG
         <button
           type="button"
           onClick={onRemove}
-          aria-label={`Remove ${song.title}`}
+          aria-label={t("Remove {title}", { title: song.title })}
           className="hidden h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted hover:bg-rose-500/10 hover:text-rose-600 sm:inline-flex"
         >
           <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -301,17 +314,18 @@ function Row({ rank, song, period, playing, queued, onPlay, onQueue, onLike, onG
 }
 
 function Empty({ genre }: { genre: Genre | "all" }) {
+  const t = useT();
   return (
     <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
       <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/12 text-primary">
         <ListMusic className="h-7 w-7" aria-hidden="true" />
       </span>
-      <p className="font-semibold">No {genre === "all" ? "" : `${genreOf(genre).label} `}songs yet</p>
+      <p className="font-semibold">{genre === "all" ? t("No songs yet") : t("No {genre} songs yet", { genre: t(genreOf(genre).label) })}</p>
       <p className="max-w-sm text-sm text-muted">
-        Upload songs you may share (your own, or Creative Commons), or start with the starter pack of 12 free songs with vocals.
+        {t("Upload songs you may share (your own, or Creative Commons), or start with the starter pack of 12 free songs with vocals.")}
       </p>
       <Link href="/music/add" className={buttonClasses("primary", "md")}>
-        <Plus className="h-4 w-4" aria-hidden="true" /> Add songs
+        <Plus className="h-4 w-4" aria-hidden="true" /> {t("Add songs")}
       </Link>
     </div>
   );

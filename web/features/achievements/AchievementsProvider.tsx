@@ -14,6 +14,7 @@ import { useRealtime, useRealtimeEvent } from "@/features/realtime/RealtimeProvi
 import { getAchievements, type Achievement } from "@/lib/api/achievements";
 import { BadgeIcon } from "./BadgeIcon";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 type AchievementsState = {
   list: Achievement[];
   status: "loading" | "ready" | "offline";
@@ -98,7 +99,10 @@ export function useAchievements(): AchievementsState {
 
 function Toasts({ items, onClose }: { items: Achievement[]; onClose: (code: string) => void }) {
   return (
-    <div aria-live="polite" className="pointer-events-none fixed inset-x-3 top-3 z-50 flex flex-col items-center gap-2 sm:inset-x-auto sm:right-6 sm:top-6 sm:items-end">
+    <div
+      aria-live="polite"
+      className="pointer-events-none fixed inset-x-3 top-3 z-50 flex flex-col items-center gap-2 sm:inset-x-auto sm:right-6 sm:top-6 sm:items-end"
+    >
       {items.map((a) => (
         <Toast key={a.code} achievement={a} onClose={() => onClose(a.code)} />
       ))}
@@ -107,6 +111,7 @@ function Toasts({ items, onClose }: { items: Achievement[]; onClose: (code: stri
 }
 
 function Toast({ achievement, onClose }: { achievement: Achievement; onClose: () => void }) {
+  const t = useT();
   // Close after 6 s. The ref keeps the timer from restarting when the parent re-renders.
   const close = useRef(onClose);
   close.current = onClose;
@@ -116,19 +121,22 @@ function Toast({ achievement, onClose }: { achievement: Achievement; onClose: ()
   }, []);
 
   return (
-    <div role="status" className="pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-2xl border border-primary/30 bg-surface-strong/95 p-3 pr-2 shadow-card backdrop-blur-xl">
+    <div
+      role="status"
+      className="pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-2xl border border-primary/30 bg-surface-strong/95 p-3 pr-2 shadow-card backdrop-blur-xl"
+    >
       <BadgeIcon name={achievement.icon} earned size="md" />
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1 text-xs font-semibold tracking-wider text-primary uppercase">
-          <Award className="h-3.5 w-3.5" aria-hidden="true" /> Achievement unlocked
+          <Award className="h-3.5 w-3.5" aria-hidden="true" /> {t("Achievement unlocked")}
         </p>
-        <p className="truncate font-bold">{achievement.title}</p>
-        <p className="truncate text-xs text-muted">{achievement.description}</p>
+        <p className="truncate font-bold">{t(achievement.title)}</p>
+        <p className="truncate text-xs text-muted">{t(achievement.description)}</p>
       </div>
       <button
         type="button"
         onClick={onClose}
-        aria-label="Close"
+        aria-label={t("Close")}
         className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted hover:bg-surface-muted hover:text-text"
       >
         <X className="h-4 w-4" aria-hidden="true" />

@@ -59,7 +59,7 @@ sessionsRouter.post("/", saveLimit, async (req, res) => {
   if (input.mode === "focus") {
     focusSessionsSaved.add(1, { signed_in: o.userId !== null });
     // Stage 6: everyone's live feed hears about it
-    await publishActivity("Timer", `${displayName(req.user?.name)} finished a ${input.minutes}-min focus session`);
+    await publishActivity("Timer", "{name} finished a {n}-min focus session", { name: displayName(req.user?.name), n: input.minutes });
     // Stage 5: badges are checked later by the worker, not here.
     await enqueue("achievements", { ...o, timeZone: timeZoneOf(req) });
   }

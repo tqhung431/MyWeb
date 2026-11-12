@@ -3,6 +3,7 @@
 import { apiFetch } from "./client";
 import { clientId } from "./clientId";
 
+import { tx } from "@/lib/i18n/core";
 export type Source = "tv" | "anime";
 export type Status = "want" | "watching" | "done" | "dropped";
 export type Found = {
@@ -57,7 +58,7 @@ export type TitleDetail = {
   mine: { status: Status; stars: number | null; note: string } | null;
 };
 
-export const STATUS_LABEL: Record<Status, string> = { want: "Want to watch", watching: "Watching", done: "Watched", dropped: "Dropped" };
+export const STATUS_LABEL: Record<Status, string> = { want: tx("Want to watch"), watching: tx("Watching"), done: tx("Watched"), dropped: tx("Dropped") };
 
 export const searchTitles = (q: string, type: "all" | Source) =>
   apiFetch<{ results: Found[]; unavailable: Source[] }>(`/api/watch/search?q=${encodeURIComponent(q)}&type=${type}`, {

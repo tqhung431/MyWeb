@@ -19,6 +19,7 @@ import { companionRouter } from "./routes/companion.js";
 import { gamesJson, gamesRouter } from "./routes/games.js";
 import { booksRouter, habitsRouter } from "./routes/habits.js";
 import { hobbyRouter } from "./routes/hobby.js";
+import { messagesRouter } from "./routes/messages.js";
 import { meRouter } from "./routes/me.js";
 import { musicRouter } from "./routes/music.js";
 import { sessionsRouter } from "./routes/sessions.js";
@@ -75,6 +76,7 @@ export function createApp() {
   app.use("/api/arcade", arcadeRouter);
   app.use("/api/arcade-online", arcadeOnlineRouter);
   app.use("/api/hobby", hobbyRouter);
+  app.use("/api/hobby", messagesRouter); // Stage 21: private chats, pictures, unread badge
   app.use("/api/watch", watchRouter);
   app.use("/api/habits", habitsRouter);
   app.use("/api/books", booksRouter);

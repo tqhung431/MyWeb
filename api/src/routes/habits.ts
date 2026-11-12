@@ -148,7 +148,7 @@ habitsRouter.put("/:id/days/:day", async (req, res) => {
 
   // Round numbers are worth telling everyone
   if (done && day === today && [7, 30, 100, 365].includes(streak.count) && streak.unit === "day") {
-    await publishActivity("Flame", `${req.user!.name} kept “${habit.name}” going for ${streak.count} days in a row`);
+    await publishActivity("Flame", "{name} kept “{habit}” going for {n} days in a row", { name: req.user!.name, habit: habit.name, n: streak.count });
   }
 });
 
@@ -208,7 +208,7 @@ booksRouter.patch("/:id", async (req, res) => {
     .returning();
   res.json(updated);
   if (changes.status === "finished" && book.status !== "finished") {
-    await publishActivity("BookOpen", `${req.user!.name} finished reading “${book.title}”`);
+    await publishActivity("BookOpen", "{name} finished reading “{book}”", { name: req.user!.name, book: book.title });
   }
 });
 
@@ -243,7 +243,7 @@ booksRouter.post("/:id/pages", async (req, res) => {
     .where(eq(books.id, book.id))
     .returning();
   res.json(updated);
-  if (finished && book.status !== "finished") await publishActivity("BookOpen", `${req.user!.name} finished reading “${book.title}”`);
+  if (finished && book.status !== "finished") await publishActivity("BookOpen", "{name} finished reading “{book}”", { name: req.user!.name, book: book.title });
 });
 
 booksRouter.get("/stats", async (req, res) => {

@@ -8,6 +8,7 @@ import { Select, type SelectOption } from "@/components/ui/Select";
 import { STATUS_LABEL, type Source, type Status } from "@/lib/api/watch";
 import { cn } from "@/lib/cn";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 export function Poster({ src, title, source, className }: { src: string | null; title: string; source?: Source; className?: string }) {
   const [broken, setBroken] = useState(false);
   const Icon = source === "anime" ? Clapperboard : Tv;
@@ -27,10 +28,11 @@ export function Poster({ src, title, source, className }: { src: string | null; 
 }
 
 export function Stars({ value, onChange, size = "md" }: { value: number | null; onChange?: (v: number | null) => void; size?: "sm" | "md" }) {
+  const t = useT();
   const cls = size === "sm" ? "h-3.5 w-3.5" : "h-5 w-5";
   if (!onChange) {
     return (
-      <span className="inline-flex text-amber-500" aria-label={value ? `${value} of 5 stars` : "No rating"}>
+      <span className="inline-flex text-amber-500" aria-label={value ? t("{n} of 5 stars", { n: value }) : t("No rating")}>
         {[1, 2, 3, 4, 5].map((n) => (
           <Star key={n} className={cn(cls, n <= (value ?? 0) ? "fill-current" : "opacity-30")} aria-hidden="true" />
         ))}
@@ -38,13 +40,13 @@ export function Stars({ value, onChange, size = "md" }: { value: number | null; 
     );
   }
   return (
-    <span className="inline-flex" role="group" aria-label="Your rating">
+    <span className="inline-flex" role="group" aria-label={t("Your rating")}>
       {[1, 2, 3, 4, 5].map((n) => (
         <button
           key={n}
           type="button"
           onClick={() => onChange(value === n ? null : n)}
-          aria-label={`${n} star${n === 1 ? "" : "s"}`}
+          aria-label={n === 1 ? t("1 star") : t("{n} stars", { n })}
           aria-pressed={value === n}
           className="cursor-pointer rounded p-0.5 text-amber-500 transition hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
@@ -78,20 +80,21 @@ export function StatusSelect({
   placeholder?: string;
   className?: string;
 }) {
+  const t = useT();
   const options: SelectOption<Status | "remove">[] = (Object.keys(STATUS_LABEL) as Status[]).map((s) => ({
     value: s,
-    label: STATUS_LABEL[s],
+    label: t(STATUS_LABEL[s]),
     icon: <span className="text-base leading-none">{STATUS_ICON[s]}</span>,
   }));
-  if (allowRemove) options.push({ value: "remove", label: "Remove from my list", icon: <Trash2 className="h-4 w-4" />, danger: true });
+  if (allowRemove) options.push({ value: "remove", label: t("Remove from my list"), icon: <Trash2 className="h-4 w-4" />, danger: true });
   return (
     <Select<Status | "remove">
-      label="Status"
+      label={t("Status")}
       variant="pill"
       value={value}
       options={options}
       onChange={onChange}
-      placeholder={placeholder ?? "+ Add to my list"}
+      placeholder={placeholder ?? t("+ Add to my list")}
       className={className}
       buttonClassName={value ? STATUS_TONE[value] : "bg-linear-to-r from-primary to-primary-2 text-on-primary"}
     />

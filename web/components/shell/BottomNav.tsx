@@ -9,21 +9,26 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AppIcon } from "@/components/ui/AppIcon";
+import { UnreadDot, useUnread } from "@/features/hobby/UnreadProvider";
 import { useMe } from "@/features/me/MeProvider";
 import { isActive, LIVE_APPS } from "@/lib/apps";
 import { cn } from "@/lib/cn";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 const tab = "flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold transition";
 
 export function BottomNav() {
+  const t = useT();
   const pathname = usePathname();
   const { user } = useMe();
   const [open, setOpen] = useState(false);
+  const { total: unread } = useUnread(); // Stage 21: the Hobby Hub badge
+  const badge = (href: string) => (href === "/hobby-hub" ? unread : 0);
 
   useEffect(() => setOpen(false), [pathname]); // close the grid after choosing
 
   const pinned = LIVE_APPS.filter((a) => a.pinned);
-  const items = [{ href: "/", label: "Home", icon: House }, ...pinned.map((a) => ({ href: a.href, label: a.shortName ?? a.name.split(" ")[0], icon: a.icon }))];
+  const items = [{ href: "/", label: t("Home"), icon: House }, ...pinned.map((a) => ({ href: a.href, label: t(a.shortName ?? a.name), icon: a.icon }))];
   const inOther = !items.some((i) => isActive(pathname, i.href)); // on an app that isn't pinned
 
   return (
@@ -33,7 +38,7 @@ export function BottomNav() {
         <div
           id="all-apps"
           role="dialog"
-          aria-label="All apps"
+          aria-label={t("All apps")}
           className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 animate-pop rounded-3xl border border-border bg-surface-strong p-4 shadow-card lg:hidden"
         >
           <ul className="grid grid-cols-4 gap-x-2 gap-y-4">
@@ -44,8 +49,12 @@ export function BottomNav() {
                   className="flex flex-col items-center gap-1.5 text-center text-[11px] leading-tight font-semibold"
                   aria-current={isActive(pathname, app.href) ? "page" : undefined}
                 >
-                  <AppIcon icon={app.icon} accent={app.accent} size="md" />
-                  {app.shortName ?? app.name}
+                  <span className="relative">
+                    <AppIcon icon={app.icon} accent={app.accent} size="md" />
+                    <UnreadDot count={badge(app.href)} className="absolute -top-1.5 -right-1.5" />
+                  </span>
+                  {t(app.shortName ?? app.name)}
+                  {badge(app.href) > 0 && <span className="sr-only">, {t("{n} unread", { n: badge(app.href) })}</span>}
                 </Link>
               </li>
             ))}
@@ -54,14 +63,14 @@ export function BottomNav() {
                 <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-surface-muted text-muted">
                   <UserRound className="h-5 w-5" aria-hidden="true" />
                 </span>
-                {user ? "You" : "Pick a name"}
+                {user ? t("You") : t("Pick a name")}
               </Link>
             </li>
           </ul>
         </div>
       )}
       <nav
-        aria-label="Main"
+        aria-label={t("Main")}
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface-strong/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
       >
         <ul className="mx-auto flex max-w-md">
@@ -70,8 +79,12 @@ export function BottomNav() {
             return (
               <li key={href} className="flex-1">
                 <Link href={href} aria-current={active ? "page" : undefined} className={cn(tab, active ? "text-primary" : "text-muted hover:text-text")}>
-                  <Icon className="h-5 w-5" aria-hidden="true" />
+                  <span className="relative">
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                    <UnreadDot count={badge(href)} className="absolute -top-1.5 -right-2.5" />
+                  </span>
                   {label}
+                  {badge(href) > 0 && <span className="sr-only">, {t("{n} unread", { n: badge(href) })}</span>}
                 </Link>
               </li>
             );
@@ -85,7 +98,7 @@ export function BottomNav() {
               className={cn(tab, "w-full cursor-pointer", open || inOther ? "text-primary" : "text-muted hover:text-text")}
             >
               {open ? <X className="h-5 w-5" aria-hidden="true" /> : <LayoutGrid className="h-5 w-5" aria-hidden="true" />}
-              Apps
+              {t("Apps")}
             </button>
           </li>
         </ul>

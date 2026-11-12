@@ -16,6 +16,10 @@ import { CHANNEL_KEY, setRealtimeServer } from "../src/realtime/emit.js";
 import { attachRealtime } from "../src/realtime/server.js";
 import { closeAll, resetDatabase } from "./helpers.js";
 
+// Stage 21: activity is a template with params; fill it in like the website does (in English)
+type Activity = { text: string; params?: Record<string, string | number> };
+const filled = (a: Activity) => a.text.replace(/\{(\w+)\}/g, (m, k: string) => String(a.params?.[k] ?? m));
+
 const app = createApp();
 let http: HttpServer;
 let io: Server;
@@ -131,11 +135,11 @@ describe("live events", () => {
 
     await request(app).post("/api/sessions").set("X-Client-Id", guest).send({ mode: "focus", minutes: 25 });
     const badge = next<{ code: string }>(owner, "achievement", (a) => a.code === "first-focus");
-    const feed = next<{ text: string }>(stranger, "activity", (a) => a.text.includes("First focus"));
+    const feed = next<Activity>(stranger, "activity", (a) => filled(a).includes("First focus"));
     await processJob("achievements", { userId: null, clientId: guest, timeZone: "UTC" }); // what the worker does
 
     expect((await badge).code).toBe("first-focus");
-    expect((await feed).text).toBe("A guest unlocked “First focus”");
+    expect(filled(await feed)).toBe("A guest unlocked “First focus”");
     await new Promise((r) => setTimeout(r, 100));
     expect(strangerGotBadge).toBe(false);
   });
@@ -148,16 +152,16 @@ describe("live events", () => {
     const phone = tab({ cookie });
     const other = tab();
     await next(phone, "presence");
-    const feed = next<{ text: string }>(other, "activity", (a) => a.text.startsWith("Linh"));
+    const feed = next<Activity>(other, "activity", (a) => filled(a).startsWith("Linh"));
     await browser.post("/api/sessions").send({ mode: "focus", minutes: 25 });
-    expect((await feed).text).toBe("Linh Pham finished a 25-min focus session");
+    expect(filled(await feed)).toBe("Linh Pham finished a 25-min focus session");
   });
 
   it("sends the recent feed to a page that connects later", async () => {
     await request(app).post("/api/sessions").set("X-Client-Id", randomUUID()).send({ mode: "focus", minutes: 25 });
     const late = tab();
-    const recent = await next<{ text: string }[]>(late, "activity:recent");
-    expect(recent[0].text).toBe("A guest finished a 25-min focus session");
+    const recent = await next<Activity[]>(late, "activity:recent");
+    expect(filled(recent[0])).toBe("A guest finished a 25-min focus session");
   });
 });
 
@@ -173,9 +177,9 @@ describe("many servers, one Valkey", () => {
       expect(await next<Presence>(onFirst, "presence", (p) => p.online === 2 && p.focusing === 1)).toEqual({ online: 2, focusing: 1 });
 
       // An event published on server 1 reaches the browser on server 2
-      const heard = next<{ text: string }>(onSecond, "activity", (a) => a.text.includes("25-min"));
+      const heard = next<Activity>(onSecond, "activity", (a) => filled(a).includes("25-min"));
       await request(app).post("/api/sessions").set("X-Client-Id", randomUUID()).send({ mode: "focus", minutes: 25 });
-      expect((await heard).text).toMatch(/finished a 25-min focus session/);
+      expect(filled(await heard)).toMatch(/finished a 25-min focus session/);
     } finally {
       second.realtime.close();
       setRealtimeServer(io);
@@ -212,6 +216,7 @@ describe("Hobby Hub rooms (Stage 11)", () => {
     let leaked = false;
     elsewhere.on("hobby:message", () => (leaked = true));
     const got = next<{ slug: string; message: { body: string; author: { name: string } } }>(reader, "hobby:message");
+    await linh.agent.put("/api/hobby/groups/gaming/membership");
     await linh.agent.post("/api/hobby/groups/gaming/messages").send({ body: "gg!" });
     expect((await got).message).toMatchObject({ body: "gg!", author: { name: "Linh" } });
     await new Promise((r) => setTimeout(r, 200));
@@ -235,5 +240,31 @@ describe("Hobby Hub rooms (Stage 11)", () => {
     maiTab.emit("hobby:join", { slug: "../../etc" }); // junk: ignored
     await new Promise((r) => setTimeout(r, 300));
     expect(names).toEqual(["Mai"]);
+  });
+
+  it("Stage 21: private messages and 'typing…' reach only the other person (all their tabs)", async () => {
+    const linh = await personWithCookie("Linh");
+    const mai = await personWithCookie("Mai");
+    const an = await personWithCookie("An");
+    const maiId = (await mai.agent.get("/api/me")).body.user.id as string;
+    const maiPhone = tab({ cookie: mai.cookie });
+    const maiLaptop = tab({ cookie: mai.cookie });
+    const anTab = tab({ cookie: an.cookie });
+    const linhTab = tab({ cookie: linh.cookie });
+    await Promise.all([maiPhone, maiLaptop, anTab, linhTab].map((t) => next(t, "presence")));
+
+    let leaked = false;
+    anTab.on("dm:message", () => (leaked = true));
+    anTab.on("dm:typing", () => (leaked = true));
+    const typing = next<{ name: string }>(maiPhone, "dm:typing");
+    linhTab.emit("dm:typing", { to: maiId });
+    expect((await typing).name).toBe("Linh");
+
+    const [onPhone, onLaptop] = [next<{ message: { body: string; mine: boolean } }>(maiPhone, "dm:message"), next(maiLaptop, "dm:message")];
+    await linh.agent.post(`/api/hobby/dms/${maiId}`).send({ body: "psst" });
+    expect((await onPhone).message).toMatchObject({ body: "psst", mine: false });
+    await onLaptop;
+    await new Promise((r) => setTimeout(r, 200));
+    expect(leaked).toBe(false);
   });
 });

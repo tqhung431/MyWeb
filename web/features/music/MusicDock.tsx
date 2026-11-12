@@ -34,9 +34,12 @@ import { genreOf } from "./genres";
 import { useMusic, type Song } from "./MusicProvider";
 import { formatTime } from "./queue";
 
-const REPEAT_LABEL = { off: "Repeat is off", all: "Repeating the queue", one: "Repeating this song" } as const;
+import { useT } from "@/lib/i18n/I18nProvider";
+import { tx } from "@/lib/i18n/core";
+const REPEAT_LABEL = { off: tx("Repeat is off"), all: tx("Repeating the queue"), one: tx("Repeating this song") } as const;
 
 export function MusicDock() {
+  const t = useT();
   const music = useMusic();
   const { current, queue, index, repeat, shuffle, volume, muted } = music;
   const audio = useRef<HTMLAudioElement>(null);
@@ -134,7 +137,7 @@ export function MusicDock() {
   const credits = [current.credit, current.license].filter(Boolean).join(" · ");
 
   const playButton = (big: boolean) => (
-    <Button variant="primary" size="icon" className={big ? "h-12 w-12" : "h-10 w-10"} onClick={togglePlay} aria-label={paused ? "Play" : "Pause"}>
+    <Button variant="primary" size="icon" className={big ? "h-12 w-12" : "h-10 w-10"} onClick={togglePlay} aria-label={paused ? t("Play") : t("Pause")}>
       {loading && !paused ? (
         <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
       ) : paused ? (
@@ -147,7 +150,7 @@ export function MusicDock() {
 
   return (
     <section
-      aria-label="Music player"
+      aria-label={t("Music player")}
       className="fixed inset-x-3 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-30 overflow-hidden rounded-2xl border border-border bg-surface-strong/95 shadow-card backdrop-blur-xl lg:inset-x-auto lg:right-6 lg:bottom-6 lg:w-96"
     >
       <audio
@@ -162,7 +165,7 @@ export function MusicDock() {
         onEnded={onEnded}
         onError={() => {
           setLoading(false);
-          setError("This song couldn't be played.");
+          setError(t("This song couldn't be played."));
         }}
       />
 
@@ -178,7 +181,7 @@ export function MusicDock() {
           {!expanded && (
             <>
               {playButton(false)}
-              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => music.next()} disabled={!music.hasNext} aria-label="Next song">
+              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => music.next()} disabled={!music.hasNext} aria-label={t("Next song")}>
                 <SkipForward className="h-4 w-4" aria-hidden="true" />
               </Button>
             </>
@@ -189,12 +192,12 @@ export function MusicDock() {
             className="h-9 w-9"
             onClick={() => setExpanded((x) => !x)}
             aria-expanded={expanded}
-            aria-label={expanded ? "Show less" : "Show the full player"}
+            aria-label={expanded ? t("Show less") : t("Show the full player")}
           >
             {expanded ? <ChevronDown className="h-4 w-4" aria-hidden="true" /> : <ChevronUp className="h-4 w-4" aria-hidden="true" />}
           </Button>
           {expanded && (
-            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={music.close} aria-label="Close player">
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={music.close} aria-label={t("Close player")}>
               <X className="h-4 w-4" aria-hidden="true" />
             </Button>
           )}
@@ -214,7 +217,7 @@ export function MusicDock() {
                   const a = el();
                   if (a) a.currentTime = Number(e.target.value);
                 }}
-                aria-label="Position in the song"
+                aria-label={t("Position in the song")}
                 aria-valuetext={`${formatTime(time)} of ${formatTime(duration)}`}
                 className="h-1 flex-1 cursor-pointer"
               />
@@ -222,23 +225,30 @@ export function MusicDock() {
             </div>
 
             <div className="mt-1 flex items-center justify-between px-1">
-              <ToggleButton active={shuffle} onClick={music.toggleShuffle} label={shuffle ? "Shuffle is on" : "Shuffle is off"}>
+              <ToggleButton active={shuffle} onClick={music.toggleShuffle} label={shuffle ? t("Shuffle is on") : t("Shuffle is off")}>
                 <Shuffle className="h-4 w-4" aria-hidden="true" />
               </ToggleButton>
-              <Button variant="ghost" size="icon" className="h-10 w-10" onClick={goBack} aria-label="Previous song">
+              <Button variant="ghost" size="icon" className="h-10 w-10" onClick={goBack} aria-label={t("Previous song")}>
                 <SkipBack className="h-5 w-5" aria-hidden="true" />
               </Button>
               {playButton(true)}
-              <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => music.next()} disabled={!music.hasNext} aria-label="Next song">
+              <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => music.next()} disabled={!music.hasNext} aria-label={t("Next song")}>
                 <SkipForward className="h-5 w-5" aria-hidden="true" />
               </Button>
-              <ToggleButton active={repeat !== "off"} onClick={music.cycleRepeat} label={`${REPEAT_LABEL[repeat]}. Change repeat`}>
+              <ToggleButton active={repeat !== "off"} onClick={music.cycleRepeat} label={t("{state}. Change repeat", { state: t(REPEAT_LABEL[repeat]) })}>
                 {repeat === "one" ? <Repeat1 className="h-4 w-4" aria-hidden="true" /> : <Repeat className="h-4 w-4" aria-hidden="true" />}
               </ToggleButton>
             </div>
 
             <div className="mt-2 flex items-center gap-1 border-t border-border pt-2">
-              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={music.toggleMute} aria-label={muted ? "Unmute" : "Mute"} aria-pressed={muted}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+                onClick={music.toggleMute}
+                aria-label={muted ? t("Unmute") : t("Mute")}
+                aria-pressed={muted}
+              >
                 <VolumeIcon className="h-4 w-4" aria-hidden="true" />
               </Button>
               {canSetVolume ? (
@@ -249,12 +259,12 @@ export function MusicDock() {
                   step={1}
                   value={muted ? 0 : Math.round(volume * 100)}
                   onChange={(e) => music.setVolume(Number(e.target.value) / 100)}
-                  aria-label="Volume"
+                  aria-label={t("Volume")}
                   aria-valuetext={`${muted ? 0 : Math.round(volume * 100)}%`}
                   className="h-1 w-24 cursor-pointer"
                 />
               ) : (
-                <span className="text-xs text-muted">Use your device&apos;s volume buttons</span>
+                <span className="text-xs text-muted">{t("Use your device's volume buttons")}</span>
               )}
               <span className="flex-1" />
               {(current.credit || current.sourceUrl) && (
@@ -263,7 +273,7 @@ export function MusicDock() {
                   target="_blank"
                   rel="noopener noreferrer"
                   title={credits}
-                  aria-label={`Credits: ${credits}`}
+                  aria-label={t("Credits: {list}", { list: credits })}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-surface-muted hover:text-text"
                 >
                   <Info className="h-4 w-4" aria-hidden="true" />
@@ -275,7 +285,7 @@ export function MusicDock() {
                 className={cn("h-9 px-3", showQueue && "bg-primary/10 text-primary")}
                 onClick={() => setShowQueue((x) => !x)}
                 aria-expanded={showQueue}
-                aria-label={`Queue, ${queue.length} ${queue.length === 1 ? "song" : "songs"}`}
+                aria-label={queue.length === 1 ? t("Queue, 1 song") : t("Queue, {n} songs", { n: queue.length })}
               >
                 <ListMusic className="h-4 w-4" aria-hidden="true" />
                 <span className="tabular-nums">{queue.length}</span>
@@ -328,6 +338,7 @@ function ToggleButton({ active, onClick, label, children }: { active: boolean; o
 type QueueProps = { queue: Song[]; index: number | null; paused: boolean; onJump: (i: number) => void; onRemove: (i: number) => void };
 
 function QueueList({ queue, index, paused, onJump, onRemove }: QueueProps) {
+  const t = useT();
   const playingRow = useRef<HTMLLIElement>(null);
   useEffect(() => {
     playingRow.current?.scrollIntoView({ block: "nearest" });
@@ -335,8 +346,8 @@ function QueueList({ queue, index, paused, onJump, onRemove }: QueueProps) {
 
   return (
     <div className="border-b border-border bg-surface-muted/50">
-      <p className="px-4 pt-3 pb-1 text-xs font-semibold tracking-wider text-muted uppercase">Up next</p>
-      <ol className="max-h-56 overflow-y-auto px-2 pb-2" aria-label="Queue">
+      <p className="px-4 pt-3 pb-1 text-xs font-semibold tracking-wider text-muted uppercase">{t("Up next")}</p>
+      <ol className="max-h-56 overflow-y-auto px-2 pb-2" aria-label={t("Queue")}>
         {queue.map((song, i) => {
           const playing = i === index;
           return (
@@ -369,7 +380,7 @@ function QueueList({ queue, index, paused, onJump, onRemove }: QueueProps) {
                 <button
                   type="button"
                   onClick={() => onRemove(i)}
-                  aria-label={`Remove ${song.title} from the queue`}
+                  aria-label={t("Remove {title} from the queue", { title: song.title })}
                   className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted opacity-100 hover:bg-surface-muted hover:text-text focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                 >
                   <X className="h-3.5 w-3.5" aria-hidden="true" />

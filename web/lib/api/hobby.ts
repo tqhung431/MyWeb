@@ -1,6 +1,7 @@
 // Hobby Hub (Stage 11): groups, posts, comments, likes and chat.
+// Stage 21: private chats, pictures in chats, unread counts.
 
-import { apiFetch } from "./client";
+import { ApiError, apiFetch } from "./client";
 
 export type Person = { id: string; name: string };
 export type Group = {
@@ -15,11 +16,16 @@ export type Group = {
   lastActivity: string | null;
   joined: boolean;
   mine: boolean;
+  unread: number; // posts and messages since you last looked (members only)
 };
-export type GroupDetail = Omit<Group, "members" | "posts" | "lastActivity"> & { members: Person[] };
+export type GroupDetail = Omit<Group, "members" | "posts" | "lastActivity" | "unread"> & { members: Person[] };
 export type Post = { id: number; body: string; createdAt: string; author: Person; likes: number; comments: number; liked: boolean; mine: boolean };
 export type Comment = { id: number; body: string; createdAt: string; author: Person; mine: boolean };
-export type Message = { id: number; body: string; createdAt: string; author: Person; mine?: boolean };
+export type ChatImage = { id: string; url: string; width: number; height: number };
+export type Message = { id: number; body: string; createdAt: string; author: Person; image: ChatImage | null; mine?: boolean };
+export type DirectMessage = { id: number; body: string; createdAt: string; readAt: string | null; image: ChatImage | null; mine: boolean };
+export type Conversation = { id: string; name: string; lastBody: string; lastImage: boolean; lastMine: boolean; lastAt: string; unread: number };
+export type Unread = { messages: number; groups: number };
 
 const json = (method: string, body?: unknown): RequestInit => ({ method, ...(body !== undefined && { body: JSON.stringify(body) }) });
 
@@ -42,5 +48,28 @@ export const deleteComment = (id: number) => apiFetch<void>(`/api/hobby/comments
 
 export const getMessages = (slug: string, before?: number) =>
   apiFetch<{ messages: Message[]; more: boolean }>(`/api/hobby/groups/${slug}/messages${before ? `?before=${before}` : ""}`);
-export const sendMessage = (slug: string, body: string) => apiFetch<Message>(`/api/hobby/groups/${slug}/messages`, json("POST", { body }));
+export const sendMessage = (slug: string, body: string, imageId?: string) =>
+  apiFetch<Message>(`/api/hobby/groups/${slug}/messages`, json("POST", { body, imageId }));
 export const deleteMessage = (id: number) => apiFetch<void>(`/api/hobby/messages/${id}`, json("DELETE"));
+export const markGroupRead = (slug: string) => apiFetch<void>(`/api/hobby/groups/${slug}/read`, json("PUT"));
+
+// --- Stage 21: private chats ---
+export const getUnread = () => apiFetch<Unread>("/api/hobby/unread");
+export const findPeople = (q = "") => apiFetch<(Person & { lastSeenAt: string })[]>(`/api/hobby/people?q=${encodeURIComponent(q)}`);
+export const getConversations = () => apiFetch<Conversation[]>("/api/hobby/dms");
+export const getDirectMessages = (userId: string, before?: number) =>
+  apiFetch<{ person: Person; messages: DirectMessage[]; more: boolean }>(`/api/hobby/dms/${userId}${before ? `?before=${before}` : ""}`);
+export const sendDirectMessage = (userId: string, body: string, imageId?: string) =>
+  apiFetch<DirectMessage>(`/api/hobby/dms/${userId}`, json("POST", { body, imageId }));
+export const markDirectRead = (userId: string) => apiFetch<void>(`/api/hobby/dms/${userId}/read`, json("PUT"));
+export const deleteDirectMessage = (id: number) => apiFetch<void>(`/api/hobby/dms/messages/${id}`, json("DELETE"));
+
+// A picture is a form upload (not JSON), so it skips apiFetch's JSON header
+export async function uploadChatImage(file: Blob, name: string): Promise<ChatImage> {
+  const form = new FormData();
+  form.append("file", file, name);
+  const res = await fetch("/api/hobby/images", { method: "POST", body: form, signal: AbortSignal.timeout(60_000) });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(res.status, body.error ?? `API answered ${res.status}`);
+  return body as ChatImage;
+}

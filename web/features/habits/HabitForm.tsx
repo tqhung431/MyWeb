@@ -12,9 +12,11 @@ import type { Habit, HabitInput } from "@/lib/api/habits";
 import { cn } from "@/lib/cn";
 import { COLOR, COLORS } from "./colors";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 const EMOJIS = ["📚", "🏃", "💧", "🧘", "🎸", "✍️", "🥗", "😴", "🇬🇧", "🧹", "💊", "🌱"];
 
 export function HabitForm({ initial, onSave, onCancel }: { initial?: Habit; onSave: (h: HabitInput) => Promise<unknown>; onCancel: () => void }) {
+  const t = useT();
   const [name, setName] = useState(initial?.name ?? "");
   const [emoji, setEmoji] = useState(initial?.emoji ?? EMOJIS[0]);
   const [color, setColor] = useState(initial?.color ?? "violet");
@@ -30,16 +32,24 @@ export function HabitForm({ initial, onSave, onCancel }: { initial?: Habit; onSa
     try {
       await onSave({ name, emoji, color, perWeek, reminderTime: reminder || null });
     } catch (err) {
-      setError(err instanceof ApiError ? (err.details[0]?.message ?? err.message) : "Not saved: can't reach Nook.");
+      setError(err instanceof ApiError ? (err.details[0]?.message ?? err.message) : t("Not saved: can't reach Nook."));
       setPending(false);
     }
   }
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4 rounded-3xl border border-border bg-surface p-5 shadow-card backdrop-blur-xl">
-      <Input label="Habit" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="e.g. Read 20 minutes" autoFocus error={error} />
+      <Input
+        label={t("Habit")}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        maxLength={40}
+        placeholder={t("e.g. Read 20 minutes")}
+        autoFocus
+        error={error}
+      />
       <fieldset>
-        <legend className="mb-1.5 text-sm font-semibold">Emoji</legend>
+        <legend className="mb-1.5 text-sm font-semibold">{t("Emoji")}</legend>
         <div className="flex flex-wrap gap-1.5">
           {EMOJIS.map((e) => (
             <button
@@ -47,7 +57,7 @@ export function HabitForm({ initial, onSave, onCancel }: { initial?: Habit; onSa
               type="button"
               onClick={() => setEmoji(e)}
               aria-pressed={emoji === e}
-              aria-label={`Emoji ${e}`}
+              aria-label={t("Emoji {e}", { e })}
               className={cn(
                 "h-10 w-10 cursor-pointer rounded-xl border text-xl",
                 emoji === e ? "border-primary bg-primary/12" : "border-border hover:bg-surface-muted",
@@ -59,7 +69,7 @@ export function HabitForm({ initial, onSave, onCancel }: { initial?: Habit; onSa
         </div>
       </fieldset>
       <fieldset>
-        <legend className="mb-1.5 text-sm font-semibold">Colour</legend>
+        <legend className="mb-1.5 text-sm font-semibold">{t("Colour")}</legend>
         <div className="flex gap-2">
           {COLORS.map((c) => (
             <button
@@ -75,14 +85,17 @@ export function HabitForm({ initial, onSave, onCancel }: { initial?: Habit; onSa
       </fieldset>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Select<number>
-          label="How often"
+          label={t("How often")}
           showLabel
           value={perWeek}
           onChange={setPerWeek}
-          options={[7, 6, 5, 4, 3, 2, 1].map((n) => ({ value: n, label: n === 7 ? "Every day" : `${n} ${n === 1 ? "day" : "days"} a week` }))}
+          options={[7, 6, 5, 4, 3, 2, 1].map((n) => ({
+            value: n,
+            label: n === 7 ? t("Every day") : n === 1 ? t("1 day a week") : t("{n} days a week", { n }),
+          }))}
         />
         <label className="flex flex-col gap-1.5 text-sm font-semibold">
-          Reminder (optional)
+          {t("Reminder (optional)")}
           <input
             type="time"
             value={reminder}
@@ -94,10 +107,10 @@ export function HabitForm({ initial, onSave, onCancel }: { initial?: Habit; onSa
       <div className="flex gap-2">
         <Button type="submit" variant="primary" disabled={!name.trim() || pending}>
           {pending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-          {initial ? "Save" : "Add habit"}
+          {initial ? t("Save") : t("Add habit")}
         </Button>
         <Button variant="ghost" onClick={onCancel}>
-          Cancel
+          {t("Cancel")}
         </Button>
       </div>
     </form>

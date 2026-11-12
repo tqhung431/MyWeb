@@ -3,6 +3,7 @@
 // The focus timer and session history, shared by every page.
 // Lives in the root layout so a running timer survives moving between pages and apps.
 
+import { tNow } from "@/lib/i18n/core";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { chime } from "@/features/ambient/engine";
 import { useAchievements } from "@/features/achievements/AchievementsProvider";
@@ -168,6 +169,6 @@ function useTabTitle(time: string, running: boolean, finished: boolean) {
       return;
     }
     saved.current ??= document.title;
-    document.title = running ? `${time} · Focus` : "Time's up! · Nook";
+    document.title = running ? `${time} · ${tNow("Focus")}` : tNow("Time's up! · Nook");
   }, [time, running, finished]);
 }

@@ -11,9 +11,10 @@ const app = createApp();
 beforeEach(resetDatabase);
 afterAll(closeAll);
 
-async function person(name: string) {
+async function person(name: string, ...groups: string[]) {
   const agent = request.agent(app);
   await agent.post("/api/me").send({ name });
+  for (const g of groups) await agent.put(`/api/hobby/groups/${g}/membership`); // Stage 21: members write
   return agent;
 }
 
@@ -62,8 +63,8 @@ describe("groups", () => {
 
 describe("posts", () => {
   it("posts, likes and comments, newest post first", async () => {
-    const linh = await person("Linh");
-    const mai = await person("Mai");
+    const linh = await person("Linh", "cooking");
+    const mai = await person("Mai", "cooking");
     const first = await linh.post("/api/hobby/groups/cooking/posts").send({ body: "Pho recipe?" });
     expect(first.status).toBe(201);
     await mai.post("/api/hobby/groups/cooking/posts").send({ body: "Made bánh mì today 🥖" });
@@ -78,7 +79,7 @@ describe("posts", () => {
     expect(board.body.posts[1]).toMatchObject({ author: { name: "Linh" }, likes: 2, liked: true, comments: 1, mine: true });
     const groups = (await linh.get("/api/hobby/groups")).body;
     const cooking = groups.find((g: { slug: string }) => g.slug === "cooking");
-    expect(cooking).toMatchObject({ posts: 2, members: 2, joined: true }); // writing in a group makes you a member
+    expect(cooking).toMatchObject({ posts: 2, members: 2, joined: true });
     expect(cooking.lastActivity).not.toBeNull();
     expect(groups.find((g: { slug: string }) => g.slug === "gaming")).toMatchObject({ posts: 0, members: 0, joined: false, lastActivity: null });
     const comments = await request(app).get(`/api/hobby/posts/${first.body.id}/comments`);
@@ -86,8 +87,8 @@ describe("posts", () => {
   });
 
   it("only lets authors delete their own posts and comments", async () => {
-    const linh = await person("Linh");
-    const mai = await person("Mai");
+    const linh = await person("Linh", "cooking");
+    const mai = await person("Mai", "cooking");
     const post = await linh.post("/api/hobby/groups/cooking/posts").send({ body: "Hello" });
     const comment = await mai.post(`/api/hobby/posts/${post.body.id}/comments`).send({ body: "Hi!" });
     expect((await linh.delete(`/api/hobby/comments/${comment.body.id}`)).status).toBe(403);
@@ -110,13 +111,13 @@ describe("posts", () => {
   });
 
   it("slows down floods: 10 posts per 10 minutes", async () => {
-    const linh = await person("Linh");
+    const linh = await person("Linh", "books");
     for (let i = 0; i < 10; i++) await linh.post("/api/hobby/groups/books/posts").send({ body: `Book ${i}` });
     expect((await linh.post("/api/hobby/groups/books/posts").send({ body: "one more" })).status).toBe(429);
   });
 
   it("keeps text as text and refuses empty or huge posts", async () => {
-    const linh = await person("Linh");
+    const linh = await person("Linh", "music");
     const res = await linh.post("/api/hobby/groups/music/posts").send({ body: "<script>alert(1)</script>" });
     expect(res.body.body).toBe("<script>alert(1)</script>"); // stored as typed; the website shows it as text, never as HTML
     expect((await linh.post("/api/hobby/groups/music/posts").send({ body: "   " })).status).toBe(400);
@@ -126,8 +127,8 @@ describe("posts", () => {
 
 describe("chat", () => {
   it("keeps the history, oldest first, and only authors delete messages", async () => {
-    const linh = await person("Linh");
-    const mai = await person("Mai");
+    const linh = await person("Linh", "gaming");
+    const mai = await person("Mai", "gaming");
     await linh.post("/api/hobby/groups/gaming/messages").send({ body: "anyone up for a match?" });
     const reply = await mai.post("/api/hobby/groups/gaming/messages").send({ body: "me! 🎮" });
     expect(reply.status).toBe(201);
@@ -142,7 +143,7 @@ describe("chat", () => {
   });
 
   it("slows down floods: 20 messages per 30 seconds", async () => {
-    const linh = await person("Linh");
+    const linh = await person("Linh", "gaming");
     for (let i = 0; i < 20; i++) expect((await linh.post("/api/hobby/groups/gaming/messages").send({ body: `${i}` })).status).toBe(201);
     expect((await linh.post("/api/hobby/groups/gaming/messages").send({ body: "one more" })).status).toBe(429);
   });

@@ -7,12 +7,16 @@ import { GAMES } from "@/features/arcade/games";
 import { Leaderboard } from "@/features/arcade/Leaderboard";
 import { cn } from "@/lib/cn";
 
-export const metadata: Metadata = { title: "Arcade leaderboards" };
+import { getT } from "@/lib/i18n/server";
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("Arcade leaderboards") };
+}
 
-export default function ScoresPage() {
+export default async function ScoresPage() {
+  const t = await getT();
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-muted">Everyone on this Nook, each person&apos;s best score. They update live as people play.</p>
+      <p className="text-sm text-muted">{t("Everyone on this Nook, each person's best score. They update live as people play.")}</p>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {GAMES.map((game) => (
           <Card key={game.id} className="flex flex-col gap-4">
@@ -21,8 +25,8 @@ export default function ScoresPage() {
                 {game.emoji}
               </span>
               <span>
-                <span className="block font-bold">{game.name}</span>
-                <span className="block text-xs text-muted">{game.better === "lower" ? "Lower is better" : "Higher is better"}</span>
+                <span className="block font-bold">{t(game.name)}</span>
+                <span className="block text-xs text-muted">{game.better === "lower" ? t("Lower is better") : t("Higher is better")}</span>
               </span>
             </Link>
             <Leaderboard game={game} limit={5} />

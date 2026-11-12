@@ -17,6 +17,7 @@ import { genreOf } from "./genres";
 import { useMusic } from "./MusicProvider";
 import { STARTER_PACK } from "./starter-pack";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 type Rights = "own" | "cc" | "permission";
 // skip: an error that trying again won't fix (too big, not audio, already in Nook)
 type Item = {
@@ -35,6 +36,7 @@ const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const AUDIO = /\.(mp3|m4a|aac|ogg|opus|flac|wav)$/i;
 
 export function AddSongForm() {
+  const t = useT();
   const [items, setItems] = useState<Item[]>([]);
   const [rights, setRights] = useState<Rights>("cc");
   const [license, setLicense] = useState("CC BY 4.0");
@@ -66,7 +68,14 @@ export function AddSongForm() {
           const id = `${file.name}-${file.size}-${Math.random()}`;
           // Too big: say so now, instead of sending it and failing at the end
           if (file.size > maxMb * 1024 * 1024)
-            return { id, file, progress: 0, status: "error", skip: true, error: `Too big: ${mb(file.size)} (Nook takes up to ${maxMb} MB)` };
+            return {
+              id,
+              file,
+              progress: 0,
+              status: "error",
+              skip: true,
+              error: t("Too big: {size} (Nook takes up to {max} MB)", { size: mb(file.size), max: maxMb }),
+            };
           return { id, file, progress: 0, status: "waiting" };
         });
       return [...kept, ...fresh];
@@ -96,7 +105,7 @@ export function AddSongForm() {
         } catch (e) {
           error = e;
           if (!(e instanceof ApiError && e.status === 0) || attempt === 3) break;
-          update(item.id, { progress: 0, error: `Connection lost, trying again (${attempt + 1} of 3)…` });
+          update(item.id, { progress: 0, error: t("Connection lost, trying again ({n} of 3)…", { n: attempt + 1 }) });
           await pause(1500 * attempt);
         }
       }
@@ -105,7 +114,7 @@ export function AddSongForm() {
         continue;
       }
       const e = error instanceof ApiError ? error : null;
-      const message = e ? (e.details[0]?.message ?? e.message) : "Upload failed";
+      const message = e ? (e.details[0]?.message ?? e.message) : t("Upload failed");
       // 409 already in Nook, 413 too big, 415 not a song: trying again won't help
       update(item.id, { status: "error", error: message, skip: e !== null && [409, 413, 415].includes(e.status) });
       if (e?.status === 429) {
@@ -144,9 +153,9 @@ export function AddSongForm() {
           <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/12 text-primary">
             <Upload className="h-6 w-6" aria-hidden="true" />
           </span>
-          <p className="font-semibold">Drop song files here</p>
+          <p className="font-semibold">{t("Drop song files here")}</p>
           <p className="text-sm text-muted">
-            MP3, M4A, OGG, FLAC or WAV, up to {maxMb} MB each. Title, artist, genre and cover are read from each file. Any file name works.
+            {t("MP3, M4A, OGG, FLAC or WAV, up to {n} MB each. Title, artist, genre and cover are read from each file. Any file name works.", { n: maxMb })}
           </p>
           <input
             ref={picker}
@@ -157,15 +166,15 @@ export function AddSongForm() {
             onChange={(e) => e.target.files && addFiles(e.target.files)}
           />
           <Button variant="secondary" onClick={() => picker.current?.click()}>
-            <Music className="h-4 w-4" aria-hidden="true" /> Choose files
+            <Music className="h-4 w-4" aria-hidden="true" /> {t("Choose files")}
           </Button>
         </div>
 
         {/* The files */}
         {items.length > 1 && (
           <p className="text-sm font-semibold" aria-live="polite">
-            {added} of {items.length} added
-            {problems > 0 && <span className="text-rose-600 dark:text-rose-300"> · {problems} with a problem</span>}
+            {t("{n} of {total} added", { n: added, total: items.length })}
+            {problems > 0 && <span className="text-rose-600 dark:text-rose-300"> · {t("{n} with a problem", { n: problems })}</span>}
           </p>
         )}
         {stopped && <p className="rounded-2xl bg-amber-500/12 p-3 text-sm text-amber-800 dark:text-amber-200">{stopped}</p>}
@@ -192,16 +201,16 @@ export function AddSongForm() {
                   {i.error && <p className={cn("text-xs", i.status === "error" ? "text-rose-600 dark:text-rose-300" : "text-muted")}>{i.error}</p>}
                   {i.song && (
                     <p className="text-xs text-muted">
-                      {i.song.starterPack ? "Starter pack · " : ""}
+                      {i.song.starterPack ? `${t("Starter pack")} · ` : ""}
                       {i.song.license}
                     </p>
                   )}
                 </div>
                 {i.song && (
                   <>
-                    <Badge tone="primary">{genreOf(i.song.genre).label}</Badge>
+                    <Badge tone="primary">{t(genreOf(i.song.genre).label)}</Badge>
                     <Button variant="ghost" size="sm" onClick={() => play(i.song!)}>
-                      Play
+                      {t("Play")}
                     </Button>
                   </>
                 )}
@@ -212,12 +221,12 @@ export function AddSongForm() {
 
         {/* What lets you share them */}
         <fieldset className="flex flex-col gap-3">
-          <legend className="mb-1 text-sm font-semibold">What allows you to share these songs?</legend>
+          <legend className="mb-1 text-sm font-semibold">{t("What allows you to share these songs?")}</legend>
           {(
             [
-              ["own", "I made them", "Your own music"],
-              ["cc", "A free licence", "e.g. Creative Commons; give the licence and credit"],
-              ["permission", "I have permission", "The artist said you may share them here"],
+              ["own", t("I made them"), t("Your own music")],
+              ["cc", t("A free licence"), t("e.g. Creative Commons; give the licence and credit")],
+              ["permission", t("I have permission"), t("The artist said you may share them here")],
             ] as const
           ).map(([value, label, hint]) => (
             <label
@@ -236,11 +245,11 @@ export function AddSongForm() {
           ))}
           {rights === "cc" && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Input label="Licence" value={license} onChange={(e) => setLicense(e.target.value)} hint="e.g. CC BY 4.0, CC BY-NC 3.0" />
-              <Input label="Credit (optional)" value={credit} onChange={(e) => setCredit(e.target.value)} hint="feat. …, original artists" />
+              <Input label={t("Licence")} value={license} onChange={(e) => setLicense(e.target.value)} hint={t("e.g. CC BY 4.0, CC BY-NC 3.0")} />
+              <Input label={t("Credit (optional)")} value={credit} onChange={(e) => setCredit(e.target.value)} hint={t("feat. …, original artists")} />
               <Input
                 className="sm:col-span-2"
-                label="Where it's from (optional)"
+                label={t("Where it's from (optional)")}
                 type="url"
                 value={sourceUrl}
                 onChange={(e) => setSourceUrl(e.target.value)}
@@ -248,44 +257,51 @@ export function AddSongForm() {
               />
             </div>
           )}
-          <p className="text-xs text-muted">Starter-pack songs are recognised by file name; their licence and credit are filled in for you.</p>
+          <p className="text-xs text-muted">{t("Starter-pack songs are recognised by file name; their licence and credit are filled in for you.")}</p>
         </fieldset>
 
         <label className="flex items-start gap-3 text-sm">
           <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} className="mt-1" />
-          <span>I may share these songs with everyone on Nook, as chosen above.</span>
+          <span>{t("I may share these songs with everyone on Nook, as chosen above.")}</span>
         </label>
 
         <Button variant="primary" size="lg" onClick={uploadAll} disabled={!confirmed || waiting === 0 || busy}>
           {busy ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : <Upload className="h-5 w-5" aria-hidden="true" />}
-          {busy ? "Uploading…" : waiting > 0 ? `Add ${waiting} song${waiting === 1 ? "" : "s"}` : "Add songs"}
+          {busy ? t("Uploading…") : waiting === 1 ? t("Add 1 song") : waiting > 1 ? t("Add {n} songs", { n: waiting }) : t("Add songs")}
         </Button>
       </Card>
 
       <Card>
-        <h2 className="text-lg font-bold">Starter pack: 12 free songs with vocals</h2>
+        <h2 className="text-lg font-bold">{t("Starter pack: 12 free songs with vocals")}</h2>
         <p className="mt-1 text-sm text-muted">
-          Picked by listener ratings on ccMixter, 3 per genre, all under Creative Commons licences that allow sharing them here. Open each page, press{" "}
-          <strong className="text-text">Download</strong>, then drop the files on the left.
+          {t(
+            "Picked by listener ratings on ccMixter, 3 per genre, all under Creative Commons licences that allow sharing them here. Open each page, press Download, then drop the files on the left.",
+          )}
         </p>
         <ul className="mt-4 flex flex-col divide-y divide-border">
           {STARTER_PACK.map((s) => (
             <li key={s.page} className="flex items-center gap-3 py-2">
-              <Badge>{genreOf(s.genre).label}</Badge>
+              <Badge>{t(genreOf(s.genre).label)}</Badge>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold">{s.title}</span>
                 <span className="block truncate text-xs text-muted">
                   {s.artist} · {s.license}
                 </span>
               </span>
-              <a href={s.page} target="_blank" rel="noopener noreferrer" className={buttonClasses("ghost", "sm")} aria-label={`Open ${s.title} on ccMixter`}>
+              <a
+                href={s.page}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={buttonClasses("ghost", "sm")}
+                aria-label={t("Open {title} on ccMixter", { title: s.title })}
+              >
                 <ExternalLink className="h-4 w-4" aria-hidden="true" />
               </a>
             </li>
           ))}
         </ul>
         <p className="mt-3 text-xs text-muted">
-          Running Nook yourself? Put the downloads in a folder and run <code>npm run music:import -- folder</code> in <code>api/</code>.
+          {t("Running Nook yourself? Put the downloads in a folder and run this in api/:")} <code>npm run music:import -- folder</code>
         </p>
         <Link href="/music" className={buttonClasses("ghost", "sm", "mt-3 -ml-3")}>
           ← Back to the charts

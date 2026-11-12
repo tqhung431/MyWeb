@@ -1,21 +1,24 @@
 "use client"; // usePathname reads the current URL to highlight the active app
 
-import { House, Info } from "lucide-react";
+import { House, Info, Settings } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { Badge } from "@/components/ui/Badge";
+import { UnreadDot, useUnread } from "@/features/hobby/UnreadProvider";
 import { UserMenu } from "@/features/me/UserMenu";
-import { ThemeSwitcher } from "@/features/theme/ThemeSwitcher";
 import { LivePill } from "@/features/realtime/LiveNow";
 import { APPS, isActive } from "@/lib/apps";
 import { cn } from "@/lib/cn";
 import { Brand } from "./Brand";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 // Desktop navigation (hidden on phones; BottomNav takes over there).
 export function Sidebar() {
+  const t = useT();
   const pathname = usePathname();
+  const { total: unread } = useUnread();
 
   return (
     <aside className="sticky top-0 hidden h-dvh flex-col gap-8 border-r border-border bg-surface/60 px-4 py-6 backdrop-blur-xl lg:flex">
@@ -23,10 +26,10 @@ export function Sidebar() {
         <Brand />
       </div>
 
-      <nav aria-label="Main" className="flex flex-1 flex-col gap-1 overflow-y-auto">
-        <PlainLink href="/" label="Home" icon={House} active={pathname === "/"} />
+      <nav aria-label={t("Main")} className="flex flex-1 flex-col gap-1 overflow-y-auto">
+        <PlainLink href="/" label={t("Home")} icon={House} active={pathname === "/"} />
 
-        <p className="mt-6 mb-2 px-3 text-xs font-semibold tracking-wider text-muted uppercase">Apps</p>
+        <p className="mt-6 mb-2 px-3 text-xs font-semibold tracking-wider text-muted uppercase">{t("Apps")}</p>
         {APPS.map((app) =>
           app.status === "live" ? (
             <Link
@@ -36,14 +39,20 @@ export function Sidebar() {
               className={itemClasses(isActive(pathname, app.href))}
             >
               <AppIcon icon={app.icon} accent={app.accent} size="sm" />
-              <span className="truncate">{app.name}</span>
+              <span className="truncate">{t(app.name)}</span>
+              {app.href === "/hobby-hub" && unread > 0 && (
+                <span className="ml-auto">
+                  <UnreadDot count={unread} />
+                  <span className="sr-only"> {t("unread")}</span>
+                </span>
+              )}
             </Link>
           ) : (
             <div key={app.id} aria-disabled="true" className="flex items-center gap-3 rounded-2xl px-3 py-2 text-sm text-muted">
               <AppIcon icon={app.icon} accent={app.accent} size="sm" muted />
-              <span className="truncate">{app.name}</span>
+              <span className="truncate">{t(app.name)}</span>
               <span className="ml-auto">
-                <Badge>Soon</Badge>
+                <Badge>{t("Soon")}</Badge>
               </span>
             </div>
           ),
@@ -52,8 +61,8 @@ export function Sidebar() {
 
       <div className="flex flex-col gap-2 border-t border-border pt-4">
         <LivePill className="self-start" />
-        <ThemeSwitcher />
-        <PlainLink href="/about" label="About" icon={Info} active={pathname === "/about"} />
+        <PlainLink href="/settings" label={t("Settings")} icon={Settings} active={pathname === "/settings"} />
+        <PlainLink href="/about" label={t("About")} icon={Info} active={pathname === "/about"} />
         <UserMenu />
       </div>
     </aside>

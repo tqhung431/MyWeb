@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/Button";
 import type { User } from "@/lib/api/me";
 import { NameForm } from "./NameForm";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 export function NamePrompt({ onDone, onLater }: { onDone: (user: User) => void; onLater: () => void }) {
+  const t = useT();
   const dialog = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,22 +29,24 @@ export function NamePrompt({ onDone, onLater }: { onDone: (user: User) => void; 
         aria-labelledby="name-prompt-title"
         className="relative w-full max-w-md animate-pop rounded-3xl border border-border bg-surface-strong p-6 shadow-card sm:p-8"
       >
-        <Button variant="ghost" size="icon" className="absolute top-3 right-3 h-9 w-9" onClick={onLater} aria-label="Not now">
+        <Button variant="ghost" size="icon" className="absolute top-3 right-3 h-9 w-9" onClick={onLater} aria-label={t("Not now")}>
           <X className="h-4 w-4" aria-hidden="true" />
         </Button>
         <p className="text-5xl" aria-hidden="true">
           👋
         </p>
         <h2 id="name-prompt-title" className="mt-3 text-2xl font-bold tracking-tight">
-          What should we call you?
+          {t("What should we call you?")}
         </h2>
         <p className="mt-1 mb-5 text-sm text-muted">
-          Just a name, so everyone here knows who&apos;s who in Hobby Hub, the leaderboards and the live feed. No email, no password.
+          {t("Just a name, so everyone here knows who's who in Hobby Hub, the leaderboards and the live feed. No email, no password.")}
         </p>
         <NameForm mode="pick" onDone={onDone} autoFocus />
-        <p className="mt-4 text-xs text-muted">Nook remembers you on this browser only. Clearing its data, or another device, means picking a name again.</p>
+        <p className="mt-4 text-xs text-muted">
+          {t("Nook remembers you on this browser only. Clearing its data, or another device, means picking a name again.")}
+        </p>
         <button type="button" onClick={onLater} className="mt-3 cursor-pointer text-sm font-semibold text-muted hover:text-text">
-          Not now
+          {t("Not now")}
         </button>
       </div>
     </div>

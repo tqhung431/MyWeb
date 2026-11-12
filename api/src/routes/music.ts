@@ -232,7 +232,7 @@ musicRouter.post(
         genre: fields.genre === "auto" ? undefined : fields.genre,
       });
       songUploads.add(1, { genre: song.genre, starter_pack: starter });
-      await publishActivity("ListMusic", `${displayName(req.user?.name)} added “${song.title}” by ${song.artist}`);
+      await publishActivity("ListMusic", "{name} added “{title}” by {artist}", { name: displayName(req.user?.name), title: song.title, artist: song.artist });
       broadcast("music:changed");
       res.status(201).json({ ...publicSong(song), detectedGenre: detected, starterPack: starter });
       await enqueue("reindex", {}); // Stage 9: the Companion learns about the new song
@@ -319,7 +319,7 @@ musicRouter.post("/:id/play", async (req, res) => {
   }
   await db.insert(songPlays).values({ songId: song.id, owner: who });
   songPlaysMetric.add(1, { genre: song.genre });
-  await publishActivity("Headphones", `${displayName(req.user?.name)} is listening to “${song.title}”`);
+  await publishActivity("Headphones", "{name} is listening to “{title}”", { name: displayName(req.user?.name), title: song.title });
   broadcast("music:changed");
   res.status(201).json({ counted: true });
 });

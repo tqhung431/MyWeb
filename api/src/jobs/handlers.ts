@@ -17,9 +17,7 @@ import type { JobData, JobName } from "./queue.js";
 // Safe to run twice: the unique index + "on conflict do nothing" skip existing badges.
 
 export async function checkAchievements({ userId, clientId, timeZone }: JobData["achievements"]) {
-  const owner = userId
-    ? eq(focusSessions.userId, userId)
-    : and(eq(focusSessions.clientId, clientId!), isNull(focusSessions.userId));
+  const owner = userId ? eq(focusSessions.userId, userId) : and(eq(focusSessions.clientId, clientId!), isNull(focusSessions.userId));
 
   const sessions = await db
     .select({ minutes: focusSessions.minutes, completedAt: focusSessions.completedAt })
@@ -47,7 +45,7 @@ export async function checkAchievements({ userId, clientId, timeZone }: JobData[
         icon: rule.icon,
         earnedAt: a.earnedAt,
       });
-      await publishActivity(rule.icon, `${displayName(user?.name)} unlocked “${rule.title}”`);
+      await publishActivity(rule.icon, "{name} unlocked “{_badge}”", { name: displayName(user?.name), _badge: rule.title });
     }
   }
   return { added: added.map((a) => a.code) };

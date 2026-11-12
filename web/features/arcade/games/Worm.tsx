@@ -17,6 +17,8 @@ import { sfx } from "../sfx";
 import type { GameProps } from "../types";
 import { useLatest } from "../useLatest";
 
+import { useT } from "@/lib/i18n/I18nProvider";
+import { tx } from "@/lib/i18n/core";
 const CELL = 30;
 const SIZE = 16;
 const PX = CELL * SIZE;
@@ -30,9 +32,10 @@ const KEYS: Record<string, Dir> = {
   a: "left",
   d: "right",
 };
-const NOMS = ["nom!", "yum!", "burp", "more!", "mmm", "crunch"];
+const NOMS = [tx("nom!"), tx("yum!"), tx("burp"), tx("more!"), tx("mmm"), tx("crunch")];
 
 export default function Worm({ onFinish }: GameProps) {
+  const t = useT();
   const canvas = useRef<HTMLCanvasElement>(null);
   const game = useRef<WormState>(newGame(SIZE));
   const turns = useRef<Dir[]>([]); // pressed faster than the worm moves? keep them in order
@@ -146,7 +149,7 @@ export default function Worm({ onFinish }: GameProps) {
         }
         sfx(before.snack.spicy ? "spicy" : "eat");
         bubble.current = {
-          text: before.snack.spicy ? "SPICY! 🔥" : NOMS[after.eaten % NOMS.length],
+          text: before.snack.spicy ? t("SPICY! 🔥") : t(NOMS[after.eaten % NOMS.length]),
           until: now + 700,
         };
         setHud({ score: after.score, eaten: after.eaten });
@@ -176,7 +179,7 @@ export default function Worm({ onFinish }: GameProps) {
         <span>
           Score: <span className="tabular-nums">{hud.score}</span>
         </span>
-        <span className="text-muted">Snacks eaten: {hud.eaten}</span>
+        <span className="text-muted">{t("Snacks eaten: {n}", { n: hud.eaten })}</span>
       </div>
       <div className="relative w-full">
         <canvas
@@ -185,11 +188,11 @@ export default function Worm({ onFinish }: GameProps) {
           onPointerUp={onPointerUp}
           className="aspect-square w-full max-w-[calc(100svh-20rem)] touch-none rounded-2xl select-none sm:max-w-none"
           role="img"
-          aria-label={`Hungry Worm board. Score ${hud.score}.`}
+          aria-label={t("Hungry Worm board. Score {n}.", { n: hud.score })}
         />
         {waiting && (
           <p className="pointer-events-none absolute inset-x-0 top-4 mx-auto w-fit animate-pop rounded-full bg-white/90 px-4 py-2 text-sm font-bold text-slate-900 shadow">
-            Press an arrow or swipe to start
+            {t("Press an arrow or swipe to start")}
           </p>
         )}
       </div>
@@ -199,23 +202,24 @@ export default function Worm({ onFinish }: GameProps) {
 }
 
 function DPad({ onSteer }: { onSteer: (d: Dir) => void }) {
+  const t = useT();
   const btn = "inline-flex h-11 w-14 items-center justify-center rounded-2xl border border-border bg-surface-strong active:scale-95 active:bg-surface-muted";
   const press = (d: Dir) => (e: React.PointerEvent) => {
     e.preventDefault();
     onSteer(d);
   };
   return (
-    <div className="flex gap-2 sm:hidden" aria-label="Steering buttons">
-      <button type="button" className={btn} onPointerDown={press("left")} aria-label="Left">
+    <div className="flex gap-2 sm:hidden" aria-label={t("Steering buttons")}>
+      <button type="button" className={btn} onPointerDown={press("left")} aria-label={t("Left")}>
         <ArrowLeft className="h-5 w-5" aria-hidden="true" />
       </button>
-      <button type="button" className={btn} onPointerDown={press("up")} aria-label="Up">
+      <button type="button" className={btn} onPointerDown={press("up")} aria-label={t("Up")}>
         <ArrowUp className="h-5 w-5" aria-hidden="true" />
       </button>
-      <button type="button" className={btn} onPointerDown={press("down")} aria-label="Down">
+      <button type="button" className={btn} onPointerDown={press("down")} aria-label={t("Down")}>
         <ArrowDown className="h-5 w-5" aria-hidden="true" />
       </button>
-      <button type="button" className={btn} onPointerDown={press("right")} aria-label="Right">
+      <button type="button" className={btn} onPointerDown={press("right")} aria-label={t("Right")}>
         <ArrowRight className="h-5 w-5" aria-hidden="true" />
       </button>
     </div>
