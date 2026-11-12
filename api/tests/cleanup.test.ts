@@ -19,10 +19,12 @@ describe("cleanup", () => {
     const old = request.agent(app);
     await old.post("/api/me").send({ name: "Old Timer" });
     await old.post("/api/sessions").send({ mode: "focus", minutes: 25 });
+    await old.put("/api/hobby/groups/books/membership");
     await old.post("/api/hobby/groups/books/posts").send({ body: "Hello" });
     await old.post("/api/arcade/scores").send({ game: "worm", score: 10 });
     const active = request.agent(app);
     await active.post("/api/me").send({ name: "Active" });
+    await active.put("/api/hobby/groups/books/membership");
     await active.post("/api/hobby/groups/books/posts").send({ body: "Still here" });
 
     await pool.query("update users set last_seen_at = now() - interval '91 days' where name = 'Old Timer'");
@@ -40,6 +42,7 @@ describe("cleanup", () => {
   it("deletes chat messages after 30 days, and old guest history after 90", async () => {
     const linh = request.agent(app);
     await linh.post("/api/me").send({ name: "Linh" });
+    await linh.put("/api/hobby/groups/gaming/membership");
     await linh.post("/api/hobby/groups/gaming/messages").send({ body: "old news" });
     await linh.post("/api/hobby/groups/gaming/messages").send({ body: "fresh" });
     await pool.query("update chat_messages set created_at = now() - interval '31 days' where body = 'old news'");

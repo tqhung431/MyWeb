@@ -2,18 +2,21 @@
 
 // One group: its members, the board of posts and the live chat.
 // Desktop: posts on the left, chat on the right. Phone: a switch between Chat and Posts.
+// Stage 21: members write; while a member has the page open, everything counts as read.
 
 import { useConfirm } from "@/components/ui/Dialog";
-import { ArrowLeft, LogOut, Trash2, UserPlus } from "lucide-react";
+import { ArrowLeft, LogOut, MessageCircle, Trash2, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button, buttonClasses } from "@/components/ui/Button";
+import { Popover } from "@/components/ui/Popover";
+import { useToast } from "@/components/ui/Toast";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useMe } from "@/features/me/MeProvider";
 import { useRealtime, useRealtimeEvent } from "@/features/realtime/RealtimeProvider";
-import { deleteGroup, getGroup, setMembership, type GroupDetail } from "@/lib/api/hobby";
+import { deleteGroup, getGroup, markGroupRead, setMembership, type GroupDetail } from "@/lib/api/hobby";
 import { cn } from "@/lib/cn";
 import { Board } from "./Board";
 import { Chat } from "./Chat";
@@ -25,6 +28,7 @@ export function GroupPage({ slug }: { slug: string }) {
   const { user, askName } = useMe();
   const { socket } = useRealtime();
   const router = useRouter();
+  const toast = useToast();
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [missing, setMissing] = useState(false);
   const [tab, setTab] = useState<Tab>("chat");
@@ -42,9 +46,31 @@ export function GroupPage({ slug }: { slug: string }) {
   }, [load, user?.id]);
   useRealtimeEvent("hobby:groups", () => void load()); // someone joined or left
   useRealtimeEvent("people:changed", () => void load());
-  useRealtimeEvent<{ slug: string; deleted?: boolean }>("hobby:board", (e) => {
-    if (e.slug === slug && e.deleted) router.push("/hobby-hub");
+  useRealtimeEvent<{ slug: string; deleted?: boolean; members?: boolean }>("hobby:board", (e) => {
+    if (e.slug !== slug) return;
+    if (e.deleted) router.push("/hobby-hub");
+    else if (e.members) void load();
+    else markRead();
   });
+  useRealtimeEvent<{ slug: string }>("hobby:message", (e) => e.slug === slug && markRead());
+
+  // You're looking at it: new posts and messages here aren't "unread". Bundled, at most every 2 s.
+  const joined = group?.joined ?? false;
+  const readTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const markRead = useCallback(() => {
+    if (!joined || readTimer.current) return;
+    readTimer.current = setTimeout(() => {
+      readTimer.current = null;
+      if (document.visibilityState === "visible") void markGroupRead(slug).catch(() => {});
+    }, 2000);
+  }, [joined, slug]);
+  useEffect(() => {
+    if (!joined) return;
+    void markGroupRead(slug).catch(() => {});
+    const onVisible = () => document.visibilityState === "visible" && void markGroupRead(slug).catch(() => {});
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [joined, slug]);
 
   // Join this group's live room while the page is open (and again after reconnecting)
   useEffect(() => {
@@ -70,9 +96,23 @@ export function GroupPage({ slug }: { slug: string }) {
   }
   if (!group) return <p className="text-sm text-muted">Loading…</p>;
 
-  async function toggleJoin() {
+  async function setJoined(join: boolean) {
     if (!user) return askName();
-    await setMembership(slug, !group!.joined).catch(() => {});
+    if (
+      !join &&
+      !(await confirm({
+        title: `Leave ${group!.name}?`,
+        description: "It moves out of Your groups and stops showing what's new. You can still read it, and join again any time.",
+        confirmLabel: "Leave",
+      }))
+    )
+      return;
+    try {
+      await setMembership(slug, join);
+      toast(join ? `You joined ${group!.name}. It's in Your groups now.` : `You left ${group!.name}.`);
+    } catch {
+      toast("Can't reach Nook right now.");
+    }
     void load();
   }
 
@@ -114,13 +154,42 @@ export function GroupPage({ slug }: { slug: string }) {
                 </span>
               ))}
             </span>
-            <span className="text-xs font-semibold text-muted" title={group.members.map((m) => m.name).join(", ")}>
-              {group.members.length === 0 ? "No members yet" : `${group.members.length} ${group.members.length === 1 ? "member" : "members"}`}
-            </span>
+            {group.members.length === 0 ? (
+              <span className="text-xs font-semibold text-muted">No members yet</span>
+            ) : (
+              <Popover
+                label="Members"
+                button={
+                  <span className="px-1 text-xs font-semibold">
+                    {group.members.length} {group.members.length === 1 ? "member" : "members"}
+                  </span>
+                }
+                buttonClassName="h-8 w-auto rounded-full px-2"
+              >
+                {() => (
+                  <ul className="flex max-h-72 flex-col gap-1 overflow-y-auto">
+                    {group.members.map((m) => (
+                      <li key={m.id} className="flex items-center gap-2">
+                        <Avatar name={m.name} size="sm" />
+                        <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                          {m.name}
+                          {m.id === user?.id && <span className="font-normal text-muted"> (you)</span>}
+                        </span>
+                        {user && m.id !== user.id && (
+                          <Link href={`/hobby-hub/messages/${m.id}`} className={buttonClasses("ghost", "sm")} aria-label={`Message ${m.name}`}>
+                            <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                          </Link>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Popover>
+            )}
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant={group.joined ? "secondary" : "primary"} size="sm" onClick={toggleJoin}>
+          <Button variant={group.joined ? "secondary" : "primary"} size="sm" onClick={() => setJoined(!group.joined)}>
             {group.joined ? <LogOut className="h-4 w-4" aria-hidden="true" /> : <UserPlus className="h-4 w-4" aria-hidden="true" />}
             {group.joined ? "Leave" : "Join"}
           </Button>
@@ -146,10 +215,10 @@ export function GroupPage({ slug }: { slug: string }) {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className={cn(tab !== "posts" && "hidden lg:block")}>
-          <Board slug={slug} groupName={group.name} />
+          <Board slug={slug} groupName={group.name} joined={group.joined} onJoin={() => setJoined(true)} />
         </div>
         <div className={cn("lg:sticky lg:top-6 lg:self-start", tab !== "chat" && "hidden lg:block")}>
-          <Chat slug={slug} className="h-[calc(100svh-22rem)] min-h-80 lg:h-[calc(100svh-12rem)]" />
+          <Chat slug={slug} joined={group.joined} onJoin={() => setJoined(true)} className="h-[calc(100svh-22rem)] min-h-80 lg:h-[calc(100svh-12rem)]" />
         </div>
       </div>
     </div>

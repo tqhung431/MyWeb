@@ -216,6 +216,8 @@ export const groupMembers = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
+    // Stage 21: posts and messages after this count as unread for this member
+    lastReadAt: timestamp("last_read_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.groupId, t.userId] }), index("group_members_user_idx").on(t.userId)],
 );
@@ -266,6 +268,25 @@ export const postLikes = pgTable(
   (t) => [primaryKey({ columns: [t.postId, t.userId] }), index("post_likes_user_idx").on(t.userId)],
 );
 
+// Stage 21: pictures sent in a chat (group or private). The file is MEDIA_DIR/chat/<id>.<ext>.
+// A picture is uploaded first, then sent with a message; the daily cleanup deletes pictures
+// that no message uses any more (message deleted, chat expired, person deleted).
+export const chatImages = pgTable(
+  "chat_images",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    uploaderId: uuid("uploader_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(), // image/jpeg, image/png, image/webp, image/gif
+    width: integer("width").notNull(),
+    height: integer("height").notNull(),
+    bytes: integer("bytes").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("chat_images_uploader_idx").on(t.uploaderId)],
+);
+
 // Chat messages are short-lived: deleted after CHAT_RETENTION_DAYS.
 export const chatMessages = pgTable(
   "chat_messages",
@@ -277,10 +298,35 @@ export const chatMessages = pgTable(
     authorId: uuid("author_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    body: text("body").notNull(),
+    body: text("body").notNull(), // "" when the message is just a picture
+    imageId: uuid("image_id").references(() => chatImages.id, { onDelete: "set null" }), // Stage 21
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("chat_messages_group_time_idx").on(t.groupId, t.createdAt), index("chat_messages_time_idx").on(t.createdAt)],
+);
+
+// Stage 21: private chats between two people. Same rules as group chat: deleted after
+// CHAT_RETENTION_DAYS, and with either person.
+export const directMessages = pgTable(
+  "direct_messages",
+  {
+    id: serial("id").primaryKey(),
+    senderId: uuid("sender_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    recipientId: uuid("recipient_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    imageId: uuid("image_id").references(() => chatImages.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    readAt: timestamp("read_at", { withTimezone: true }), // null = the recipient hasn't seen it yet
+  },
+  (t) => [
+    index("direct_messages_pair_idx").on(t.senderId, t.recipientId, t.id),
+    index("direct_messages_unread_idx").on(t.recipientId, t.readAt),
+    index("direct_messages_time_idx").on(t.createdAt),
+  ],
 );
 
 // --- Stage 12: WatchList --------------------------------------------------------------

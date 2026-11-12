@@ -39,6 +39,7 @@ export function GroupsList() {
     void load();
   }, [load, user?.id]);
   useRealtimeEvent("hobby:groups", () => void load());
+  useRealtimeEvent("hobby:unread", () => void load()); // Stage 21: new posts/messages in your groups
 
   const mine = groups?.filter((g) => g.joined) ?? [];
   const others = groups?.filter((g) => !g.joined) ?? [];
@@ -46,7 +47,9 @@ export function GroupsList() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-xl text-sm text-muted">Groups for what you love. Post, comment and chat with everyone on this Nook, live.</p>
+        <p className="max-w-xl text-sm text-muted">
+          Groups for what you love. Join one to post, comment and chat; your groups come first and show what&apos;s new.
+        </p>
         <Button variant="primary" onClick={() => (user ? setCreating(true) : askName())}>
           <Plus className="h-4 w-4" aria-hidden="true" /> Start a group
         </Button>
@@ -95,7 +98,7 @@ function GroupCard({ group }: { group: Group }) {
         >
           {group.emoji}
         </span>
-        {group.joined && <Badge tone="success">Joined</Badge>}
+        {group.unread > 0 ? <Badge tone="danger">{group.unread > 99 ? "99+" : group.unread} new</Badge> : group.joined && <Badge tone="success">Joined</Badge>}
       </span>
       <span>
         <span className="block font-bold">{group.name}</span>

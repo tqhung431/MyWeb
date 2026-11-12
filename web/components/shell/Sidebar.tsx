@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { Badge } from "@/components/ui/Badge";
+import { UnreadDot, useUnread } from "@/features/hobby/UnreadProvider";
 import { UserMenu } from "@/features/me/UserMenu";
 import { ThemeSwitcher } from "@/features/theme/ThemeSwitcher";
 import { LivePill } from "@/features/realtime/LiveNow";
@@ -16,6 +17,7 @@ import { Brand } from "./Brand";
 // Desktop navigation (hidden on phones; BottomNav takes over there).
 export function Sidebar() {
   const pathname = usePathname();
+  const { total: unread } = useUnread();
 
   return (
     <aside className="sticky top-0 hidden h-dvh flex-col gap-8 border-r border-border bg-surface/60 px-4 py-6 backdrop-blur-xl lg:flex">
@@ -37,6 +39,12 @@ export function Sidebar() {
             >
               <AppIcon icon={app.icon} accent={app.accent} size="sm" />
               <span className="truncate">{app.name}</span>
+              {app.href === "/hobby-hub" && unread > 0 && (
+                <span className="ml-auto">
+                  <UnreadDot count={unread} />
+                  <span className="sr-only"> unread</span>
+                </span>
+              )}
             </Link>
           ) : (
             <div key={app.id} aria-disabled="true" className="flex items-center gap-3 rounded-2xl px-3 py-2 text-sm text-muted">

@@ -96,6 +96,10 @@ export const APPS: AppInfo[] = [
     accent: "from-emerald-400 to-teal-500",
     status: "live",
     phase: "Stage 11",
+    links: [
+      { href: "/hobby-hub", label: "Groups" },
+      { href: "/hobby-hub/messages", label: "Messages" }, // Stage 21: private chats
+    ],
   },
   {
     id: "habits",

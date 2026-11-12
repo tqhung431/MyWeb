@@ -6,17 +6,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AppIcon } from "@/components/ui/AppIcon";
+import { UnreadDot, useUnread } from "@/features/hobby/UnreadProvider";
 import { getApp } from "@/lib/apps";
 import { cn } from "@/lib/cn";
 
 export function AppHeader({ appId, className }: { appId: string; className?: string }) {
   const app = getApp(appId);
   const pathname = usePathname();
+  const unread = useUnread();
+  const badge = (href: string) => (href === "/hobby-hub/messages" ? unread.messages : 0); // Stage 21
 
   // The longest matching link wins, so /chill/tips/x highlights "Tips", not "Focus".
-  const activeHref = app.links
-    ?.filter((l) => pathname === l.href || pathname.startsWith(`${l.href}/`))
-    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+  const activeHref = app.links?.filter((l) => pathname === l.href || pathname.startsWith(`${l.href}/`)).sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
     <header className={cn("mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between", className)}>
@@ -41,6 +42,12 @@ export function AppHeader({ appId, className }: { appId: string; className?: str
               )}
             >
               {link.label}
+              {badge(link.href) > 0 && (
+                <>
+                  <UnreadDot count={badge(link.href)} className="ml-1.5 align-[1px]" />
+                  <span className="sr-only"> unread</span>
+                </>
+              )}
             </Link>
           ))}
         </nav>

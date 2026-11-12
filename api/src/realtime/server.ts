@@ -30,6 +30,7 @@ type SocketData = Owner & { name: string | null; focusing: boolean };
 const focusState = z.object({ running: z.boolean(), mode: z.enum(["focus", "short", "long"]) });
 // Stage 11: Hobby Hub rooms. A slug is lowercase letters, numbers and dashes.
 const groupSlug = z.object({ slug: z.string().regex(/^[a-z0-9-]{1,48}$/) });
+const dmTyping = z.object({ to: z.uuid() }); // Stage 21
 
 export async function attachRealtime(http: HttpServer): Promise<Server> {
   const io = new Server(http, {
@@ -107,6 +108,13 @@ export async function attachRealtime(http: HttpServer): Promise<Server> {
       const room = parsed.success ? groupRoom(parsed.data.slug) : null;
       if (!room || !data.name || !socket.rooms.has(room)) return;
       socket.to(room).emit("hobby:typing", { slug: parsed.data!.slug, name: data.name });
+    });
+
+    // Stage 21: "Mai is typing…" in a private chat: only to that one person, only from people with a name
+    socket.on("dm:typing", (raw: unknown) => {
+      const parsed = dmTyping.safeParse(raw);
+      if (!parsed.success || !data.userId || !data.name || parsed.data.to === data.userId) return;
+      io.to(ownerRoom({ userId: parsed.data.to, clientId: null })).emit("dm:typing", { from: data.userId, name: data.name });
     });
 
     // Stage 14: Quiz Party (Arcade Online)

@@ -81,6 +81,7 @@ describe("what Nook keeps about you", () => {
     const browser = request.agent(app);
     await browser.post("/api/me").send({ name: "Linh" });
     await browser.post("/api/sessions").send({ mode: "focus", minutes: 25 });
+    await browser.put("/api/hobby/groups/cooking/membership");
     await browser.post("/api/hobby/groups/cooking/posts").send({ body: "Pho tonight!" });
     const data = await browser.get("/api/me/data");
     expect(data.body).toMatchObject({ name: "Linh", keptForDays: 90, chatKeptForDays: 30 });
@@ -92,6 +93,7 @@ describe("what Nook keeps about you", () => {
     const res = await browser.post("/api/me").send({ name: "Linh" });
     const cookie = sessionCookie(res)!.split(";")[0];
     await browser.post("/api/sessions").send({ mode: "focus", minutes: 25 });
+    await browser.put("/api/hobby/groups/cooking/membership");
     await browser.post("/api/hobby/groups/cooking/posts").send({ body: "Pho tonight!" });
     await browser.post("/api/hobby/groups/cooking/messages").send({ body: "hi!" });
 

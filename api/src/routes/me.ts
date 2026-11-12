@@ -17,7 +17,9 @@ import { config } from "../config.js";
 import { db } from "../db/client.js";
 import {
   achievements,
+  chatImages,
   chatMessages,
+  directMessages,
   focusSessions,
   gameScores,
   postComments,
@@ -133,6 +135,8 @@ meRouter.get("/data", requireUser, async (req, res) => {
       posts: await n(db.select({ n: count() }).from(posts).where(eq(posts.authorId, id))),
       comments: await n(db.select({ n: count() }).from(postComments).where(eq(postComments.authorId, id))),
       chatMessages: await n(db.select({ n: count() }).from(chatMessages).where(eq(chatMessages.authorId, id))),
+      privateMessages: await n(db.select({ n: count() }).from(directMessages).where(eq(directMessages.senderId, id))),
+      chatPictures: await n(db.select({ n: count() }).from(chatImages).where(eq(chatImages.uploaderId, id))),
       watchList: await n(db.select({ n: count() }).from(watchEntries).where(eq(watchEntries.userId, id))),
       habits: await n(db.select({ n: count() }).from(habits).where(eq(habits.userId, id))),
       books: await n(db.select({ n: count() }).from(books).where(eq(books.userId, id))),

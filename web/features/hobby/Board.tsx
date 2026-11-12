@@ -3,10 +3,11 @@
 // A group's board: posts (newest first) with likes and comments.
 // When anyone posts, likes or comments, the API tells everyone with the group open ("hobby:board")
 // and the board reloads itself.
+// Stage 21: only members post and comment; others see a "Join" button in place of the box.
 
 import { useConfirm } from "@/components/ui/Dialog";
-import { Heart, Loader2, MessageCircle, Send, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { Heart, Loader2, MessageCircle, Send, Trash2, UserPlus } from "lucide-react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type FormEvent } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { useMe } from "@/features/me/MeProvider";
@@ -16,8 +17,11 @@ import { createComment, createPost, deleteComment, deletePost, getComments, getP
 import { cn } from "@/lib/cn";
 import { timeAgo } from "@/lib/time";
 
-export function Board({ slug, groupName }: { slug: string; groupName: string }) {
-  const { user } = useMe();
+// Whether you're a member, for the comment boxes deep inside each post
+const Membership = createContext<{ joined: boolean; onJoin: () => void }>({ joined: false, onJoin: () => {} });
+
+export function Board({ slug, groupName, joined, onJoin }: { slug: string; groupName: string; joined: boolean; onJoin: () => void }) {
+  const { user, askName } = useMe();
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [more, setMore] = useState(false);
   const [changed, setChanged] = useState<Record<number, number>>({}); // postId → version, to reload its comments
@@ -65,34 +69,45 @@ export function Board({ slug, groupName }: { slug: string; groupName: string }) 
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      {user && <Composer slug={slug} groupName={groupName} onPosted={(p) => setPosts((list) => [p, ...(list ?? []).filter((x) => x.id !== p.id)])} />}
+    <Membership.Provider value={{ joined, onJoin }}>
+      <div className="flex flex-col gap-4">
+        {user && joined ? (
+          <Composer slug={slug} groupName={groupName} onPosted={(p) => setPosts((list) => [p, ...(list ?? []).filter((x) => x.id !== p.id)])} />
+        ) : (
+          <div className="flex flex-col items-start gap-3 rounded-3xl border border-dashed border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted">{user ? `Join ${groupName} to post, comment and chat.` : "Pick a name, then join to post."}</p>
+            <Button variant="primary" size="sm" onClick={user ? onJoin : askName}>
+              <UserPlus className="h-4 w-4" aria-hidden="true" /> {user ? "Join" : "Pick a name"}
+            </Button>
+          </div>
+        )}
 
-      {posts === null && <p className="text-sm text-muted">Loading posts…</p>}
-      {posts?.length === 0 && (
-        <div className="rounded-3xl border border-dashed border-border p-8 text-center">
-          <p className="text-4xl" aria-hidden="true">
-            📝
-          </p>
-          <p className="mt-2 font-semibold">No posts yet</p>
-          <p className="text-sm text-muted">Share something: a photo idea, a question, a recommendation.</p>
-        </div>
-      )}
-      {posts?.map((p) => (
-        <PostCard
-          key={p.id}
-          post={p}
-          version={changed[p.id] ?? 0}
-          onChange={(np) => setPosts((list) => list?.map((x) => (x.id === np.id ? np : x)) ?? null)}
-          onDeleted={() => setPosts((list) => list?.filter((x) => x.id !== p.id) ?? null)}
-        />
-      ))}
-      {more && (
-        <Button variant="secondary" className="self-center" onClick={loadMore}>
-          Show older posts
-        </Button>
-      )}
-    </div>
+        {posts === null && <p className="text-sm text-muted">Loading posts…</p>}
+        {posts?.length === 0 && (
+          <div className="rounded-3xl border border-dashed border-border p-8 text-center">
+            <p className="text-4xl" aria-hidden="true">
+              📝
+            </p>
+            <p className="mt-2 font-semibold">No posts yet</p>
+            <p className="text-sm text-muted">Share something: a photo idea, a question, a recommendation.</p>
+          </div>
+        )}
+        {posts?.map((p) => (
+          <PostCard
+            key={p.id}
+            post={p}
+            version={changed[p.id] ?? 0}
+            onChange={(np) => setPosts((list) => list?.map((x) => (x.id === np.id ? np : x)) ?? null)}
+            onDeleted={() => setPosts((list) => list?.filter((x) => x.id !== p.id) ?? null)}
+          />
+        ))}
+        {more && (
+          <Button variant="secondary" className="self-center" onClick={loadMore}>
+            Show older posts
+          </Button>
+        )}
+      </div>
+    </Membership.Provider>
   );
 }
 
@@ -205,6 +220,7 @@ function PostCard({ post, version, onChange, onDeleted }: CardProps) {
 
 function Comments({ postId, version, onCount }: { postId: number; version: number; onCount: (n: number) => void }) {
   const { user, askName } = useMe();
+  const { joined, onJoin } = useContext(Membership);
   const [comments, setComments] = useState<Comment[] | null>(null);
   const [body, setBody] = useState("");
   const [error, setError] = useState("");
@@ -264,7 +280,11 @@ function Comments({ postId, version, onCount }: { postId: number; version: numbe
           )}
         </div>
       ))}
-      {user ? (
+      {user && !joined ? (
+        <button type="button" onClick={onJoin} className="cursor-pointer self-start text-sm font-semibold text-primary hover:underline">
+          Join the group to comment
+        </button>
+      ) : user ? (
         <form onSubmit={onSubmit} className="flex items-center gap-2">
           <input
             value={body}

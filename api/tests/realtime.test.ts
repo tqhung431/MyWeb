@@ -212,6 +212,7 @@ describe("Hobby Hub rooms (Stage 11)", () => {
     let leaked = false;
     elsewhere.on("hobby:message", () => (leaked = true));
     const got = next<{ slug: string; message: { body: string; author: { name: string } } }>(reader, "hobby:message");
+    await linh.agent.put("/api/hobby/groups/gaming/membership");
     await linh.agent.post("/api/hobby/groups/gaming/messages").send({ body: "gg!" });
     expect((await got).message).toMatchObject({ body: "gg!", author: { name: "Linh" } });
     await new Promise((r) => setTimeout(r, 200));
@@ -235,5 +236,31 @@ describe("Hobby Hub rooms (Stage 11)", () => {
     maiTab.emit("hobby:join", { slug: "../../etc" }); // junk: ignored
     await new Promise((r) => setTimeout(r, 300));
     expect(names).toEqual(["Mai"]);
+  });
+
+  it("Stage 21: private messages and 'typing…' reach only the other person (all their tabs)", async () => {
+    const linh = await personWithCookie("Linh");
+    const mai = await personWithCookie("Mai");
+    const an = await personWithCookie("An");
+    const maiId = (await mai.agent.get("/api/me")).body.user.id as string;
+    const maiPhone = tab({ cookie: mai.cookie });
+    const maiLaptop = tab({ cookie: mai.cookie });
+    const anTab = tab({ cookie: an.cookie });
+    const linhTab = tab({ cookie: linh.cookie });
+    await Promise.all([maiPhone, maiLaptop, anTab, linhTab].map((t) => next(t, "presence")));
+
+    let leaked = false;
+    anTab.on("dm:message", () => (leaked = true));
+    anTab.on("dm:typing", () => (leaked = true));
+    const typing = next<{ name: string }>(maiPhone, "dm:typing");
+    linhTab.emit("dm:typing", { to: maiId });
+    expect((await typing).name).toBe("Linh");
+
+    const [onPhone, onLaptop] = [next<{ message: { body: string; mine: boolean } }>(maiPhone, "dm:message"), next(maiLaptop, "dm:message")];
+    await linh.agent.post(`/api/hobby/dms/${maiId}`).send({ body: "psst" });
+    expect((await onPhone).message).toMatchObject({ body: "psst", mine: false });
+    await onLaptop;
+    await new Promise((r) => setTimeout(r, 200));
+    expect(leaked).toBe(false);
   });
 });

@@ -9,6 +9,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AppIcon } from "@/components/ui/AppIcon";
+import { UnreadDot, useUnread } from "@/features/hobby/UnreadProvider";
 import { useMe } from "@/features/me/MeProvider";
 import { isActive, LIVE_APPS } from "@/lib/apps";
 import { cn } from "@/lib/cn";
@@ -19,6 +20,8 @@ export function BottomNav() {
   const pathname = usePathname();
   const { user } = useMe();
   const [open, setOpen] = useState(false);
+  const { total: unread } = useUnread(); // Stage 21: the Hobby Hub badge
+  const badge = (href: string) => (href === "/hobby-hub" ? unread : 0);
 
   useEffect(() => setOpen(false), [pathname]); // close the grid after choosing
 
@@ -44,8 +47,12 @@ export function BottomNav() {
                   className="flex flex-col items-center gap-1.5 text-center text-[11px] leading-tight font-semibold"
                   aria-current={isActive(pathname, app.href) ? "page" : undefined}
                 >
-                  <AppIcon icon={app.icon} accent={app.accent} size="md" />
+                  <span className="relative">
+                    <AppIcon icon={app.icon} accent={app.accent} size="md" />
+                    <UnreadDot count={badge(app.href)} className="absolute -top-1.5 -right-1.5" />
+                  </span>
                   {app.shortName ?? app.name}
+                  {badge(app.href) > 0 && <span className="sr-only">, {badge(app.href)} unread</span>}
                 </Link>
               </li>
             ))}
@@ -70,8 +77,12 @@ export function BottomNav() {
             return (
               <li key={href} className="flex-1">
                 <Link href={href} aria-current={active ? "page" : undefined} className={cn(tab, active ? "text-primary" : "text-muted hover:text-text")}>
-                  <Icon className="h-5 w-5" aria-hidden="true" />
+                  <span className="relative">
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                    <UnreadDot count={badge(href)} className="absolute -top-1.5 -right-2.5" />
+                  </span>
                   {label}
+                  {badge(href) > 0 && <span className="sr-only">, {badge(href)} unread</span>}
                 </Link>
               </li>
             );

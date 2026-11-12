@@ -39,7 +39,10 @@ export function MiniPlayer() {
         music.current && "hidden lg:flex lg:right-[calc(24rem+3rem)] lg:mx-0",
       )}
     >
-      <Link href="/chill" className="flex min-w-0 flex-1 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+      <Link
+        href="/chill"
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
         <AppIcon icon={track?.icon ?? chill.icon} accent={track?.accent ?? chill.accent} size="md" />
         <span className="min-w-0">
           <span className="flex items-center gap-2 truncate text-sm font-semibold">
