@@ -22,6 +22,7 @@ import { hobbyRouter } from "./routes/hobby.js";
 import { meRouter } from "./routes/me.js";
 import { musicRouter } from "./routes/music.js";
 import { sessionsRouter } from "./routes/sessions.js";
+import { openApiDocument } from "./openapi.js";
 import { tipsRouter } from "./routes/tips.js";
 import { watchRouter } from "./routes/watch.js";
 import { valkey, valkeyReady } from "./valkey/client.js";
@@ -52,6 +53,12 @@ export function createApp() {
         () => false,
       ));
     res.json({ ok: true, database: "up", valkey: valkeyUp ? "up" : "down (running without cache)" });
+  });
+
+  // Stage 19: the API described in OpenAPI 3.1 (built once, it never changes while running)
+  const openApi = openApiDocument();
+  app.get("/api/openapi.json", (_req, res) => {
+    res.set("Cache-Control", "public, max-age=300").json(openApi);
   });
 
   app.use("/api/tips", tipsRouter);

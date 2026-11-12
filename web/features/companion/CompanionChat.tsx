@@ -20,8 +20,10 @@ const SUGGESTIONS = [
   "Mình hơi mệt, nên nghe gì để thư giãn?",
 ];
 
-export function CompanionChat() {
-  const [status, setStatus] = useState<CompanionStatus | null | "error">(null);
+// Stage 19 (speed): the page asks the API on the server first (initialStatus), so the right card is in the
+// first HTML; the browser only asks again if the server couldn't.
+export function CompanionChat({ initialStatus = null }: { initialStatus?: CompanionStatus | null }) {
+  const [status, setStatus] = useState<CompanionStatus | null | "error">(initialStatus);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -30,9 +32,9 @@ export function CompanionChat() {
 
   const refresh = () => getCompanionStatus().then(setStatus, () => setStatus("error"));
   useEffect(() => {
-    void refresh();
+    if (!initialStatus) void refresh();
     return () => abort.current?.abort();
-  }, []);
+  }, [initialStatus]);
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: "end", behavior: "smooth" });
   }, [messages]);

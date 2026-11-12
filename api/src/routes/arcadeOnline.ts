@@ -24,8 +24,10 @@ arcadeOnlineRouter.get("/categories", (_req, res) => {
   ]);
 });
 
+export const periodQuery = z.object({ period: z.enum(["week", "all"]).default("all") });
+
 arcadeOnlineRouter.get("/leaderboard", async (req, res) => {
-  const { period } = z.object({ period: z.enum(["week", "all"]).default("all") }).parse(req.query);
+  const { period } = periodQuery.parse(req.query);
   const since = period === "week" ? new Date(Date.now() - 7 * 86_400_000) : new Date(0);
   const me = req.user?.id ?? null;
   const result = await db.execute<{ name: string; games: number; wins: number; points: number; best: number; me: boolean }>(sql`

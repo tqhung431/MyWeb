@@ -12,10 +12,7 @@ export const achievementsRouter = Router();
 
 achievementsRouter.get("/", async (req, res) => {
   const o = owner(req);
-  const where =
-    o.userId !== null
-      ? eq(achievements.userId, o.userId)
-      : and(eq(achievements.clientId, o.clientId), isNull(achievements.userId));
+  const where = o.userId !== null ? eq(achievements.userId, o.userId) : and(eq(achievements.clientId, o.clientId), isNull(achievements.userId));
 
   const rows = await db.select({ code: achievements.code, earnedAt: achievements.earnedAt }).from(achievements).where(where);
   const earned = new Map(rows.map((r) => [r.code, r.earnedAt]));

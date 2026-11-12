@@ -31,7 +31,27 @@ import { cn } from "@/lib/cn";
 import { useRealtime } from "./RealtimeProvider";
 
 // The server names an icon; only these are drawn (it never sends markup).
-const ICONS: Record<string, LucideIcon> = { Timer, UserPlus, Sprout, Leaf, TreePine, Repeat, Flame, Hourglass, Sunrise, MoonStar, Headphones, ListMusic, Trophy, Gamepad2, MessagesSquare, Users, Clapperboard, BookOpen, Swords };
+const ICONS: Record<string, LucideIcon> = {
+  Timer,
+  UserPlus,
+  Sprout,
+  Leaf,
+  TreePine,
+  Repeat,
+  Flame,
+  Hourglass,
+  Sunrise,
+  MoonStar,
+  Headphones,
+  ListMusic,
+  Trophy,
+  Gamepad2,
+  MessagesSquare,
+  Users,
+  Clapperboard,
+  BookOpen,
+  Swords,
+};
 
 export function LivePill({ className }: { className?: string }) {
   const { connected, presence } = useRealtime();
@@ -39,7 +59,10 @@ export function LivePill({ className }: { className?: string }) {
   const focusing = presence.focusing;
   return (
     <span
-      className={cn("inline-flex items-center gap-2 rounded-full bg-emerald-500/12 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300", className)}
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full bg-emerald-500/12 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300",
+        className,
+      )}
       aria-live="polite"
     >
       <Pulse />
@@ -56,11 +79,7 @@ export function LiveNow() {
     <Card aria-labelledby="live-title">
       <CardHeader
         id="live-title"
-        title={
-          <span className="flex items-center gap-2">
-            Live now {connected && <Pulse />}
-          </span>
-        }
+        title={<span className="flex items-center gap-2">Live now {connected && <Pulse />}</span>}
         subtitle={connected ? "Updates the moment something happens" : "Connecting…"}
       />
 
@@ -70,26 +89,29 @@ export function LiveNow() {
       </div>
 
       <h3 className="mb-2 text-xs font-semibold tracking-wider text-muted uppercase">Recent activity</h3>
-      {activity.length === 0 ? (
-        <p className="text-sm text-muted">Nothing yet. Finish a focus session and it shows up here for everyone.</p>
-      ) : (
-        <ul className="flex flex-col gap-1" aria-live="polite">
-          {activity.slice(0, 6).map((a) => {
-            const Icon = ICONS[a.icon] ?? ActivityIcon;
-            return (
-              <li key={a.id} className="flex animate-[fade-in_0.4s_ease-out] items-center gap-3 rounded-xl px-2 py-1.5 hover:bg-surface-muted">
-                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
-                  <Icon className="h-4 w-4" aria-hidden="true" />
-                </span>
-                <span className="min-w-0 flex-1 truncate text-sm">{a.text}</span>
-                <time dateTime={a.at} className="shrink-0 text-xs text-muted tabular-nums">
-                  {ago(a.at, now)}
-                </time>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      {/* Stage 19: room for 6 rows from the start, so the page below doesn't jump when the list arrives */}
+      <div className="min-h-[17rem]">
+        {activity.length === 0 ? (
+          <p className="text-sm text-muted">Nothing yet. Finish a focus session and it shows up here for everyone.</p>
+        ) : (
+          <ul className="flex flex-col gap-1" aria-live="polite">
+            {activity.slice(0, 6).map((a) => {
+              const Icon = ICONS[a.icon] ?? ActivityIcon;
+              return (
+                <li key={a.id} className="flex animate-[fade-in_0.4s_ease-out] items-center gap-3 rounded-xl px-2 py-1.5 hover:bg-surface-muted">
+                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm">{a.text}</span>
+                  <time dateTime={a.at} className="shrink-0 text-xs text-muted tabular-nums">
+                    {ago(a.at, now)}
+                  </time>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </Card>
   );
 }

@@ -17,6 +17,9 @@ const nextConfig: NextConfig = {
     // of a request unless told otherwise. Bigger songs were cut off, the API waited for the rest,
     // and after 30 s the upload failed ("can't reach Nook"). A little extra for the form fields.
     proxyClientMaxBodySize: `${MAX_UPLOAD_MB + 5}mb`,
+    // Stage 19 (speed): put the CSS (about 16 KB) inside the HTML instead of a separate file the browser must
+    // fetch before it can draw anything. Lighthouse counted that wait as ~0.3 s on a phone.
+    inlineCss: true,
   },
 
   // Dev mode (npm run dev) only: let other PCs on a home/office network load the
@@ -28,7 +31,10 @@ const nextConfig: NextConfig = {
     "10.*.*.*",
     "172.*.*.*",
     "*.local",
-    ...(process.env.DEV_ORIGINS ?? "").split(",").map((o) => o.trim()).filter(Boolean),
+    ...(process.env.DEV_ORIGINS ?? "")
+      .split(",")
+      .map((o) => o.trim())
+      .filter(Boolean),
   ],
 
   // Stage 4: the browser calls /api/* on THIS site, and Next.js forwards it to the API.

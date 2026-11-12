@@ -15,7 +15,21 @@ import { z } from "zod";
 import { claimGuestData, COOKIE_NAME, endSession, publicUser, refreshCachedSession, startSession } from "../auth/sessions.js";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
-import { achievements, chatMessages, focusSessions, gameScores, postComments, posts, songLikes, songs, users, watchEntries, habits, books, onlineGamePlayers } from "../db/schema.js";
+import {
+  achievements,
+  chatMessages,
+  focusSessions,
+  gameScores,
+  postComments,
+  posts,
+  songLikes,
+  songs,
+  users,
+  watchEntries,
+  habits,
+  books,
+  onlineGamePlayers,
+} from "../db/schema.js";
 import { enqueue } from "../jobs/queue.js";
 import { deletePerson } from "../people.js";
 import { requireUser } from "../middleware/auth.js";
@@ -38,7 +52,7 @@ export const nameSchema = z
       .refine((n) => !/[\p{Cc}\p{Cf}<>]/u.test(n), "Use letters, numbers, spaces or emoji")
       .refine((n) => n.toLowerCase() !== "guest" && n.toLowerCase() !== "a guest", "Pick a name other than Guest"),
   );
-const nameBody = z.object({ name: nameSchema });
+export const nameBody = z.object({ name: nameSchema });
 
 // The database refuses a second "Linh" (unique index on lower(name)): turn that into a friendly 409.
 function isNameTaken(err: unknown): boolean {
@@ -129,7 +143,7 @@ meRouter.get("/data", requireUser, async (req, res) => {
 
 // --- PUT /api/me/preferences (Stage 7) -------------------------------------------------
 
-const preferences = z.object({
+export const preferences = z.object({
   timer: z
     .object({
       focus: z.number().int().min(1).max(120),

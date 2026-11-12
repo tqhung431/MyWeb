@@ -1,7 +1,10 @@
 "use client";
 
-// The page around every game: start screen → game → "game over" card (score saved, new best?, rank),
+// The page around every game: start screen → 3-2-1 → game → "game over" card (score saved, new best?, rank),
 // with how to play and the live leaderboard next to it.
+//
+// Stage 19: a countdown so you're ready, Space or Enter to start and to play again, your best on the start screen,
+// and confetti for a new best.
 //
 // Each game is its own file in ./games and is only downloaded when you open it (next/dynamic),
 // so the arcade's lobby stays small.
@@ -12,9 +15,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
-import { saveScore, type GameId, type SaveResult } from "@/lib/api/arcade";
+import { getMyBests, saveScore, type GameId, type SaveResult } from "@/lib/api/arcade";
 import { cn } from "@/lib/cn";
 import { formatScore, getGame, type GameInfo } from "./games";
+import { Confetti } from "./Confetti";
 import { Leaderboard } from "./Leaderboard";
 import { isMuted, setMuted, sfx } from "./sfx";
 import type { GameProps } from "./types";
@@ -34,7 +38,12 @@ const COMPONENTS: Record<GameId, ComponentType<GameProps>> = {
   odd: dynamic(() => import("./games/Odd"), { ssr: false, loading }),
 };
 
-type Phase = { name: "ready" } | { name: "playing" } | { name: "over"; score: number; saved: SaveResult | "saving" | "error" };
+type Phase =
+  | { name: "ready" }
+  | { name: "countdown"; n: number }
+  | { name: "playing" }
+  | { name: "over"; score: number; saved: SaveResult | "saving" | "error" };
+const COUNT_MS = 600;
 
 export function GameShell({ gameId }: { gameId: GameId }) {
   const game = getGame(gameId)!;
@@ -44,15 +53,50 @@ export function GameShell({ gameId }: { gameId: GameId }) {
   const [boardVersion, setBoardVersion] = useState(0);
   const [muted, setMutedState] = useState(false);
   const board = useRef<HTMLDivElement>(null);
+  const [best, setBest] = useState<number | null>(null);
 
   useEffect(() => setMutedState(isMuted()), []);
+  useEffect(() => {
+    getMyBests()
+      .then((r) => setBest(r.bests[gameId] ?? null))
+      .catch(() => {});
+  }, [gameId, boardVersion]);
 
-  const start = () => {
-    setRound((r) => r + 1);
-    setPhase({ name: "playing" });
+  const start = useCallback(() => {
+    setPhase({ name: "countdown", n: 3 });
+    sfx("tick");
     // Phones: bring the whole game onto the screen
     if (window.matchMedia("(max-width: 639px)").matches) board.current?.scrollIntoView({ block: "start", behavior: "smooth" });
-  };
+  }, []);
+
+  // 3, 2, 1, go!
+  useEffect(() => {
+    if (phase.name !== "countdown") return;
+    const id = setTimeout(() => {
+      if (phase.n > 1) {
+        setPhase({ name: "countdown", n: phase.n - 1 });
+        sfx("tick");
+      } else {
+        sfx("go");
+        setRound((r) => r + 1);
+        setPhase({ name: "playing" });
+      }
+    }, COUNT_MS);
+    return () => clearTimeout(id);
+  }, [phase]);
+
+  // Space or Enter starts a game from the start screen and the game-over card
+  useEffect(() => {
+    if (phase.name !== "ready" && !(phase.name === "over" && phase.saved !== "saving")) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key === " " || e.key === "Enter") && !(e.target as HTMLElement).closest("input, textarea, button, a, [role=listbox]")) {
+        e.preventDefault();
+        start();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [phase, start]);
 
   const finish = useCallback(
     async (score: number) => {
@@ -102,8 +146,14 @@ export function GameShell({ gameId }: { gameId: GameId }) {
           </header>
 
           <div className="relative mx-auto w-full max-w-[32rem]">
-            {phase.name === "ready" ? <StartScreen game={game} onStart={start} /> : <Game key={round} onFinish={finish} />}
+            {phase.name === "ready" || (phase.name === "countdown" && round === 0) ? (
+              <StartScreen game={game} onStart={start} best={best} />
+            ) : (
+              <Game key={round} onFinish={finish} />
+            )}
+            {phase.name === "countdown" && <Countdown n={phase.n} />}
             {phase.name === "over" && <GameOver game={game} score={phase.score} saved={phase.saved} onAgain={start} />}
+            {phase.name === "over" && typeof phase.saved === "object" && phase.saved.newBest && <Confetti />}
           </div>
         </Card>
 
@@ -126,7 +176,17 @@ export function GameShell({ gameId }: { gameId: GameId }) {
   );
 }
 
-function StartScreen({ game, onStart }: { game: GameInfo; onStart: () => void }) {
+function Countdown({ n }: { n: number }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-black/35" aria-live="assertive">
+      <span key={n} className="animate-pop text-8xl font-extrabold text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.45)] tabular-nums">
+        {n}
+      </span>
+    </div>
+  );
+}
+
+function StartScreen({ game, onStart, best }: { game: GameInfo; onStart: () => void; best: number | null }) {
   return (
     <div className={cn("flex aspect-square flex-col items-center justify-center gap-5 rounded-2xl bg-linear-to-br p-6 text-center text-white", game.accent)}>
       <span className="animate-bounce text-7xl drop-shadow-lg sm:text-8xl" aria-hidden="true">
@@ -136,6 +196,10 @@ function StartScreen({ game, onStart }: { game: GameInfo; onStart: () => void })
       <Button variant="light" size="lg" className="shadow-xl" onClick={onStart} autoFocus>
         <Play className="h-5 w-5" aria-hidden="true" /> Play
       </Button>
+      <p className="text-sm font-semibold text-white/90 drop-shadow">
+        {best !== null ? `Your best: ${formatScore(game, best)} · ` : ""}
+        <span className="hidden sm:inline">Space or Enter to start</span>
+      </p>
     </div>
   );
 }

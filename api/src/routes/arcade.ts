@@ -96,7 +96,7 @@ arcadeRouter.get("/me", async (req, res) => {
 
 // --- GET /api/arcade/scores/:game ----------------------------------------------------
 
-const boardQuery = z.object({ period: z.enum(["week", "all"]).default("all") });
+export const boardQuery = z.object({ period: z.enum(["week", "all"]).default("all") });
 
 arcadeRouter.get("/scores/:game", async (req, res) => {
   const game = gameParam.parse(req.params.game);
@@ -118,7 +118,7 @@ arcadeRouter.get("/scores/:game", async (req, res) => {
 
 // --- POST /api/arcade/scores ---------------------------------------------------------
 
-const newScore = z
+export const newScore = z
   .object({ game: gameParam, score: z.number().int() })
   .refine((v) => v.score >= GAMES[v.game].min && v.score <= GAMES[v.game].max, { message: "That score isn't possible in this game", path: ["score"] });
 
@@ -145,8 +145,10 @@ arcadeRouter.post("/scores", saveLimit, async (req, res) => {
   broadcast("arcade:changed", { game }); // open leaderboards reload
   // Taking first place is news for everyone's live feed (only when someone else was there to beat)
   if (newBest && rank === 1) {
-    const [{ players }] = (await db.execute<{ players: number }>(sql`
-      select count(distinct ${WHO})::int as players from game_scores s where s.game = ${game}`)).rows;
+    const [{ players }] = (
+      await db.execute<{ players: number }>(sql`
+      select count(distinct ${WHO})::int as players from game_scores s where s.game = ${game}`)
+    ).rows;
     if (players > 1) {
       const rule = GAMES[game];
       await publishActivity("Trophy", `${displayName(req.user?.name)} is now #1 in ${rule.name} (${score} ${rule.unit})`);

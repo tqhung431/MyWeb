@@ -28,7 +28,7 @@ export const GAMES = ["van-lo"] as const;
 export const gamesJson = express.json({ limit: MAX_SAVE_BYTES });
 
 const gameParam = z.enum(GAMES);
-const saveBody = z.object({
+export const saveBody = z.object({
   version: z.number().int().min(1).max(1000),
   data: z.record(z.string(), z.unknown()),
   summary: z.string().trim().max(120).default(""),

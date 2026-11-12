@@ -34,7 +34,7 @@ companionRouter.get("/status", async (_req, res) => {
   res.json({ ...status, ready, chatModel: config.AI_CHAT_MODEL, embedModel: config.AI_EMBED_MODEL, indexed });
 });
 
-const chatBody = z.object({
+export const chatBody = z.object({
   messages: z
     .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().trim().min(1).max(2000) }))
     .min(1)

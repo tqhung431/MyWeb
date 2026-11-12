@@ -25,7 +25,7 @@ const externalIdParam = z.string().regex(/^\d{1,10}$/, "Unknown title");
 
 // --- search -------------------------------------------------------------------------------
 
-const searchQuery = z.object({
+export const searchQuery = z.object({
   q: z.string().trim().min(2, "Type at least 2 letters").max(80),
   type: z.enum(["all", "tv", "anime"]).default("all"),
 });
@@ -92,7 +92,7 @@ watchRouter.get("/list", requireUser, async (req, res) => {
   res.json(rows);
 });
 
-const entryBody = z.object({
+export const entryBody = z.object({
   status: z.enum(WATCH_STATUSES),
   stars: z.number().int().min(1).max(5).nullable().optional(),
   note: z.string().trim().max(500).optional(),

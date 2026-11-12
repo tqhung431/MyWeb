@@ -19,8 +19,8 @@ export type Source =
 
 export type ChatTurn = { role: "user" | "assistant"; content: string };
 
-export function getCompanionStatus(): Promise<CompanionStatus> {
-  return apiFetch<CompanionStatus>("/api/companion/status");
+export function getCompanionStatus(timeoutMs?: number): Promise<CompanionStatus> {
+  return apiFetch<CompanionStatus>("/api/companion/status", { timeoutMs });
 }
 
 type Handlers = { onSources: (s: Source[]) => void; onToken: (t: string) => void };

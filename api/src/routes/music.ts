@@ -62,7 +62,7 @@ export function publicSong(song: Song) {
 
 // --- Charts -----------------------------------------------------------------------
 
-const chartQuery = z.object({
+export const chartQuery = z.object({
   period: z.enum(["week", "month", "all"]).default("week"),
   genre: z.enum(["all", ...GENRES]).default("all"),
   // Stage 18 fix: the chart used to stop at 50 songs. Now it comes in pages, and can be searched.
@@ -160,7 +160,7 @@ const upload = multer({
   defParamCharset: "utf8",
 }).single("file");
 
-const uploadFields = z.object({
+export const uploadFields = z.object({
   // The person must confirm they may share it. Nook only hosts songs people have the right to share.
   rights: z.literal("yes", { message: "Please confirm you may share this song" }),
   license: z.string().trim().min(2).max(80),
@@ -277,7 +277,7 @@ async function findOwnSong(req: Request): Promise<Song> {
   return song;
 }
 
-const edits = z.object({
+export const edits = z.object({
   genre: z.enum(GENRES).optional(),
   title: z.string().trim().min(1).max(200).optional(),
   artist: z.string().trim().min(1).max(200).optional(),

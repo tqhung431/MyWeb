@@ -1,0 +1,12 @@
+{
+  "name": "nook-quality",
+  "private": true,
+  "description": "Stage 19: Lighthouse and load-test checks for a running Nook. Not part of the app.",
+  "type": "module",
+  "scripts": {
+    "lighthouse": "node lighthouse.mjs"
+  },
+  "devDependencies": {
+    "lighthouse": "13.6.0"
+  }
+}
