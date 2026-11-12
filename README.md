@@ -275,6 +275,80 @@ music-import/          drop song files here to import many at once
 stage-1-static/        Stage 1: the plain HTML/CSS/JS version
 ```
 
+### Expose web application using Cloudflare Tunnel
+
+1/ Install cloudflared
+
+```Bash
+sudo mkdir -p --mode=0755 /usr/share/keyrings
+
+curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
+  | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
+
+echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main" \
+  | sudo tee /etc/apt/sources.list.d/cloudflared.list
+
+sudo apt update
+sudo apt install cloudflared
+```
+
+Verify:
+```Bash
+cloudflared --version
+```
+
+2/ Configure Docker Caddy
+In your project `.env` file:
+
+```
+BIND_IP=127.0.0.1
+```
+
+Recreate Caddy:
+```Bash
+docker compose up -d --force-recreate <caddy-id>
+```
+
+Or
+```Bash
+docker compose up -d
+```
+
+Expect with `docker ps`
+```
+127.0.0.1:80->80/tcp
+127.0.0.1:443->443/tcp
+```
+
+3/ Verify local application
+Before starting Cloudflare:
+```Bash
+curl -I http://127.0.0.1:80
+```
+
+Expected result:
+```
+HTTP/1.1 200 OK
+Via: 1.1 Caddy
+X-Powered-By: Next.js
+```
+
+This confirms the local application is reachable through Caddy.
+
+4/ Start Cloudflare Quick Tunnel
+
+```Bash
+cloudflared tunnel \
+  --loglevel info \
+  --protocol http2 \
+  --url http://127.0.0.1:80
+```
+
+Cloudflare generates a temporary public URL:
+```
+https://<random-name>.trycloudflare.com
+```
+
 ## Stages
 
 1. Static page — Chill Corner ✅ · [docs](docs/stage-1.md)
