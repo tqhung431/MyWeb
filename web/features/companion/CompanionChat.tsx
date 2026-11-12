@@ -11,18 +11,21 @@ import { getCompanionStatus, streamChat, type ChatTurn, type CompanionStatus, ty
 import { SourceCards } from "./SourceCard";
 import { StatusCard } from "./StatusCard";
 
+import { useT } from "@/lib/i18n/I18nProvider";
+import { tx } from "@/lib/i18n/core";
 type Message = ChatTurn & { sources?: Source[]; error?: string };
 
 const SUGGESTIONS = [
-  "I need to focus for an hour. What should I play?",
-  "Give me a tip for taking better breaks",
-  "Gợi ý một bài remix sôi động cho buổi tối",
-  "Mình hơi mệt, nên nghe gì để thư giãn?",
+  tx("I need to focus for an hour. What should I play?"),
+  tx("Give me a tip for taking better breaks"),
+  tx("Suggest a lively remix for tonight"),
+  tx("I'm a bit tired, what should I listen to relax?"),
 ];
 
 // Stage 19 (speed): the page asks the API on the server first (initialStatus), so the right card is in the
 // first HTML; the browser only asks again if the server couldn't.
 export function CompanionChat({ initialStatus = null }: { initialStatus?: CompanionStatus | null }) {
+  const t = useT();
   const [status, setStatus] = useState<CompanionStatus | null | "error">(initialStatus);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -64,7 +67,7 @@ export function CompanionChat({ initialStatus = null }: { initialStatus?: Compan
         controller.signal,
       );
     } catch (e) {
-      if (!controller.signal.aborted) patchLast((m) => ({ ...m, error: e instanceof Error ? e.message : "Something went wrong." }));
+      if (!controller.signal.aborted) patchLast((m) => ({ ...m, error: e instanceof Error ? e.message : t("Something went wrong.") }));
     } finally {
       setBusy(false);
       abort.current = null;
@@ -79,7 +82,7 @@ export function CompanionChat({ initialStatus = null }: { initialStatus?: Compan
   if (status === null) {
     return (
       <Card className="flex items-center gap-3 text-muted">
-        <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> Waking up the Companion…
+        <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> {t("Waking up the Companion…")}
       </Card>
     );
   }
@@ -93,14 +96,14 @@ export function CompanionChat({ initialStatus = null }: { initialStatus?: Compan
             <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-linear-to-br from-fuchsia-400 to-purple-600 text-white">
               <Sparkles className="h-7 w-7" aria-hidden="true" />
             </span>
-            <h2 className="mt-3 text-lg font-bold">What do you feel like doing?</h2>
+            <h2 className="mt-3 text-lg font-bold">{t("What do you feel like doing?")}</h2>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-              Ask in English or Vietnamese. I suggest songs and tips that are really in Nook, and I run on this computer, so your chat stays here.
+              {t("Ask in English or Vietnamese. I suggest songs and tips that are really in Nook, and I run on this computer, so your chat stays here.")}
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
               {SUGGESTIONS.map((s) => (
-                <Button key={s} size="sm" onClick={() => void send(s)}>
-                  {s}
+                <Button key={s} size="sm" onClick={() => void send(t(s))}>
+                  {t(s)}
                 </Button>
               ))}
             </div>
@@ -114,7 +117,7 @@ export function CompanionChat({ initialStatus = null }: { initialStatus?: Compan
             ) : (
               <div key={i} className="max-w-[90%]">
                 <div className="w-fit rounded-3xl rounded-bl-md bg-surface-muted px-4 py-2.5 whitespace-pre-wrap">
-                  {m.content || (m.error ? "" : <Loader2 className="h-4 w-4 animate-spin text-muted" aria-label="Thinking" />)}
+                  {m.content || (m.error ? "" : <Loader2 className="h-4 w-4 animate-spin text-muted" aria-label={t("Thinking")} />)}
                   {m.error && <span className="text-rose-600 dark:text-rose-400">{m.error}</span>}
                 </div>
                 {m.sources && <SourceCards sources={m.sources} />}
@@ -127,12 +130,12 @@ export function CompanionChat({ initialStatus = null }: { initialStatus?: Compan
 
       <form onSubmit={submit} className="mt-5 flex items-end gap-2">
         {messages.length > 0 && !busy && (
-          <Button variant="ghost" size="icon" onClick={() => setMessages([])} aria-label="New chat" title="New chat">
+          <Button variant="ghost" size="icon" onClick={() => setMessages([])} aria-label={t("New chat")} title={t("New chat")}>
             <RotateCcw className="h-5 w-5" aria-hidden="true" />
           </Button>
         )}
         <label className="sr-only" htmlFor="companion-input">
-          Message the Companion
+          {t("Message the Companion")}
         </label>
         <textarea
           id="companion-input"
@@ -146,15 +149,15 @@ export function CompanionChat({ initialStatus = null }: { initialStatus?: Compan
               void send(input);
             }
           }}
-          placeholder="Ask for a song or a tip…"
+          placeholder={t("Ask for a song or a tip…")}
           className="max-h-40 min-h-11 flex-1 resize-none rounded-3xl border border-border bg-surface-strong/70 px-4 py-2.5 focus:ring-2 focus:ring-primary focus:outline-none"
         />
         {busy ? (
-          <Button variant="secondary" size="icon" onClick={() => abort.current?.abort()} aria-label="Stop">
+          <Button variant="secondary" size="icon" onClick={() => abort.current?.abort()} aria-label={t("Stop")}>
             <Square className="h-4 w-4" aria-hidden="true" />
           </Button>
         ) : (
-          <Button type="submit" variant="primary" size="icon" disabled={!input.trim()} aria-label="Send">
+          <Button type="submit" variant="primary" size="icon" disabled={!input.trim()} aria-label={t("Send")}>
             <ArrowUp className="h-5 w-5" aria-hidden="true" />
           </Button>
         )}

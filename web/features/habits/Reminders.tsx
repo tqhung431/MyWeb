@@ -13,18 +13,20 @@ import { Button } from "@/components/ui/Button";
 import { useRealtimeEvent } from "@/features/realtime/RealtimeProvider";
 import { setHabitDay } from "@/lib/api/habits";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 type Reminder = { habitId: number; name: string; emoji: string; day: string };
 
 const canNotify = () => typeof window !== "undefined" && "Notification" in window && window.isSecureContext;
 
 export function ReminderSwitch() {
+  const t = useT();
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default");
   useEffect(() => setPermission(canNotify() ? Notification.permission : "unsupported"), []);
 
   if (permission === "granted") {
     return (
       <span className="inline-flex h-9 items-center gap-1.5 rounded-full bg-emerald-500/12 px-3 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-        <Bell className="h-4 w-4" aria-hidden="true" /> Reminders on
+        <Bell className="h-4 w-4" aria-hidden="true" /> {t("Reminders on")}
       </span>
     );
   }
@@ -34,28 +36,29 @@ export function ReminderSwitch() {
         className="inline-flex h-9 items-center gap-1.5 rounded-full bg-surface-muted px-3 text-xs font-semibold text-muted"
         title={
           permission === "denied"
-            ? "Notifications are blocked in this browser's settings"
-            : "System notifications need https://. Reminders still pop up while Nook is open."
+            ? t("Notifications are blocked in this browser's settings")
+            : t("System notifications need https://. Reminders still pop up while Nook is open.")
         }
       >
-        <BellOff className="h-4 w-4" aria-hidden="true" /> In-app reminders
+        <BellOff className="h-4 w-4" aria-hidden="true" /> {t("In-app reminders")}
       </span>
     );
   }
   return (
     <Button variant="secondary" size="sm" onClick={async () => setPermission(await Notification.requestPermission())}>
-      <Bell className="h-4 w-4" aria-hidden="true" /> Turn on reminders
+      <Bell className="h-4 w-4" aria-hidden="true" /> {t("Turn on reminders")}
     </Button>
   );
 }
 
 export function HabitReminders() {
+  const t = useT();
   const [items, setItems] = useState<Reminder[]>([]);
 
   useRealtimeEvent<Reminder>("reminder", (r) => {
     setItems((list) => [...list.filter((x) => x.habitId !== r.habitId), r]);
     if (canNotify() && Notification.permission === "granted" && document.hidden) {
-      const n = new Notification(`${r.emoji} ${r.name}`, { body: "Not done yet today. You've got this!", tag: `habit-${r.habitId}` });
+      const n = new Notification(`${r.emoji} ${r.name}`, { body: t("Not done yet today. You've got this!"), tag: `habit-${r.habitId}` });
       n.onclick = () => {
         window.focus();
         n.close();
@@ -78,6 +81,7 @@ export function HabitReminders() {
 }
 
 function ReminderToast({ reminder: r, onClose }: { reminder: Reminder; onClose: () => void }) {
+  const t = useT();
   const close = useRef(onClose);
   useEffect(() => {
     close.current = onClose;
@@ -96,7 +100,7 @@ function ReminderToast({ reminder: r, onClose }: { reminder: Reminder; onClose: 
         {r.emoji}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold tracking-wider text-primary uppercase">Reminder</p>
+        <p className="text-xs font-semibold tracking-wider text-primary uppercase">{t("Reminder")}</p>
         <p className="truncate font-bold">{r.name}</p>
       </div>
       <Button
@@ -107,12 +111,12 @@ function ReminderToast({ reminder: r, onClose }: { reminder: Reminder; onClose: 
           onClose();
         }}
       >
-        <Check className="h-4 w-4" aria-hidden="true" /> Done
+        <Check className="h-4 w-4" aria-hidden="true" /> {t("Done")}
       </Button>
       <button
         type="button"
         onClick={onClose}
-        aria-label="Close"
+        aria-label={t("Close")}
         className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted hover:bg-surface-muted hover:text-text"
       >
         <X className="h-4 w-4" aria-hidden="true" />

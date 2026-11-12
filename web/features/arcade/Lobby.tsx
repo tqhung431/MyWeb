@@ -9,7 +9,9 @@ import { getMyBests, type GameId } from "@/lib/api/arcade";
 import { cn } from "@/lib/cn";
 import { formatScore, GAMES } from "./games";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 export function Lobby() {
+  const t = useT();
   const [bests, setBests] = useState<Partial<Record<GameId, number>>>({});
 
   useEffect(() => {
@@ -37,14 +39,14 @@ export function Lobby() {
                 </span>
               </span>
               <span className="flex flex-1 flex-col gap-1 p-5">
-                <span className="font-bold">{game.name}</span>
-                <span className="text-sm text-muted">{game.tagline}</span>
+                <span className="font-bold">{t(game.name)}</span>
+                <span className="text-sm text-muted">{t(game.tagline)}</span>
                 <span className="mt-auto pt-3 text-xs font-semibold text-muted">
                   {best === undefined ? (
-                    "Not played yet"
+                    t("Not played yet")
                   ) : (
                     <>
-                      Your best: <span className="text-text tabular-nums">{formatScore(game, best)}</span>
+                      {t("Your best:")} <span className="text-text tabular-nums">{formatScore(game, best)}</span>
                     </>
                   )}
                 </span>

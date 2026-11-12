@@ -14,7 +14,9 @@ import type { Server } from "socket.io";
 import { config } from "../config.js";
 import { valkey, valkeyReady } from "../valkey/client.js";
 
-export type Activity = { id: string; icon: string; text: string; at: string };
+// Stage 21: text is an English template ("{name} joined {group}") with params, so each browser shows it in its
+// own language. Params whose key starts with "_" are Nook's own words (a badge, a game) and get translated too.
+export type Activity = { id: string; icon: string; text: string; params?: Record<string, string | number>; at: string };
 export type Owner = { userId: string | null; clientId: string | null };
 
 const RECENT_KEY = "activity:recent";
@@ -76,8 +78,8 @@ export function notifyOwner(owner: Owner, event: string, payload: unknown): void
 
 // Something happened that everyone may see ("Linh finished a focus session").
 // Kept in a short list in Valkey too, so a page opened later can show recent activity.
-export async function publishActivity(icon: string, text: string): Promise<void> {
-  const activity: Activity = { id: randomUUID(), icon, text, at: new Date().toISOString() };
+export async function publishActivity(icon: string, text: string, params?: Activity["params"]): Promise<void> {
+  const activity: Activity = { id: randomUUID(), icon, text, ...(params && { params }), at: new Date().toISOString() };
   if (valkeyReady()) {
     await valkey
       .multi()

@@ -4,7 +4,10 @@
 import type { Metadata } from "next";
 import { YouPage } from "@/features/me/YouPage";
 
-export const metadata: Metadata = { title: "You" };
+import { getT } from "@/lib/i18n/server";
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("You") };
+}
 
 export default function AccountPage() {
   return <YouPage />;

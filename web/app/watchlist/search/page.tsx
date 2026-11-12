@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Search } from "@/features/watch/Search";
 
-export const metadata: Metadata = { title: "Find shows and anime" };
+import { getT } from "@/lib/i18n/server";
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("Find shows and anime") };
+}
 
 export default function WatchSearchPage() {
   return <Search />;

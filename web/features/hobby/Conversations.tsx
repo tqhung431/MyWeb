@@ -15,7 +15,9 @@ import { cn } from "@/lib/cn";
 import { timeAgo } from "@/lib/time";
 import { UnreadDot } from "./UnreadProvider";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 export function Conversations({ className }: { className?: string }) {
+  const t = useT();
   const { user, askName } = useMe();
   const pathname = usePathname();
   const [list, setList] = useState<Conversation[] | null>(null);
@@ -37,35 +39,35 @@ export function Conversations({ className }: { className?: string }) {
   if (!user) {
     return (
       <div className={cn("flex flex-col items-start gap-3 rounded-3xl border border-border bg-surface p-5", className)}>
-        <p className="font-semibold">Private chats</p>
-        <p className="text-sm text-muted">Pick a name to send private messages to people on this Nook.</p>
+        <p className="font-semibold">{t("Private chats")}</p>
+        <p className="text-sm text-muted">{t("Pick a name to send private messages to people on this Nook.")}</p>
         <Button variant="primary" size="sm" onClick={askName}>
-          Pick a name
+          {t("Pick a name")}
         </Button>
       </div>
     );
   }
 
   return (
-    <section aria-label="Private chats" className={cn("flex min-h-0 flex-col gap-3", className)}>
+    <section aria-label={t("Private chats")} className={cn("flex min-h-0 flex-col gap-3", className)}>
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold tracking-wider text-muted uppercase">Private chats</h2>
+        <h2 className="text-sm font-semibold tracking-wider text-muted uppercase">{t("Private chats")}</h2>
         <Button variant={searching ? "secondary" : "primary"} size="sm" onClick={() => setSearching((s) => !s)}>
           {searching ? <X className="h-4 w-4" aria-hidden="true" /> : <PenSquare className="h-4 w-4" aria-hidden="true" />}
-          {searching ? "Close" : "New"}
+          {searching ? t("Close") : t("New")}
         </Button>
       </div>
 
       {searching && <PeopleSearch />}
 
-      {list === null && <p className="text-sm text-muted">Loading…</p>}
+      {list === null && <p className="text-sm text-muted">{t("Loading…")}</p>}
       {list?.length === 0 && !searching && (
         <div className="rounded-3xl border border-dashed border-border p-6 text-center">
           <p className="text-4xl" aria-hidden="true">
             ✉️
           </p>
-          <p className="mt-2 font-semibold">No private chats yet</p>
-          <p className="text-sm text-muted">Tap New, or a name in a group chat, to start one.</p>
+          <p className="mt-2 font-semibold">{t("No private chats yet")}</p>
+          <p className="text-sm text-muted">{t("Tap New, or a name in a group chat, to start one.")}</p>
         </div>
       )}
       <ul className="flex min-h-0 flex-col gap-1 overflow-y-auto">
@@ -90,17 +92,17 @@ export function Conversations({ className }: { className?: string }) {
                   </span>
                   <span className="flex items-center gap-2">
                     <span className={cn("min-w-0 flex-1 truncate text-sm", c.unread ? "font-semibold text-text" : "text-muted")}>
-                      {c.lastMine && "You: "}
+                      {c.lastMine && t("You: ")}
                       {c.lastImage && !c.lastBody ? (
                         <span className="inline-flex items-center gap-1">
-                          <ImageIcon className="h-3.5 w-3.5" aria-hidden="true" /> Picture
+                          <ImageIcon className="h-3.5 w-3.5" aria-hidden="true" /> {t("Picture")}
                         </span>
                       ) : (
                         c.lastBody
                       )}
                     </span>
                     <UnreadDot count={c.unread} />
-                    {c.unread > 0 && <span className="sr-only">{c.unread} unread</span>}
+                    {c.unread > 0 && <span className="sr-only">{t("{n} unread", { n: c.unread })}</span>}
                   </span>
                 </span>
               </Link>
@@ -113,6 +115,7 @@ export function Conversations({ className }: { className?: string }) {
 }
 
 function PeopleSearch() {
+  const t = useT();
   const [q, setQ] = useState("");
   const [people, setPeople] = useState<Person[] | null>(null);
 
@@ -128,14 +131,14 @@ function PeopleSearch() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Find someone by name"
-          aria-label="Find someone by name"
+          placeholder={t("Find someone by name")}
+          aria-label={t("Find someone by name")}
           autoFocus
           maxLength={40}
           className="h-10 min-w-0 flex-1 bg-transparent text-sm focus:outline-none"
         />
       </label>
-      {people?.length === 0 && <p className="px-1 text-sm text-muted">{q ? "Nobody with that name." : "Nobody else has picked a name yet."}</p>}
+      {people?.length === 0 && <p className="px-1 text-sm text-muted">{q ? t("Nobody with that name.") : t("Nobody else has picked a name yet.")}</p>}
       <ul className="flex max-h-64 flex-col overflow-y-auto">
         {people?.map((p) => (
           <li key={p.id}>

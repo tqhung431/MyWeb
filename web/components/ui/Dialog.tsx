@@ -13,6 +13,7 @@ import { createPortal } from "react-dom";
 import { cn } from "@/lib/cn";
 import { Button } from "./Button";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 type DialogProps = {
   open: boolean;
   onClose: () => void;
@@ -103,6 +104,7 @@ type Ask = ConfirmOptions & { resolve: (ok: boolean) => void };
 const ConfirmContext = createContext<((o: ConfirmOptions) => Promise<boolean>) | null>(null);
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
+  const t = useT();
   const [ask, setAsk] = useState<Ask | null>(null);
   const confirm = useCallback((o: ConfirmOptions) => new Promise<boolean>((resolve) => setAsk({ ...o, resolve })), []);
   const answer = (ok: boolean) => {
@@ -121,10 +123,10 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
         actions={
           <>
             <Button variant="ghost" onClick={() => answer(false)} data-autofocus>
-              {ask?.cancelLabel ?? "Cancel"}
+              {ask?.cancelLabel ?? t("Cancel")}
             </Button>
             <Button variant={ask?.danger ? "danger" : "primary"} onClick={() => answer(true)}>
-              {ask?.confirmLabel ?? "OK"}
+              {ask?.confirmLabel ?? t("OK")}
             </Button>
           </>
         }

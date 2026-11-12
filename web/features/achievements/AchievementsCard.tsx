@@ -6,7 +6,9 @@ import { cn } from "@/lib/cn";
 import { useAchievements } from "./AchievementsProvider";
 import { BadgeIcon } from "./BadgeIcon";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 export function AchievementsCard() {
+  const t = useT();
   const { list, status } = useAchievements();
   const earned = list.filter((a) => a.earnedAt).length;
 
@@ -14,8 +16,8 @@ export function AchievementsCard() {
     <Card aria-labelledby="badges-title">
       <CardHeader
         id="badges-title"
-        title="Achievements"
-        subtitle={status === "ready" ? `${earned} of ${list.length} unlocked` : " "}
+        title={t("Achievements")}
+        subtitle={status === "ready" ? t("{n} of {total} unlocked", { n: earned, total: list.length }) : " "}
       />
 
       {status === "offline" && (
@@ -35,11 +37,11 @@ export function AchievementsCard() {
       {status === "ready" && (
         <ul className="grid grid-cols-4 gap-x-2 gap-y-4">
           {list.map((a) => (
-            <li key={a.code} className="flex flex-col items-center gap-1.5 text-center" title={a.description}>
+            <li key={a.code} className="flex flex-col items-center gap-1.5 text-center" title={t(a.description)}>
               <BadgeIcon name={a.icon} earned={Boolean(a.earnedAt)} />
-              <span className={cn("text-xs leading-tight font-semibold", !a.earnedAt && "text-muted")}>{a.title}</span>
+              <span className={cn("text-xs leading-tight font-semibold", !a.earnedAt && "text-muted")}>{t(a.title)}</span>
               <span className="sr-only">
-                {a.earnedAt ? "Unlocked." : "Locked."} {a.description}
+                {a.earnedAt ? t("Unlocked.") : t("Locked.")} {t(a.description)}
               </span>
             </li>
           ))}

@@ -19,7 +19,8 @@ import { useMe } from "@/features/me/MeProvider";
 import { clientId } from "@/lib/api/clientId";
 
 export type Presence = { online: number; focusing: number };
-export type Activity = { id: string; icon: string; text: string; at: string };
+// Stage 21: text is an English template ("{name} posted in {group}"), filled in and translated where shown
+export type Activity = { id: string; icon: string; text: string; params?: Record<string, string | number>; at: string };
 
 type RealtimeState = {
   connected: boolean;

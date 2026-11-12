@@ -7,11 +7,16 @@ import { Card } from "@/components/ui/Card";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useRealtimeEvent } from "@/features/realtime/RealtimeProvider";
 import { getQuizBoard, type BoardRow } from "@/lib/api/arcadeOnline";
+import { LOCALE } from "@/lib/i18n/core";
+import { useLang } from "@/lib/i18n/I18nProvider";
 import { cn } from "@/lib/cn";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 const MEDALS = ["🥇", "🥈", "🥉"];
 
 export function QuizBoard() {
+  const t = useT();
+  const lang = useLang();
   const [period, setPeriod] = useState<"week" | "all">("week");
   const [rows, setRows] = useState<BoardRow[] | null>(null);
   const load = () => getQuizBoard(period).then(setRows, () => setRows([]));
@@ -24,27 +29,27 @@ export function QuizBoard() {
   return (
     <div className="flex max-w-2xl flex-col gap-4">
       <SegmentedControl<"week" | "all">
-        label="Period"
+        label={t("Period")}
         options={[
-          { value: "week", label: "This week" },
-          { value: "all", label: "All time" },
+          { value: "week", label: t("This week") },
+          { value: "all", label: t("All time") },
         ]}
         value={period}
         onChange={setPeriod}
       />
       <Card className="p-3 sm:p-4">
-        {rows === null && <p className="p-3 text-sm text-muted">Loading…</p>}
-        {rows?.length === 0 && <p className="p-3 text-sm text-muted">No games yet. Start a Quiz Party!</p>}
+        {rows === null && <p className="p-3 text-sm text-muted">{t("Loading…")}</p>}
+        {rows?.length === 0 && <p className="p-3 text-sm text-muted">{t("No games yet. Start a Quiz Party!")}</p>}
         {rows && rows.length > 0 && (
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-muted">
                 <th className="w-8 p-2" />
-                <th className="p-2">Player</th>
-                <th className="p-2 text-right">Wins</th>
-                <th className="p-2 text-right">Games</th>
-                <th className="hidden p-2 text-right sm:table-cell">Best</th>
-                <th className="p-2 text-right">Points</th>
+                <th className="p-2">{t("Player")}</th>
+                <th className="p-2 text-right">{t("Wins")}</th>
+                <th className="p-2 text-right">{t("Games")}</th>
+                <th className="hidden p-2 text-right sm:table-cell">{t("Best")}</th>
+                <th className="p-2 text-right">{t("Points")}</th>
               </tr>
             </thead>
             <tbody>
@@ -55,14 +60,14 @@ export function QuizBoard() {
                   <td className="p-2 text-right font-bold">{r.wins}</td>
                   <td className="p-2 text-right">{r.games}</td>
                   <td className="hidden p-2 text-right sm:table-cell">{r.best}</td>
-                  <td className="p-2 text-right">{r.points.toLocaleString("en")}</td>
+                  <td className="p-2 text-right">{r.points.toLocaleString(LOCALE[lang])}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </Card>
-      <p className="text-xs text-muted">A win counts when at least two people played. The server keeps the score, so it can&apos;t be faked.</p>
+      <p className="text-xs text-muted">{t("A win counts when at least two people played. The server keeps the score, so it can't be faked.")}</p>
     </div>
   );
 }

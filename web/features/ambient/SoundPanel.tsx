@@ -11,23 +11,25 @@ import { DEFAULT_TRACK_VOLUME, useAmbient } from "./AmbientProvider";
 import { TrackCard } from "./TrackCard";
 import { CATEGORIES, getTrack, TRACKS, type Category } from "./tracks";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 export function SoundPanel() {
+  const t = useT();
   const { playing, toggle, stopAll, volumes, setTrackVolume, volume, setVolume } = useAmbient();
   const [category, setCategory] = useState<Category>("music");
   const VolumeIcon = volume === 0 ? VolumeX : volume < 50 ? Volume1 : Volume2;
-  const nowPlaying = playing.map((n) => getTrack(n)?.label).join(" + ");
+  const nowPlaying = playing.map((n) => t(getTrack(n)?.label ?? "")).join(" + ");
 
   return (
     <Card aria-labelledby="sound-title">
       <CardHeader
         id="sound-title"
-        title="Soundscape"
-        subtitle={playing.length ? `Playing: ${nowPlaying}` : "Mix any sounds together. All made live in your browser."}
+        title={t("Soundscape")}
+        subtitle={playing.length ? t("Playing: {list}", { list: nowPlaying }) : t("Mix any sounds together. All made live in your browser.")}
         action={
           playing.length > 0 && (
             <Button variant="secondary" size="sm" onClick={stopAll}>
               <Square className="h-3.5 w-3.5" aria-hidden="true" />
-              Stop all
+              {t("Stop all")}
             </Button>
           )
         }
@@ -35,17 +37,17 @@ export function SoundPanel() {
 
       <div className="mb-4">
         <SegmentedControl
-          label="Sound type"
+          label={t("Sound type")}
           options={CATEGORIES.map((c) => ({
             value: c.id,
-            label: `${c.label} ${countIn(c.id, playing) ? `· ${countIn(c.id, playing)}` : ""}`.trim(),
+            label: `${t(c.label)} ${countIn(c.id, playing) ? `· ${countIn(c.id, playing)}` : ""}`.trim(),
           }))}
           value={category}
           onChange={setCategory}
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3" role="group" aria-label="Sounds">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3" role="group" aria-label={t("Sounds")}>
         {TRACKS.filter((t) => t.category === category).map((track) => (
           <TrackCard
             key={track.name}
@@ -60,7 +62,7 @@ export function SoundPanel() {
 
       <label htmlFor="volume" className="mt-5 flex items-center gap-3 text-sm text-muted">
         <VolumeIcon className="h-5 w-5 shrink-0" aria-hidden="true" />
-        <span className="shrink-0 font-semibold">Master</span>
+        <span className="shrink-0 font-semibold">{t("Master")}</span>
         <input
           id="volume"
           type="range"

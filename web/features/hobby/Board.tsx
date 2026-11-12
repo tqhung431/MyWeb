@@ -17,10 +17,12 @@ import { createComment, createPost, deleteComment, deletePost, getComments, getP
 import { cn } from "@/lib/cn";
 import { timeAgo } from "@/lib/time";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 // Whether you're a member, for the comment boxes deep inside each post
 const Membership = createContext<{ joined: boolean; onJoin: () => void }>({ joined: false, onJoin: () => {} });
 
 export function Board({ slug, groupName, joined, onJoin }: { slug: string; groupName: string; joined: boolean; onJoin: () => void }) {
+  const t = useT();
   const { user, askName } = useMe();
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [more, setMore] = useState(false);
@@ -75,21 +77,23 @@ export function Board({ slug, groupName, joined, onJoin }: { slug: string; group
           <Composer slug={slug} groupName={groupName} onPosted={(p) => setPosts((list) => [p, ...(list ?? []).filter((x) => x.id !== p.id)])} />
         ) : (
           <div className="flex flex-col items-start gap-3 rounded-3xl border border-dashed border-border p-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-muted">{user ? `Join ${groupName} to post, comment and chat.` : "Pick a name, then join to post."}</p>
+            <p className="text-sm text-muted">
+              {user ? t("Join {group} to post, comment and chat.", { group: groupName }) : t("Pick a name, then join to post.")}
+            </p>
             <Button variant="primary" size="sm" onClick={user ? onJoin : askName}>
-              <UserPlus className="h-4 w-4" aria-hidden="true" /> {user ? "Join" : "Pick a name"}
+              <UserPlus className="h-4 w-4" aria-hidden="true" /> {user ? t("Join") : t("Pick a name")}
             </Button>
           </div>
         )}
 
-        {posts === null && <p className="text-sm text-muted">Loading posts…</p>}
+        {posts === null && <p className="text-sm text-muted">{t("Loading posts…")}</p>}
         {posts?.length === 0 && (
           <div className="rounded-3xl border border-dashed border-border p-8 text-center">
             <p className="text-4xl" aria-hidden="true">
               📝
             </p>
-            <p className="mt-2 font-semibold">No posts yet</p>
-            <p className="text-sm text-muted">Share something: a photo idea, a question, a recommendation.</p>
+            <p className="mt-2 font-semibold">{t("No posts yet")}</p>
+            <p className="text-sm text-muted">{t("Share something: a photo idea, a question, a recommendation.")}</p>
           </div>
         )}
         {posts?.map((p) => (
@@ -103,7 +107,7 @@ export function Board({ slug, groupName, joined, onJoin }: { slug: string; group
         ))}
         {more && (
           <Button variant="secondary" className="self-center" onClick={loadMore}>
-            Show older posts
+            {t("Show older posts")}
           </Button>
         )}
       </div>
@@ -112,6 +116,7 @@ export function Board({ slug, groupName, joined, onJoin }: { slug: string; group
 }
 
 function Composer({ slug, groupName, onPosted }: { slug: string; groupName: string; onPosted: (p: Post) => void }) {
+  const t = useT();
   const { user } = useMe();
   const [body, setBody] = useState("");
   const [error, setError] = useState("");
@@ -125,7 +130,7 @@ function Composer({ slug, groupName, onPosted }: { slug: string; groupName: stri
       onPosted(await createPost(slug, body));
       setBody("");
     } catch (err) {
-      setError(err instanceof ApiError ? (err.details[0]?.message ?? err.message) : "Not posted: can't reach Nook.");
+      setError(err instanceof ApiError ? (err.details[0]?.message ?? err.message) : t("Not posted: can't reach Nook."));
     } finally {
       setPending(false);
     }
@@ -140,8 +145,8 @@ function Composer({ slug, groupName, onPosted }: { slug: string; groupName: stri
           onChange={(e) => setBody(e.target.value)}
           rows={2}
           maxLength={4000}
-          placeholder={`Share something with ${groupName}…`}
-          aria-label="New post"
+          placeholder={t("Share something with {group}…", { group: groupName })}
+          aria-label={t("New post")}
           className="min-h-16 flex-1 resize-none bg-transparent text-sm [field-sizing:content] placeholder:text-muted focus:outline-none"
         />
       </div>
@@ -149,7 +154,7 @@ function Composer({ slug, groupName, onPosted }: { slug: string; groupName: stri
         <span className="text-xs text-rose-600 dark:text-rose-300">{error}</span>
         <Button type="submit" variant="primary" size="sm" disabled={!body.trim() || pending}>
           {pending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-          Post
+          {t("Post")}
         </Button>
       </div>
     </form>
@@ -159,6 +164,7 @@ function Composer({ slug, groupName, onPosted }: { slug: string; groupName: stri
 type CardProps = { post: Post; version: number; onChange: (p: Post) => void; onDeleted: () => void };
 
 function PostCard({ post, version, onChange, onDeleted }: CardProps) {
+  const t = useT();
   const confirm = useConfirm();
   const { user, askName } = useMe();
   const [open, setOpen] = useState(false);
@@ -171,7 +177,7 @@ function PostCard({ post, version, onChange, onDeleted }: CardProps) {
   }
 
   async function remove() {
-    if (!(await confirm({ title: "Delete this post and its comments?", confirmLabel: "Delete", danger: true }))) return;
+    if (!(await confirm({ title: t("Delete this post and its comments?"), confirmLabel: t("Delete"), danger: true }))) return;
     await deletePost(post.id).catch(() => {});
     onDeleted();
   }
@@ -185,7 +191,7 @@ function PostCard({ post, version, onChange, onDeleted }: CardProps) {
           <p className="text-xs text-muted">{timeAgo(post.createdAt)}</p>
         </div>
         {post.mine && (
-          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={remove} aria-label="Delete this post">
+          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={remove} aria-label={t("Delete this post")}>
             <Trash2 className="h-4 w-4" aria-hidden="true" />
           </Button>
         )}
@@ -196,7 +202,7 @@ function PostCard({ post, version, onChange, onDeleted }: CardProps) {
           type="button"
           onClick={like}
           aria-pressed={post.liked}
-          aria-label={post.liked ? "Unlike" : "Like"}
+          aria-label={post.liked ? t("Unlike") : t("Like")}
           className={cn(
             "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold tabular-nums transition",
             post.liked ? "bg-rose-500/12 text-rose-600 dark:text-rose-300" : "text-muted hover:bg-surface-muted hover:text-text",
@@ -219,6 +225,7 @@ function PostCard({ post, version, onChange, onDeleted }: CardProps) {
 }
 
 function Comments({ postId, version, onCount }: { postId: number; version: number; onCount: (n: number) => void }) {
+  const t = useT();
   const { user, askName } = useMe();
   const { joined, onJoin } = useContext(Membership);
   const [comments, setComments] = useState<Comment[] | null>(null);
@@ -247,7 +254,7 @@ function Comments({ postId, version, onCount }: { postId: number; version: numbe
       setComments((list) => [...(list ?? []).filter((x) => x.id !== c.id), c]);
       setBody("");
     } catch (err) {
-      setError(err instanceof ApiError ? (err.details[0]?.message ?? err.message) : "Not sent: can't reach Nook.");
+      setError(err instanceof ApiError ? (err.details[0]?.message ?? err.message) : t("Not sent: can't reach Nook."));
     }
   }
 
@@ -258,7 +265,7 @@ function Comments({ postId, version, onCount }: { postId: number; version: numbe
 
   return (
     <div className="mt-3 flex flex-col gap-3 border-t border-border pt-3">
-      {comments === null && <p className="text-xs text-muted">Loading comments…</p>}
+      {comments === null && <p className="text-xs text-muted">{t("Loading comments…")}</p>}
       {comments?.map((c) => (
         <div key={c.id} className="group flex gap-2.5">
           <Avatar name={c.author.name} size="sm" />
@@ -272,7 +279,7 @@ function Comments({ postId, version, onCount }: { postId: number; version: numbe
             <button
               type="button"
               onClick={() => remove(c)}
-              aria-label="Delete this comment"
+              aria-label={t("Delete this comment")}
               className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center self-center rounded-full text-muted opacity-60 hover:text-rose-600 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
             >
               <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -282,7 +289,7 @@ function Comments({ postId, version, onCount }: { postId: number; version: numbe
       ))}
       {user && !joined ? (
         <button type="button" onClick={onJoin} className="cursor-pointer self-start text-sm font-semibold text-primary hover:underline">
-          Join the group to comment
+          {t("Join the group to comment")}
         </button>
       ) : user ? (
         <form onSubmit={onSubmit} className="flex items-center gap-2">
@@ -290,17 +297,17 @@ function Comments({ postId, version, onCount }: { postId: number; version: numbe
             value={body}
             onChange={(e) => setBody(e.target.value)}
             maxLength={1000}
-            placeholder="Write a comment…"
-            aria-label="Write a comment"
+            placeholder={t("Write a comment…")}
+            aria-label={t("Write a comment")}
             className="h-10 min-w-0 flex-1 rounded-full border border-border bg-surface-strong/70 px-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/15 focus:outline-none"
           />
-          <Button type="submit" variant="ghost" size="icon" className="h-10 w-10" disabled={!body.trim()} aria-label="Send comment">
+          <Button type="submit" variant="ghost" size="icon" className="h-10 w-10" disabled={!body.trim()} aria-label={t("Send comment")}>
             <Send className="h-4 w-4" aria-hidden="true" />
           </Button>
         </form>
       ) : (
         <button type="button" onClick={askName} className="cursor-pointer self-start text-sm font-semibold text-primary hover:underline">
-          Pick a name to comment
+          {t("Pick a name to comment")}
         </button>
       )}
       {error && <p className="text-xs text-rose-600 dark:text-rose-300">{error}</p>}

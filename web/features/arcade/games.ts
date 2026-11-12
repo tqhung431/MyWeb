@@ -3,6 +3,8 @@
 
 import type { GameId } from "@/lib/api/arcade";
 
+import { currentLang, LOCALE, tNow, tx } from "@/lib/i18n/core";
+// Stage 21: texts in tx() (translated where shown); formatScore uses the page's language.
 export type GameInfo = {
   id: GameId;
   name: string;
@@ -17,83 +19,83 @@ export type GameInfo = {
 export const GAMES: GameInfo[] = [
   {
     id: "worm",
-    name: "Hungry Worm",
+    name: tx("Hungry Worm"),
     emoji: "🐛",
-    tagline: "Eat everything. Don't bite yourself.",
+    tagline: tx("Eat everything. Don't bite yourself."),
     howTo: [
-      "Steer with the arrow keys, WASD, a swipe, or the buttons under the board.",
-      "Every snack makes you longer and a little faster. Chillies are extra spicy: double points.",
-      "Hit a wall or your own tail and it's over.",
+      tx(tx("Steer with the arrow keys, WASD, a swipe, or the buttons under the board.")),
+      tx(tx("Every snack makes you longer and a little faster. Chillies are extra spicy: double points.")),
+      tx(tx("Hit a wall or your own tail and it's over.")),
     ],
     accent: "from-lime-400 to-emerald-500",
     better: "higher",
-    unit: "pts",
+    unit: tx("pts"),
   },
   {
     id: "pairs",
-    name: "Silly Pairs",
+    name: tx("Silly Pairs"),
     emoji: "🦆",
-    tagline: "Find the 8 pairs of very silly animals.",
-    howTo: ["Flip two cards. Same animal? They stay open.", "Find all 8 pairs in as few moves as you can.", "Fewer moves is better."],
+    tagline: tx("Find the 8 pairs of very silly animals."),
+    howTo: [tx("Flip two cards. Same animal? They stay open."), tx("Find all 8 pairs in as few moves as you can."), tx("Fewer moves is better.")],
     accent: "from-sky-400 to-indigo-500",
     better: "lower",
-    unit: "moves",
+    unit: tx("moves"),
   },
   {
     id: "bonk",
-    name: "Bonk-a-Blob",
+    name: tx("Bonk-a-Blob"),
     emoji: "🤪",
-    tagline: "Bonk the blobs. Never bonk the cat.",
+    tagline: tx("Bonk the blobs. Never bonk the cat."),
     howTo: [
-      "Blobs pop out of the holes: tap them before they hide (+10).",
-      "A golden star blob is worth +30. Bonking the cat costs 20.",
-      "Hit several in a row for a combo bonus. You have 30 seconds.",
+      tx(tx("Blobs pop out of the holes: tap them before they hide (+10).")),
+      tx(tx("A golden star blob is worth +30. Bonking the cat costs 20.")),
+      tx(tx("Hit several in a row for a combo bonus. You have 30 seconds.")),
     ],
     accent: "from-fuchsia-400 to-pink-500",
     better: "higher",
-    unit: "pts",
+    unit: tx("pts"),
   },
   {
     id: "pancakes",
-    name: "Pancake Tower",
+    name: tx("Pancake Tower"),
     emoji: "🥞",
-    tagline: "Stack them high. Wobbly is fine.",
+    tagline: tx("Stack them high. Wobbly is fine."),
     howTo: [
-      "A pancake slides above the stack: tap, click or press Space to drop it.",
-      "The part that hangs over the edge falls off, so the next one is smaller.",
-      "A perfect drop makes the pancake grow back a little.",
+      tx(tx("A pancake slides above the stack: tap, click or press Space to drop it.")),
+      tx(tx("The part that hangs over the edge falls off, so the next one is smaller.")),
+      tx(tx("A perfect drop makes the pancake grow back a little.")),
     ],
     accent: "from-amber-300 to-orange-500",
     better: "higher",
-    unit: "pancakes",
+    unit: tx("pancakes"),
   },
   {
     id: "reflex",
-    name: "Too Early!",
+    name: tx("Too Early!"),
     emoji: "🐢",
-    tagline: "Wait for green… wait for it…",
+    tagline: tx("Wait for green… wait for it…"),
     howTo: [
-      "Tap (or press Space) the moment the screen turns green.",
-      "Tap too early and the chicken laughs at you: that round starts again.",
-      "Your score is your average over 5 rounds. Lower is faster.",
+      tx(tx("Tap (or press Space) the moment the screen turns green.")),
+      tx(tx("Tap too early and the chicken laughs at you: that round starts again.")),
+      tx(tx("Your score is your average over 5 rounds. Lower is faster.")),
     ],
     accent: "from-rose-400 to-red-500",
     better: "lower",
-    unit: "ms",
+    unit: tx("ms"),
   },
   {
     id: "odd",
-    name: "Odd Emoji Out",
+    name: tx("Odd Emoji Out"),
     emoji: "🙃",
-    tagline: "One of these is not like the others.",
+    tagline: tx("One of these is not like the others."),
     howTo: [
-      "Tap the one emoji that's different. The grid grows as you go.",
-      "A wrong tap costs 3 seconds. You have 60 seconds.",
-      "Each one you find is 1 point.",
+      tx(tx("Tap the one emoji that's different. The grid grows as you go.")),
+      tx(tx("A wrong tap costs 3 seconds. You have 60 seconds.")),
+      tx(tx("Each one you find is 1 point.")),
     ],
     accent: "from-violet-400 to-purple-600",
     better: "higher",
-    unit: "pts",
+    unit: tx("pts"),
   },
 ];
 
@@ -102,5 +104,5 @@ export function getGame(id: string): GameInfo | undefined {
 }
 
 export function formatScore(game: GameInfo, score: number): string {
-  return `${score.toLocaleString("en")} ${game.unit}`;
+  return `${score.toLocaleString(LOCALE[currentLang()])} ${tNow(game.unit)}`;
 }

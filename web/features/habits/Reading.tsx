@@ -26,9 +26,12 @@ import {
   type BookStatus,
   type ReadingStats,
 } from "@/lib/api/habits";
+import { currentLang, LOCALE } from "@/lib/i18n/core";
 import { cn } from "@/lib/cn";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 export function Reading() {
+  const t = useT();
   const { user, setUser } = useMe();
   const [books, setBooks] = useState<Book[] | null>(null);
   const [stats, setStats] = useState<ReadingStats | null>(null);
@@ -53,7 +56,7 @@ export function Reading() {
   if (!user) {
     return (
       <div className="max-w-xl rounded-3xl border border-border bg-surface p-6 shadow-card">
-        <h2 className="text-lg font-bold">Pick a name to track your reading</h2>
+        <h2 className="text-lg font-bold">{t("Pick a name to track your reading")}</h2>
         <NameForm mode="pick" onDone={setUser} />
       </div>
     );
@@ -77,14 +80,14 @@ export function Reading() {
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="flex flex-col gap-5">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold tracking-wider text-muted uppercase">Reading now</h2>
+          <h2 className="text-sm font-semibold tracking-wider text-muted uppercase">{t("Reading now")}</h2>
           <Button variant="primary" size="sm" onClick={() => setAdding(true)}>
-            <Plus className="h-4 w-4" aria-hidden="true" /> Add a book
+            <Plus className="h-4 w-4" aria-hidden="true" /> {t("Add a book")}
           </Button>
         </div>
         {offline && (
           <p className="flex items-center gap-2 rounded-2xl bg-amber-500/12 p-3 text-sm text-amber-800 dark:text-amber-200">
-            <CloudOff className="h-4 w-4 shrink-0" aria-hidden="true" /> Offline: pages you add are kept on this device and sent later.
+            <CloudOff className="h-4 w-4 shrink-0" aria-hidden="true" /> {t("Offline: pages you add are kept on this device and sent later.")}
           </p>
         )}
         {adding && (
@@ -96,22 +99,22 @@ export function Reading() {
             onCancel={() => setAdding(false)}
           />
         )}
-        {books === null && <p className="text-sm text-muted">Loading…</p>}
+        {books === null && <p className="text-sm text-muted">{t("Loading…")}</p>}
         {books && reading.length === 0 && !adding && (
           <div className="rounded-3xl border border-dashed border-border p-8 text-center">
             <p className="text-4xl" aria-hidden="true">
               📖
             </p>
-            <p className="mt-2 font-semibold">Not reading anything right now</p>
-            <p className="text-sm text-muted">Add the book on your nightstand.</p>
+            <p className="mt-2 font-semibold">{t("Not reading anything right now")}</p>
+            <p className="text-sm text-muted">{t("Add the book on your nightstand.")}</p>
           </div>
         )}
         {reading.map((b) => (
           <BookCard key={b.id} book={b} onPages={(n) => addPages(b, n)} onChanged={load} />
         ))}
 
-        {want.length > 0 && <Shelf title="Want to read" books={want} onChanged={load} />}
-        {finished.length > 0 && <Shelf title="Finished" books={finished} onChanged={load} />}
+        {want.length > 0 && <Shelf title={t("Want to read")} books={want} onChanged={load} />}
+        {finished.length > 0 && <Shelf title={t("Finished")} books={finished} onChanged={load} />}
       </div>
 
       <aside className="flex flex-col gap-4">{stats && <StatsCard stats={stats} />}</aside>
@@ -120,6 +123,7 @@ export function Reading() {
 }
 
 function BookCard({ book: b, onPages, onChanged }: { book: Book; onPages: (n: number) => void; onChanged: () => void }) {
+  const t = useT();
   const [custom, setCustom] = useState("");
   const pct = b.totalPages ? Math.round((b.currentPage / b.totalPages) * 100) : null;
   return (
@@ -148,13 +152,13 @@ function BookCard({ book: b, onPages, onChanged }: { book: Book; onPages: (n: nu
           aria-valuenow={pct ?? 0}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label={`${b.title} progress`}
+          aria-label={t("{title} progress", { title: b.title })}
         >
           <div className="h-full rounded-full bg-linear-to-r from-lime-400 to-emerald-500 transition-[width]" style={{ width: `${pct}%` }} />
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-muted">Read today:</span>
+        <span className="text-xs font-semibold text-muted">{t("Read today:")}</span>
         {[5, 10, 20, 50].map((n) => (
           <Button key={n} variant="secondary" size="sm" className="h-8 px-3" onClick={() => onPages(n)}>
             +{n}
@@ -173,12 +177,12 @@ function BookCard({ book: b, onPages, onChanged }: { book: Book; onPages: (n: nu
             value={custom}
             onChange={(e) => setCustom(e.target.value.replace(/\D/g, ""))}
             inputMode="numeric"
-            placeholder="pages"
-            aria-label="Pages read today"
+            placeholder={t("pages")}
+            aria-label={t("Pages read today")}
             className="h-8 w-16 rounded-full border border-border bg-surface-strong/70 px-2 text-center text-sm focus:border-primary focus:outline-none"
           />
           <Button type="submit" variant="ghost" size="sm" className="h-8 px-2" disabled={!custom}>
-            Add
+            {t("Add")}
           </Button>
         </form>
       </div>
@@ -187,11 +191,12 @@ function BookCard({ book: b, onPages, onChanged }: { book: Book; onPages: (n: nu
 }
 
 function BookMenu({ book: b, onChanged }: { book: Book; onChanged: () => void }) {
+  const t = useT();
   const confirm = useConfirm();
   return (
     <div className="flex items-center gap-1">
       <Select<BookStatus>
-        label={`Status of ${b.title}`}
+        label={t("Status of {title}", { title: b.title })}
         variant="pill"
         value={b.status}
         onChange={async (status) => {
@@ -199,9 +204,9 @@ function BookMenu({ book: b, onChanged }: { book: Book; onChanged: () => void })
           onChanged();
         }}
         options={[
-          { value: "want", label: "Want to read" },
-          { value: "reading", label: "Reading" },
-          { value: "finished", label: "Finished" },
+          { value: "want", label: t("Want to read") },
+          { value: "reading", label: t("Reading") },
+          { value: "finished", label: t("Finished") },
         ]}
         size="xs"
       />
@@ -209,9 +214,9 @@ function BookMenu({ book: b, onChanged }: { book: Book; onChanged: () => void })
         variant="ghost"
         size="icon"
         className="h-8 w-8"
-        aria-label={`Delete ${b.title}`}
+        aria-label={t("Delete {title}", { title: b.title })}
         onClick={async () => {
-          if (!(await confirm({ title: `Delete “${b.title}” and its reading log?`, confirmLabel: "Delete", danger: true }))) return;
+          if (!(await confirm({ title: t("Delete “{title}” and its reading log?", { title: b.title }), confirmLabel: t("Delete"), danger: true }))) return;
           await deleteBook(b.id).catch(() => {});
           onChanged();
         }}
@@ -223,6 +228,7 @@ function BookMenu({ book: b, onChanged }: { book: Book; onChanged: () => void })
 }
 
 function Shelf({ title, books, onChanged }: { title: string; books: Book[]; onChanged: () => void }) {
+  const t = useT();
   return (
     <section>
       <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted uppercase">{title}</h2>
@@ -234,7 +240,7 @@ function Shelf({ title, books, onChanged }: { title: string; books: Book[]; onCh
               <p className="truncate text-xs text-muted">
                 {b.author}
                 {b.finishedOn &&
-                  ` · finished ${new Date(`${b.finishedOn}T12:00:00Z`).toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" })}`}
+                  ` · ${t("finished {date}", { date: new Date(`${b.finishedOn}T12:00:00Z`).toLocaleDateString(LOCALE[currentLang()], { day: "numeric", month: "short", year: "numeric" }) })}`}
               </p>
             </div>
             <BookMenu book={b} onChanged={onChanged} />
@@ -246,6 +252,7 @@ function Shelf({ title, books, onChanged }: { title: string; books: Book[]; onCh
 }
 
 function NewBook({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
+  const t = useT();
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
   const [pages, setPages] = useState("");
@@ -260,35 +267,35 @@ function NewBook({ onDone, onCancel }: { onDone: () => void; onCancel: () => voi
       await createBook({ title, author, totalPages: pages ? Number(pages) : null, status });
       onDone();
     } catch (err) {
-      setError(err instanceof ApiError ? (err.details[0]?.message ?? err.message) : "Not saved: can't reach Nook.");
+      setError(err instanceof ApiError ? (err.details[0]?.message ?? err.message) : t("Not saved: can't reach Nook."));
       setPending(false);
     }
   }
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3 rounded-3xl border border-border bg-surface p-5 shadow-card">
-      <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} autoFocus error={error} />
+      <Input label={t("Title")} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} autoFocus error={error} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_8rem_10rem]">
-        <Input label="Author (optional)" value={author} onChange={(e) => setAuthor(e.target.value)} maxLength={120} />
-        <Input label="Pages" value={pages} onChange={(e) => setPages(e.target.value.replace(/\D/g, ""))} inputMode="numeric" placeholder="e.g. 320" />
+        <Input label={t("Author (optional)")} value={author} onChange={(e) => setAuthor(e.target.value)} maxLength={120} />
+        <Input label={t("Pages")} value={pages} onChange={(e) => setPages(e.target.value.replace(/\D/g, ""))} inputMode="numeric" placeholder={t("e.g. 320")} />
         <Select<BookStatus>
-          label="Shelf"
+          label={t("Shelf")}
           showLabel
           value={status}
           onChange={setStatus}
           options={[
-            { value: "reading", label: "Reading now" },
-            { value: "want", label: "Want to read" },
-            { value: "finished", label: "Finished" },
+            { value: "reading", label: t("Reading now") },
+            { value: "want", label: t("Want to read") },
+            { value: "finished", label: t("Finished") },
           ]}
         />
       </div>
       <div className="flex gap-2">
         <Button type="submit" variant="primary" disabled={!title.trim() || pending}>
-          {pending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />} Add book
+          {pending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />} {t("Add book")}
         </Button>
         <Button variant="ghost" onClick={onCancel}>
-          Cancel
+          {t("Cancel")}
         </Button>
       </div>
     </form>
@@ -297,15 +304,16 @@ function NewBook({ onDone, onCancel }: { onDone: () => void; onCancel: () => voi
 
 // Pages per day for 30 days: plain bars, the tallest day is full height
 function StatsCard({ stats }: { stats: ReadingStats }) {
+  const t = useT();
   const max = Math.max(1, ...stats.series.map((d) => d.pages));
   return (
     <Card>
-      <CardHeader title="Pages read" subtitle="Last 30 days" />
-      <div className="flex h-28 items-end gap-[3px]" role="img" aria-label={`Pages per day, last 30 days. ${stats.month} pages in total.`}>
+      <CardHeader title={t("Pages read")} subtitle={t("Last 30 days")} />
+      <div className="flex h-28 items-end gap-[3px]" role="img" aria-label={t("Pages per day, last 30 days. {n} pages in total.", { n: stats.month })}>
         {stats.series.map((d) => (
           <span
             key={d.day}
-            title={`${d.day}: ${d.pages} pages`}
+            title={t("{day}: {n} pages", { day: d.day, n: d.pages })}
             className={cn("flex-1 rounded-t-sm", d.pages ? "bg-linear-to-t from-lime-400 to-emerald-500" : "bg-surface-muted")}
             style={{ height: `${Math.max(4, (d.pages / max) * 100)}%` }}
           />
@@ -313,10 +321,10 @@ function StatsCard({ stats }: { stats: ReadingStats }) {
       </div>
       <dl className="mt-4 grid grid-cols-2 gap-3 text-center">
         {[
-          ["This week", stats.week],
-          ["30 days", stats.month],
-          ["This year", stats.year],
-          ["Books finished", stats.finishedThisYear],
+          [t("This week"), stats.week],
+          [t("30 days"), stats.month],
+          [t("This year"), stats.year],
+          [t("Books finished"), stats.finishedThisYear],
         ].map(([label, n]) => (
           <div key={label} className="rounded-2xl bg-surface-muted p-2">
             <dt className="text-xs text-muted">{label}</dt>
@@ -325,7 +333,7 @@ function StatsCard({ stats }: { stats: ReadingStats }) {
         ))}
       </dl>
       <p className="mt-3 text-xs text-muted">
-        <Badge>Tip</Badge> 20 pages a day is about a book a fortnight.
+        <Badge>{t("Tip")}</Badge> {t("20 pages a day is about a book a fortnight.")}
       </p>
     </Card>
   );

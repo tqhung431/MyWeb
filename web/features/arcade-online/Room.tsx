@@ -17,6 +17,8 @@ import { useRealtime, useRealtimeEvent } from "@/features/realtime/RealtimeProvi
 import type { Ack, CategoryId, QuizState } from "@/lib/api/arcadeOnline";
 import { cn } from "@/lib/cn";
 
+import { useT } from "@/lib/i18n/I18nProvider";
+import { tx } from "@/lib/i18n/core";
 // Four colours AND four shapes, so colour-blind players can tell them apart
 const CHOICES = [
   { color: "bg-rose-500", shape: "▲" },
@@ -25,15 +27,16 @@ const CHOICES = [
   { color: "bg-emerald-500", shape: "■" },
 ];
 const CATEGORY_NAMES: Record<CategoryId, string> = {
-  mixed: "Mixed",
-  general: "General knowledge",
-  science: "Science & nature",
-  music: "Music",
-  screen: "Movies, TV & games",
-  food: "Food",
+  mixed: tx("Mixed"),
+  general: tx("General knowledge"),
+  science: tx("Science & nature"),
+  music: tx("Music"),
+  screen: tx("Movies, TV & games"),
+  food: tx("Food"),
 };
 
 export function Room({ code }: { code: string }) {
+  const t = useT();
   const { user } = useMe();
   const { socket, connected } = useRealtime();
   const router = useRouter();
@@ -63,7 +66,7 @@ export function Room({ code }: { code: string }) {
     if (!socket || !user) return;
     const join = () =>
       socket.emit("ao:join", { code }, (ack: Ack) => {
-        if (!ack.ok) setError(ack.error ?? "Can't join this room");
+        if (!ack.ok) setError(ack.error ?? t("Can't join this room"));
       });
     if (socket.connected) join();
     socket.on("connect", join);
@@ -74,9 +77,9 @@ export function Room({ code }: { code: string }) {
 
   const send = (event: string, payload: unknown = {}) =>
     new Promise<Ack>((resolve) => {
-      if (!socket) return resolve({ ok: false, error: "Not connected" });
+      if (!socket) return resolve({ ok: false, error: t("Not connected") });
       socket.emit(event, payload, (ack: Ack) => {
-        if (!ack.ok) setError(ack.error ?? "That didn't work");
+        if (!ack.ok) setError(ack.error ?? t("That didn't work"));
         resolve(ack);
       });
     });
@@ -91,12 +94,12 @@ export function Room({ code }: { code: string }) {
       <div className="flex flex-col items-start gap-3">
         <p className="font-semibold">{error}</p>
         <Link href="/arcade-online" className={buttonClasses("secondary", "sm")}>
-          Back to Quiz Party
+          {t("Back to Quiz Party")}
         </Link>
       </div>
     );
   }
-  if (!state || !user) return <p className="text-sm text-muted">{connected ? "Joining the room…" : "Connecting…"}</p>;
+  if (!state || !user) return <p className="text-sm text-muted">{connected ? t("Joining the room…") : t("Connecting…")}</p>;
 
   const host = state.hostId === user.id;
   const me = state.players.find((p) => p.id === user.id);
@@ -113,13 +116,13 @@ export function Room({ code }: { code: string }) {
           )}
         </p>
         <Button variant="ghost" size="sm" onClick={leave}>
-          <LogOut className="h-4 w-4" aria-hidden="true" /> Leave
+          <LogOut className="h-4 w-4" aria-hidden="true" /> {t("Leave")}
         </Button>
       </header>
       {error && (
         <p className="flex items-center justify-between rounded-2xl bg-rose-500/10 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
           {error}
-          <button type="button" onClick={() => setError("")} aria-label="Close" className="cursor-pointer">
+          <button type="button" onClick={() => setError("")} aria-label={t("Close")} className="cursor-pointer">
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </p>
@@ -147,26 +150,27 @@ export function Room({ code }: { code: string }) {
 }
 
 function Waiting({ state, host, userId, send }: { state: QuizState; host: boolean; userId: string; send: (e: string, p?: unknown) => Promise<Ack> }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   const [starting, setStarting] = useState(false);
   return (
     <section className="flex flex-col gap-5 rounded-3xl border border-border bg-surface p-5 shadow-card backdrop-blur-xl sm:p-6">
       <div className="text-center">
-        <p className="text-sm text-muted">Tell the others to open Arcade Online and join with</p>
+        <p className="text-sm text-muted">{t("Tell the others to open Arcade Online and join with")}</p>
         <button
           type="button"
           onClick={() => {
             void navigator.clipboard?.writeText(state.code).then(() => setCopied(true));
           }}
           className="mt-2 inline-flex cursor-pointer items-center gap-3 rounded-2xl bg-rose-500/12 px-5 py-2 font-mono text-5xl font-black tracking-[0.2em] text-rose-600 dark:text-rose-300"
-          aria-label={`Room code ${state.code}. Copy`}
+          aria-label={t("Room code {code}. Copy", { code: state.code })}
         >
           {state.code}
           {copied ? <Check className="h-6 w-6" aria-hidden="true" /> : <Copy className="h-6 w-6 opacity-50" aria-hidden="true" />}
         </button>
       </div>
 
-      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Players">
+      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label={t("Players")}>
         {state.players.map((p) => (
           <li
             key={p.id}
@@ -174,7 +178,7 @@ function Waiting({ state, host, userId, send }: { state: QuizState; host: boolea
           >
             <span className="relative">
               <Avatar name={p.name} />
-              {p.id === state.hostId && <Crown className="absolute -top-2 -right-2 h-4 w-4 fill-amber-400 text-amber-500" aria-label="Host" />}
+              {p.id === state.hostId && <Crown className="absolute -top-2 -right-2 h-4 w-4 fill-amber-400 text-amber-500" aria-label={t("Host")} />}
             </span>
             <span className="w-full truncate text-sm font-semibold">{p.name}</span>
           </li>
@@ -184,11 +188,11 @@ function Waiting({ state, host, userId, send }: { state: QuizState; host: boolea
       {host ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Select
-            label="Questions about"
+            label={t("Questions about")}
             variant="pill"
             value={state.category}
             onChange={(category) => void send("ao:category", { category })}
-            options={Object.entries(CATEGORY_NAMES).map(([id, label]) => ({ value: id, label }))}
+            options={Object.entries(CATEGORY_NAMES).map(([id, label]) => ({ value: id, label: t(label) }))}
             className="sm:w-56"
             size="md"
             buttonClassName="border border-border bg-surface-strong"
@@ -204,12 +208,13 @@ function Waiting({ state, host, userId, send }: { state: QuizState; host: boolea
             }}
           >
             {starting ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : <Play className="h-5 w-5" aria-hidden="true" />}
-            {state.players.length === 1 ? "Start (just me)" : `Start with ${state.players.length} players`}
+            {state.players.length === 1 ? t("Start (just me)") : t("Start with {n} players", { n: state.players.length })}
           </Button>
         </div>
       ) : (
         <p className="text-center text-sm text-muted">
-          {CATEGORY_NAMES[state.category]} · Waiting for {state.players.find((p) => p.id === state.hostId)?.name ?? "the host"} to start…
+          {t(CATEGORY_NAMES[state.category])} ·{" "}
+          {t("Waiting for {name} to start…", { name: state.players.find((p) => p.id === state.hostId)?.name ?? t("the host") })}
         </p>
       )}
     </section>
@@ -229,6 +234,7 @@ function QuestionView({
   picked: number | null;
   onPick: (c: number) => void;
 }) {
+  const t = useT();
   const q = state.question!;
   const reveal = state.phase === "reveal" ? state.reveal : undefined;
   const [left, setLeft] = useState(q.ms);
@@ -255,17 +261,17 @@ function QuestionView({
         />
       </div>
       <div className="rounded-3xl border border-border bg-surface p-5 text-center shadow-card backdrop-blur-xl sm:p-8">
-        <p className="text-xs font-semibold tracking-wider text-muted uppercase">{CATEGORY_NAMES[q.category as CategoryId] ?? q.category}</p>
+        <p className="text-xs font-semibold tracking-wider text-muted uppercase">{t(CATEGORY_NAMES[q.category as CategoryId] ?? q.category)}</p>
         <h2 className="mt-2 text-xl font-bold sm:text-2xl">{q.text}</h2>
         <p className="mt-2 text-sm text-muted tabular-nums" aria-live="polite">
           {reveal
             ? mine
               ? mine.choice === reveal.answer
-                ? `Right! +${mine.gained} 🎉`
-                : "Not this time 🙈"
-              : "No answer in time ⏰"
+                ? t("Right! +{n} 🎉", { n: mine.gained })
+                : t("Not this time 🙈")
+              : t("No answer in time ⏰")
             : picked !== null
-              ? `Answer locked in · ${answeredCount}/${state.players.filter((p) => p.connected).length} answered`
+              ? t("Answer locked in · {n}/{total} answered", { n: answeredCount, total: state.players.filter((p) => p.connected).length })
               : `${Math.ceil(left / 1000)} s`}
         </p>
       </div>
@@ -292,7 +298,7 @@ function QuestionView({
                 {CHOICES[i].shape}
               </span>
               <span className="flex-1">{text}</span>
-              {right && <Check className="h-6 w-6" strokeWidth={3} aria-label="Right answer" />}
+              {right && <Check className="h-6 w-6" strokeWidth={3} aria-label={t("Right answer")} />}
             </button>
           );
         })}
@@ -302,8 +308,9 @@ function QuestionView({
 }
 
 function Scores({ state, userId }: { state: QuizState; userId: string }) {
+  const t = useT();
   return (
-    <ol className="flex flex-col gap-1 rounded-3xl border border-border bg-surface p-3 shadow-card backdrop-blur-xl" aria-label="Scores">
+    <ol className="flex flex-col gap-1 rounded-3xl border border-border bg-surface p-3 shadow-card backdrop-blur-xl" aria-label={t("Scores")}>
       {state.players.map((p, i) => {
         const gained = state.reveal?.results[p.id]?.gained;
         return (
@@ -320,7 +327,7 @@ function Scores({ state, userId }: { state: QuizState; userId: string }) {
               {p.name}
               {!p.connected && " (away)"}
             </span>
-            {state.phase === "question" && p.answered && <Check className="h-4 w-4 text-emerald-500" aria-label="answered" />}
+            {state.phase === "question" && p.answered && <Check className="h-4 w-4 text-emerald-500" aria-label={t("answered")} />}
             {gained !== undefined && gained > 0 && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-300">+{gained}</span>}
             <span className="w-14 text-right tabular-nums">{p.score}</span>
           </li>
@@ -331,14 +338,15 @@ function Scores({ state, userId }: { state: QuizState; userId: string }) {
 }
 
 function Final({ state, host, userId, send }: { state: QuizState; host: boolean; userId: string; send: (e: string, p?: unknown) => Promise<Ack> }) {
+  const t = useT();
   const [first, second, third] = state.players;
   const podium = [second, first, third].filter(Boolean);
   const heights: Record<string, string> = { [first?.id]: "h-28", [second?.id ?? "-"]: "h-20", [third?.id ?? "-"]: "h-14" };
   const medal: Record<string, string> = { [first?.id]: "🥇", [second?.id ?? "-"]: "🥈", [third?.id ?? "-"]: "🥉" };
   return (
     <section className="flex flex-col gap-5 rounded-3xl border border-border bg-surface p-5 text-center shadow-card backdrop-blur-xl sm:p-6">
-      <p className="text-sm font-semibold tracking-wider text-muted uppercase">Final scores</p>
-      <h2 className="text-2xl font-extrabold">{first?.id === userId ? "You won! 🏆" : `${first?.name} wins! 🏆`}</h2>
+      <p className="text-sm font-semibold tracking-wider text-muted uppercase">{t("Final scores")}</p>
+      <h2 className="text-2xl font-extrabold">{first?.id === userId ? t("You won! 🏆") : t("{name} wins! 🏆", { name: first?.name ?? "" })}</h2>
       <div className="flex items-end justify-center gap-3">
         {podium.map((p) => (
           <div key={p.id} className="flex w-24 flex-col items-center gap-1">
@@ -365,18 +373,18 @@ function Final({ state, host, userId, send }: { state: QuizState; host: boolean;
         </ol>
       )}
       <p className="text-sm text-muted">
-        You got {state.players.find((p) => p.id === userId)?.correct ?? 0} of {state.rounds} right.
+        {t("You got {n} of {total} right.", { n: state.players.find((p) => p.id === userId)?.correct ?? 0, total: state.rounds })}
       </p>
       <div className="flex flex-wrap justify-center gap-2">
         {host ? (
           <Button variant="primary" onClick={() => void send("ao:again")}>
-            <RotateCcw className="h-4 w-4" aria-hidden="true" /> Play again
+            <RotateCcw className="h-4 w-4" aria-hidden="true" /> {t("Play again")}
           </Button>
         ) : (
-          <p className="text-sm text-muted">The host can start another round.</p>
+          <p className="text-sm text-muted">{t("The host can start another round.")}</p>
         )}
         <Link href="/arcade-online/leaderboard" className={buttonClasses("secondary")}>
-          <Trophy className="h-4 w-4" aria-hidden="true" /> Leaderboard
+          <Trophy className="h-4 w-4" aria-hidden="true" /> {t("Leaderboard")}
         </Link>
       </div>
     </section>

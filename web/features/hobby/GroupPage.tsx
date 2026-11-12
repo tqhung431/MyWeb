@@ -21,9 +21,11 @@ import { cn } from "@/lib/cn";
 import { Board } from "./Board";
 import { Chat } from "./Chat";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 type Tab = "chat" | "posts";
 
 export function GroupPage({ slug }: { slug: string }) {
+  const t = useT();
   const confirm = useConfirm();
   const { user, askName } = useMe();
   const { socket } = useRealtime();
@@ -87,31 +89,31 @@ export function GroupPage({ slug }: { slug: string }) {
   if (missing) {
     return (
       <div className="flex flex-col items-start gap-3">
-        <p className="font-semibold">This group doesn&apos;t exist (any more).</p>
+        <p className="font-semibold">{t("This group doesn't exist (any more).")}</p>
         <Link href="/hobby-hub" className={buttonClasses("secondary", "sm")}>
-          All groups
+          {t("All groups")}
         </Link>
       </div>
     );
   }
-  if (!group) return <p className="text-sm text-muted">Loading…</p>;
+  if (!group) return <p className="text-sm text-muted">{t("Loading…")}</p>;
 
   async function setJoined(join: boolean) {
     if (!user) return askName();
     if (
       !join &&
       !(await confirm({
-        title: `Leave ${group!.name}?`,
-        description: "It moves out of Your groups and stops showing what's new. You can still read it, and join again any time.",
-        confirmLabel: "Leave",
+        title: t("Leave {group}?", { group: group!.name }),
+        description: t("It moves out of Your groups and stops showing what's new. You can still read it, and join again any time."),
+        confirmLabel: t("Leave"),
       }))
     )
       return;
     try {
       await setMembership(slug, join);
-      toast(join ? `You joined ${group!.name}. It's in Your groups now.` : `You left ${group!.name}.`);
+      toast(join ? t("You joined {group}. It's in Your groups now.", { group: group!.name }) : t("You left {group}.", { group: group!.name }));
     } catch {
-      toast("Can't reach Nook right now.");
+      toast(t("Can't reach Nook right now."));
     }
     void load();
   }
@@ -119,9 +121,9 @@ export function GroupPage({ slug }: { slug: string }) {
   async function remove() {
     if (
       !(await confirm({
-        title: `Delete ${group!.name}?`,
-        description: "All its posts and chat go too. This can't be undone.",
-        confirmLabel: "Delete",
+        title: t("Delete {group}?", { group: group!.name }),
+        description: t("All its posts and chat go too. This can't be undone."),
+        confirmLabel: t("Delete"),
         danger: true,
       }))
     )
@@ -133,7 +135,7 @@ export function GroupPage({ slug }: { slug: string }) {
   return (
     <div className="flex flex-col gap-4">
       <Link href="/hobby-hub" className={buttonClasses("ghost", "sm", "-ml-3 self-start")}>
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> All groups
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> {t("All groups")}
       </Link>
 
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -155,13 +157,13 @@ export function GroupPage({ slug }: { slug: string }) {
               ))}
             </span>
             {group.members.length === 0 ? (
-              <span className="text-xs font-semibold text-muted">No members yet</span>
+              <span className="text-xs font-semibold text-muted">{t("No members yet")}</span>
             ) : (
               <Popover
-                label="Members"
+                label={t("Members")}
                 button={
                   <span className="px-1 text-xs font-semibold">
-                    {group.members.length} {group.members.length === 1 ? "member" : "members"}
+                    {group.members.length === 1 ? t("1 member") : t("{n} members", { n: group.members.length })}
                   </span>
                 }
                 buttonClassName="h-8 w-auto rounded-full px-2"
@@ -173,10 +175,14 @@ export function GroupPage({ slug }: { slug: string }) {
                         <Avatar name={m.name} size="sm" />
                         <span className="min-w-0 flex-1 truncate text-sm font-semibold">
                           {m.name}
-                          {m.id === user?.id && <span className="font-normal text-muted"> (you)</span>}
+                          {m.id === user?.id && <span className="font-normal text-muted"> {t("(you)")}</span>}
                         </span>
                         {user && m.id !== user.id && (
-                          <Link href={`/hobby-hub/messages/${m.id}`} className={buttonClasses("ghost", "sm")} aria-label={`Message ${m.name}`}>
+                          <Link
+                            href={`/hobby-hub/messages/${m.id}`}
+                            className={buttonClasses("ghost", "sm")}
+                            aria-label={t("Message {name}", { name: m.name })}
+                          >
                             <MessageCircle className="h-4 w-4" aria-hidden="true" />
                           </Link>
                         )}
@@ -191,10 +197,10 @@ export function GroupPage({ slug }: { slug: string }) {
         <div className="flex gap-2">
           <Button variant={group.joined ? "secondary" : "primary"} size="sm" onClick={() => setJoined(!group.joined)}>
             {group.joined ? <LogOut className="h-4 w-4" aria-hidden="true" /> : <UserPlus className="h-4 w-4" aria-hidden="true" />}
-            {group.joined ? "Leave" : "Join"}
+            {group.joined ? t("Leave") : t("Join")}
           </Button>
           {group.mine && (
-            <Button variant="ghost" size="sm" onClick={remove} aria-label={`Delete ${group.name}`}>
+            <Button variant="ghost" size="sm" onClick={remove} aria-label={t("Delete {group}", { group: group.name })}>
               <Trash2 className="h-4 w-4" aria-hidden="true" />
             </Button>
           )}
@@ -203,10 +209,10 @@ export function GroupPage({ slug }: { slug: string }) {
 
       <div className="lg:hidden">
         <SegmentedControl<Tab>
-          label="Show"
+          label={t("Show")}
           options={[
-            { value: "chat", label: "Chat" },
-            { value: "posts", label: "Posts" },
+            { value: "chat", label: t("Chat") },
+            { value: "posts", label: t("Posts") },
           ]}
           value={tab}
           onChange={setTab}

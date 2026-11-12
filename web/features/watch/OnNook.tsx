@@ -10,9 +10,17 @@ import { getPopular, type Popular } from "@/lib/api/watch";
 import { timeAgo } from "@/lib/time";
 import { Poster, Stars } from "./bits";
 
-const VERB = { want: "wants to watch", watching: "is watching", done: "watched", dropped: "dropped" } as const;
+import { useT } from "@/lib/i18n/I18nProvider";
+import { tx } from "@/lib/i18n/core";
+const VERB = {
+  want: tx("{name} wants to watch {title}"),
+  watching: tx("{name} is watching {title}"),
+  done: tx("{name} watched {title}"),
+  dropped: tx("{name} dropped {title}"),
+} as const;
 
 export function OnNook() {
+  const t = useT();
   const [data, setData] = useState<Popular | null>(null);
   const [offline, setOffline] = useState(false);
 
@@ -40,18 +48,18 @@ export function OnNook() {
   if (offline)
     return (
       <p className="flex items-center gap-2 text-sm text-muted">
-        <CloudOff className="h-5 w-5" aria-hidden="true" /> Can&apos;t reach the API right now.
+        <CloudOff className="h-5 w-5" aria-hidden="true" /> {t("Can't reach the API right now.")}
       </p>
     );
-  if (!data) return <p className="text-sm text-muted">Loading…</p>;
+  if (!data) return <p className="text-sm text-muted">{t("Loading…")}</p>;
   if (data.popular.length === 0)
     return (
       <div className="rounded-3xl border border-dashed border-border p-10 text-center">
         <p className="text-4xl" aria-hidden="true">
           📺
         </p>
-        <p className="mt-2 font-semibold">Nobody has added anything yet</p>
-        <p className="text-sm text-muted">Be the first: find a show and add it to your list.</p>
+        <p className="mt-2 font-semibold">{t("Nobody has added anything yet")}</p>
+        <p className="text-sm text-muted">{t("Be the first: find a show and add it to your list.")}</p>
       </div>
     );
 
@@ -59,7 +67,7 @@ export function OnNook() {
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <section aria-labelledby="popular-title">
         <h2 id="popular-title" className="mb-3 text-sm font-semibold tracking-wider text-muted uppercase">
-          Popular on Nook this month
+          {t("Popular on Nook this month")}
         </h2>
         <ol className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
           {data.popular.map((t, i) => (
@@ -86,7 +94,7 @@ export function OnNook() {
 
       <section aria-labelledby="latest-title">
         <h2 id="latest-title" className="mb-3 text-sm font-semibold tracking-wider text-muted uppercase">
-          Latest
+          {t("Latest")}
         </h2>
         <ul className="flex flex-col gap-2 rounded-3xl border border-border bg-surface p-3 shadow-card backdrop-blur-xl">
           {data.latest.map((l) => (
@@ -94,7 +102,7 @@ export function OnNook() {
               <Link href={`/watchlist/t/${l.titleId}`} className="flex items-center gap-3 rounded-2xl p-1.5 hover:bg-surface-muted">
                 <Poster src={l.imageUrl} title={l.title} className="w-10 shrink-0 rounded-lg" />
                 <span className="min-w-0 text-sm">
-                  <strong>{l.name}</strong> {VERB[l.status]} <strong>{l.title}</strong>
+                  {t(VERB[l.status], { name: l.name, title: l.title })}
                   {l.stars && l.status === "done" && <span className="text-amber-500"> {"★".repeat(l.stars)}</span>}
                   <span className="block text-xs text-muted">{timeAgo(l.updatedAt)}</span>
                 </span>

@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Lobby } from "@/features/arcade/Lobby";
 
-export const metadata: Metadata = { title: "Mini Arcade" };
+import { getT } from "@/lib/i18n/server";
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("Mini Arcade") };
+}
 
 export default function ArcadePage() {
   return <Lobby />;

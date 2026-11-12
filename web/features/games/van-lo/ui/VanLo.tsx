@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { useConfirm } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { useLang } from "@/lib/i18n/I18nProvider";
 import { useMe } from "@/features/me/MeProvider";
 import { subscribeTheme } from "@/features/theme/theme";
 import { seedFrom } from "../engine/rng";
@@ -170,7 +171,8 @@ function Intro({ t }: { t: (vi: string, en: string) => string }) {
 function Title({ onStart }: { onStart: (g: Game) => void }) {
   const { user } = useMe();
   const [name, setName] = useState(user?.name ?? "");
-  const [lang, setLang] = useState<Lang>("vi");
+  const siteLang = useLang(); // Stage 21: a new game starts in Nook's language; the switch below still changes it
+  const [lang, setLang] = useState<Lang>(siteLang);
   const [path, setPath] = useState<PathId>("kiem");
   const [rolled, setRolled] = useState<Game | null>(null);
   const t = (vi: string, en: string) => (lang === "vi" ? vi : en);

@@ -1,11 +1,12 @@
 // Small pure functions: no React, no browser. Easy to test (see tests/focus-logic.test.ts).
 
 import type { DaySummary, Mode } from "@/lib/api/sessions";
+import { currentLang, LOCALE, tx } from "@/lib/i18n/core";
 
 export const MODES: Record<Mode, { label: string; short: string }> = {
-  focus: { label: "Focus", short: "Focus" },
-  short: { label: "Short break", short: "Break" },
-  long: { label: "Long break", short: "Long" },
+  focus: { label: tx("Focus"), short: tx("Focus") },
+  short: { label: tx("Short break"), short: tx("Break") },
+  long: { label: tx("Long break"), short: tx("Long") },
 };
 
 // Stage 7: you choose how long each mode lasts.
@@ -21,10 +22,10 @@ export const LIMITS: Record<Mode, { min: number; max: number }> = {
 };
 
 export const PRESETS: { name: string; hint: string; durations: Durations }[] = [
-  { name: "Classic", hint: "Pomodoro", durations: { focus: 25, short: 5, long: 15 } },
-  { name: "Quick", hint: "For tired days", durations: { focus: 15, short: 3, long: 10 } },
-  { name: "Deep", hint: "Longer stretches", durations: { focus: 50, short: 10, long: 30 } },
-  { name: "Flow", hint: "90-minute cycles", durations: { focus: 90, short: 20, long: 30 } },
+  { name: tx("Classic"), hint: tx("Pomodoro"), durations: { focus: 25, short: 5, long: 15 } },
+  { name: tx("Quick"), hint: tx("For tired days"), durations: { focus: 15, short: 3, long: 10 } },
+  { name: tx("Deep"), hint: tx("Longer stretches"), durations: { focus: 50, short: 10, long: 30 } },
+  { name: tx("Flow"), hint: tx("90-minute cycles"), durations: { focus: 90, short: 20, long: 30 } },
 ];
 
 // Whole minutes inside the limits; anything odd (text, NaN) falls back to the default.
@@ -60,5 +61,5 @@ export function streak(days: DaySummary[]): number {
 
 export function weekdayLabel(isoDate: string): string {
   // Noon avoids time-zone edge cases turning the date into the previous day.
-  return new Date(`${isoDate}T12:00:00`).toLocaleDateString("en", { weekday: "short" });
+  return new Date(`${isoDate}T12:00:00`).toLocaleDateString(LOCALE[currentLang()], { weekday: "short" });
 }

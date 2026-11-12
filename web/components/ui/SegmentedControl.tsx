@@ -3,6 +3,7 @@
 
 import { cn } from "@/lib/cn";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 type Option<T extends string> = { value: T; label: string };
 
 type Props<T extends string> = {
@@ -13,8 +14,9 @@ type Props<T extends string> = {
 };
 
 export function SegmentedControl<T extends string>({ label, options, value, onChange }: Props<T>) {
+  const t = useT();
   return (
-    <div role="group" aria-label={label} className="inline-flex rounded-full border border-border bg-surface-muted p-1">
+    <div role="group" aria-label={t(label)} className="inline-flex rounded-full border border-border bg-surface-muted p-1">
       {options.map((option) => {
         const active = option.value === value;
         return (
@@ -29,7 +31,7 @@ export function SegmentedControl<T extends string>({ label, options, value, onCh
               active ? "bg-surface-strong text-text shadow-sm" : "text-muted hover:text-text",
             )}
           >
-            {option.label}
+            {t(option.label)}
           </button>
         );
       })}

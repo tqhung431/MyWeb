@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { OnNook } from "@/features/watch/OnNook";
 
-export const metadata: Metadata = { title: "Watched on Nook" };
+import { getT } from "@/lib/i18n/server";
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("Watched on Nook") };
+}
 
 export default function WatchPopularPage() {
   return <OnNook />;

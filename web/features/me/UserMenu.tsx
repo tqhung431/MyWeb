@@ -9,7 +9,9 @@ import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/cn";
 import { useMe } from "./MeProvider";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 export function UserMenu({ compact = false }: { compact?: boolean }) {
+  const t = useT();
   const { user, askName } = useMe();
   const pathname = usePathname();
 
@@ -18,7 +20,7 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
     return user ? (
       <Link
         href="/account"
-        aria-label={`You: ${user.name}`}
+        aria-label={t("You: {name}", { name: user.name })}
         className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         <Avatar name={user.name} size="sm" />
@@ -29,7 +31,7 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
         onClick={askName}
         className="flex cursor-pointer items-center gap-2 rounded-full border border-border bg-surface-strong py-1 pr-1 pl-3 text-xs font-semibold text-muted hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
-        Pick a name
+        {t("Pick a name")}
         <Avatar size="sm" />
       </button>
     );
@@ -40,9 +42,9 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
       <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface-muted p-2.5">
         <Avatar />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">Guest</p>
+          <p className="text-sm font-semibold">{t("Guest")}</p>
           <button type="button" onClick={askName} className="cursor-pointer text-xs font-semibold text-primary hover:underline">
-            Pick a name
+            {t("Pick a name")}
           </button>
         </div>
       </div>
@@ -61,7 +63,7 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
       <Avatar name={user.name} />
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold">{user.name}</span>
-        <span className="block truncate text-xs text-muted">You · your data</span>
+        <span className="block truncate text-xs text-muted">{t("You · your data")}</span>
       </span>
     </Link>
   );

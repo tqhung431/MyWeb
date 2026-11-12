@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { CompanionChat } from "@/features/companion/CompanionChat";
 import { getCompanionStatus, type CompanionStatus } from "@/lib/api/companion";
 
-export const metadata: Metadata = { title: "Free-time Companion" };
+import { getT } from "@/lib/i18n/server";
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("Free-time Companion") };
+}
 export const dynamic = "force-dynamic"; // asks the API on every visit (it isn't running while the site is built)
 
 export default async function CompanionPage() {

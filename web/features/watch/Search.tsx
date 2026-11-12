@@ -13,10 +13,12 @@ import { ApiError } from "@/lib/api/client";
 import { removeEntry, saveEntry, searchTitles, type Found, type Source, type Status } from "@/lib/api/watch";
 import { Poster, StatusSelect } from "./bits";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 type Kind = "all" | Source;
 const SUGGESTIONS = ["Frieren", "Friends", "One Piece", "The Office", "Spy x Family", "Breaking Bad"];
 
 export function Search() {
+  const t = useT();
   const [q, setQ] = useState("");
   const [kind, setKind] = useState<Kind>("all");
   const [results, setResults] = useState<Found[] | null>(null);
@@ -41,7 +43,7 @@ export function Search() {
         setUnavailable(res.unavailable);
         setError("");
       } catch (e) {
-        if (!cancelled) setError(e instanceof ApiError ? e.message : "Can't reach Nook right now.");
+        if (!cancelled) setError(e instanceof ApiError ? e.message : t("Can't reach Nook right now."));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -56,24 +58,24 @@ export function Search() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <label className="relative flex-1">
-          <span className="sr-only">Search TV shows and anime</span>
+          <span className="sr-only">{t("Search TV shows and anime")}</span>
           <SearchIcon className="pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-muted" aria-hidden="true" />
           <input
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search TV shows and anime…"
+            placeholder={t("Search TV shows and anime…")}
             autoFocus
             className="h-12 w-full rounded-full border border-border bg-surface-strong/70 pr-12 pl-12 focus:border-primary focus:ring-4 focus:ring-primary/15 focus:outline-none"
           />
-          {loading && <Loader2 className="absolute top-1/2 right-4 h-5 w-5 -translate-y-1/2 animate-spin text-primary" aria-label="Searching" />}
+          {loading && <Loader2 className="absolute top-1/2 right-4 h-5 w-5 -translate-y-1/2 animate-spin text-primary" aria-label={t("Searching")} />}
         </label>
         <SegmentedControl<Kind>
-          label="What to search"
+          label={t("What to search")}
           options={[
-            { value: "all", label: "All" },
+            { value: "all", label: t("All") },
             { value: "tv", label: "TV" },
-            { value: "anime", label: "Anime" },
+            { value: "anime", label: t("Anime") },
           ]}
           value={kind}
           onChange={setKind}
@@ -82,7 +84,7 @@ export function Search() {
 
       {results === null && !error && (
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
-          Try:
+          {t("Try:")}
           {SUGGESTIONS.map((s) => (
             <button
               key={s}
@@ -101,18 +103,22 @@ export function Search() {
         </p>
       )}
       {unavailable.length > 0 && results && (
-        <p className="text-sm text-muted">{unavailable.includes("anime") ? "Anime" : "TV"} search isn&apos;t answering right now; showing the rest.</p>
+        <p className="text-sm text-muted">
+          {unavailable.includes("anime")
+            ? t("Anime search isn't answering right now; showing the rest.")
+            : t("TV search isn't answering right now; showing the rest.")}
+        </p>
       )}
-      {results?.length === 0 && <p className="text-sm text-muted">Nothing found for “{q.trim()}”.</p>}
+      {results?.length === 0 && <p className="text-sm text-muted">{t("Nothing found for “{q}”.", { q: q.trim() })}</p>}
 
       {results && results.length > 0 && (
         <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {results.map((t) => (
-            <li key={`${t.source}-${t.externalId}`}>
+          {results.map((r) => (
+            <li key={`${r.source}-${r.externalId}`}>
               <ResultCard
-                title={t}
+                title={r}
                 onSaved={(mine) =>
-                  setResults((list) => list?.map((x) => (x.source === t.source && x.externalId === t.externalId ? { ...x, mine } : x)) ?? null)
+                  setResults((list) => list?.map((x) => (x.source === r.source && x.externalId === r.externalId ? { ...x, mine } : x)) ?? null)
                 }
               />
             </li>
@@ -120,21 +126,22 @@ export function Search() {
         </ul>
       )}
       <p className="text-xs text-muted">
-        TV shows from{" "}
+        {t("TV shows from")}{" "}
         <a href="https://www.tvmaze.com" target="_blank" rel="noopener noreferrer" className="underline">
           TVmaze
         </a>
-        , anime from{" "}
+        , {t("anime from")}{" "}
         <a href="https://myanimelist.net" target="_blank" rel="noopener noreferrer" className="underline">
           MyAnimeList
         </a>{" "}
-        via Jikan. Both free; this PC needs the internet to search.
+        {t("via Jikan. Both free; this PC needs the internet to search.")}
       </p>
     </div>
   );
 }
 
-function ResultCard({ title: t, onSaved }: { title: Found; onSaved: (mine: Found["mine"]) => void }) {
+function ResultCard({ title: show, onSaved }: { title: Found; onSaved: (mine: Found["mine"]) => void }) {
+  const t = useT();
   const { user, askName } = useMe();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -145,26 +152,26 @@ function ResultCard({ title: t, onSaved }: { title: Found; onSaved: (mine: Found
     setError("");
     try {
       if (s === "remove") {
-        if (t.mine) await removeEntry(t.mine.titleId);
+        if (show.mine) await removeEntry(show.mine.titleId);
         onSaved(null);
       } else {
-        const e = await saveEntry(t.source, t.externalId, { status: s });
+        const e = await saveEntry(show.source, show.externalId, { status: s });
         onSaved({ status: e.status, titleId: e.titleId });
       }
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Not saved");
+      setError(e instanceof ApiError ? e.message : t("Not saved"));
     } finally {
       setBusy(false);
     }
   }
 
-  const poster = <Poster src={t.imageUrl} title={t.title} source={t.source} />;
+  const poster = <Poster src={show.imageUrl} title={show.title} source={show.source} />;
   return (
     <article className="flex h-full flex-col gap-2">
-      {t.mine ? (
+      {show.mine ? (
         <Link
-          href={`/watchlist/t/${t.mine.titleId}`}
-          aria-label={t.title}
+          href={`/watchlist/t/${show.mine.titleId}`}
+          aria-label={show.title}
           className="rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           {poster}
@@ -173,27 +180,27 @@ function ResultCard({ title: t, onSaved }: { title: Found; onSaved: (mine: Found
         poster
       )}
       <div className="min-w-0">
-        <h3 className="line-clamp-2 text-sm leading-snug font-semibold" title={t.originalTitle ?? undefined}>
-          {t.title}
+        <h3 className="line-clamp-2 text-sm leading-snug font-semibold" title={show.originalTitle ?? undefined}>
+          {show.title}
         </h3>
         <p className="text-xs text-muted">
-          {[t.year, t.kind, t.episodes ? `${t.episodes} ep` : null].filter(Boolean).join(" · ")}
-          {t.rating !== null && (
+          {[show.year, show.kind, show.episodes ? `${show.episodes} ep` : null].filter(Boolean).join(" · ")}
+          {show.rating !== null && (
             <>
               {" · "}
-              <Badge>★ {(t.rating / 10).toFixed(1)}</Badge>
+              <Badge>★ {(show.rating / 10).toFixed(1)}</Badge>
             </>
           )}
         </p>
       </div>
-      {t.summary && (
+      {show.summary && (
         <details className="text-xs text-muted">
-          <summary className="cursor-pointer font-semibold">About</summary>
-          <p className="mt-1 whitespace-pre-line">{t.summary}</p>
+          <summary className="cursor-pointer font-semibold">{t("About")}</summary>
+          <p className="mt-1 whitespace-pre-line">{show.summary}</p>
         </details>
       )}
       <div className="mt-auto flex items-center gap-2">
-        <StatusSelect value={t.mine?.status ?? null} onChange={change} allowRemove={!!t.mine} className="w-full" />
+        <StatusSelect value={show.mine?.status ?? null} onChange={change} allowRemove={!!show.mine} className="w-full" />
         {busy && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" aria-hidden="true" />}
       </div>
       {error && <p className="text-xs text-rose-600 dark:text-rose-300">{error}</p>}

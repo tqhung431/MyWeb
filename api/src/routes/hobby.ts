@@ -181,7 +181,7 @@ hobbyRouter.post("/groups", requireUser, perUser("group-new", 60 * 60 * 1000, 5)
   res.status(201).json(group);
 
   broadcast("hobby:groups");
-  await publishActivity("Users", `${req.user!.name} started the group ${group.emoji} ${group.name}`);
+  await publishActivity("Users", "{name} started the group {group}", { name: req.user!.name, group: `${group.emoji} ${group.name}` });
 });
 
 hobbyRouter.get("/groups/:slug", async (req, res) => {
@@ -215,7 +215,7 @@ hobbyRouter.put("/groups/:slug/membership", requireUser, async (req, res) => {
   res.json({ joined: true });
   broadcast("hobby:groups");
   toRoom(groupRoom(group.slug), "hobby:board", { slug: group.slug, members: true });
-  if (added.length) await publishActivity("Users", `${req.user!.name} joined ${group.emoji} ${group.name}`);
+  if (added.length) await publishActivity("Users", "{name} joined {group}", { name: req.user!.name, group: `${group.emoji} ${group.name}` });
 });
 
 hobbyRouter.delete("/groups/:slug/membership", requireUser, async (req, res) => {
@@ -279,7 +279,7 @@ hobbyRouter.post("/groups/:slug/posts", requireUser, perUser("post-new", 10 * 60
   toRoom(groupRoom(group.slug), "hobby:board", { slug: group.slug });
   broadcast("hobby:groups");
   await tellMembers(group.id, group.slug, req.user!.id);
-  await publishActivity("MessagesSquare", `${req.user!.name} posted in ${group.emoji} ${group.name}`);
+  await publishActivity("MessagesSquare", "{name} posted in {group}", { name: req.user!.name, group: `${group.emoji} ${group.name}` });
 });
 
 async function postWithGroup(id: number) {

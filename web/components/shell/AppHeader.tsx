@@ -10,7 +10,9 @@ import { UnreadDot, useUnread } from "@/features/hobby/UnreadProvider";
 import { getApp } from "@/lib/apps";
 import { cn } from "@/lib/cn";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 export function AppHeader({ appId, className }: { appId: string; className?: string }) {
+  const t = useT();
   const app = getApp(appId);
   const pathname = usePathname();
   const unread = useUnread();
@@ -24,13 +26,16 @@ export function AppHeader({ appId, className }: { appId: string; className?: str
       <div className="flex items-center gap-4">
         <AppIcon icon={app.icon} accent={app.accent} size="lg" />
         <div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{app.name}</h1>
-          <p className="text-sm text-muted">{app.tagline}</p>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t(app.name)}</h1>
+          <p className="text-sm text-muted">{t(app.tagline)}</p>
         </div>
       </div>
 
       {app.links && (
-        <nav aria-label={`${app.name} sections`} className="inline-flex self-start rounded-full border border-border bg-surface-muted p-1 sm:self-auto">
+        <nav
+          aria-label={t("{app} sections", { app: t(app.name) })}
+          className="inline-flex self-start rounded-full border border-border bg-surface-muted p-1 sm:self-auto"
+        >
           {app.links.map((link) => (
             <Link
               key={link.href}
@@ -41,11 +46,11 @@ export function AppHeader({ appId, className }: { appId: string; className?: str
                 activeHref === link.href ? "bg-surface-strong text-text shadow-sm" : "text-muted hover:text-text",
               )}
             >
-              {link.label}
+              {t(link.label)}
               {badge(link.href) > 0 && (
                 <>
                   <UnreadDot count={badge(link.href)} className="ml-1.5 align-[1px]" />
-                  <span className="sr-only"> unread</span>
+                  <span className="sr-only"> {t("unread")}</span>
                 </>
               )}
             </Link>

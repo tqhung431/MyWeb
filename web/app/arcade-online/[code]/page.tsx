@@ -3,8 +3,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Room } from "@/features/arcade-online/Room";
 
+import { getT } from "@/lib/i18n/server";
 type Props = { params: Promise<{ code: string }> };
-export const metadata: Metadata = { title: "Quiz Party" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("Quiz Party") };
+}
 
 export default async function RoomPage({ params }: Props) {
   const code = (await params).code.toUpperCase();

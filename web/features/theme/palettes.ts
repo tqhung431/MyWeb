@@ -1,13 +1,14 @@
+import { tx } from "@/lib/i18n/core";
 // Stage 15: the colour themes ("palettes"). The colours themselves are in app/palettes.css;
 // this list gives each one a name for the theme picker. Every palette has a light and a dark version.
 
 export const PALETTES = [
-  { id: "nook", name: "Nook", feel: "Calm indigo, the original" },
-  { id: "bamboo", name: "Bamboo", feel: "Fresh green, quiet" },
-  { id: "ink", name: "Ink & Paper", feel: "Ink-wash painting, red seal" },
-  { id: "sunset", name: "Sunset", feel: "Warm orange and rose" },
-  { id: "ocean", name: "Ocean", feel: "Cool teal and blue" },
-  { id: "lotus", name: "Lotus", feel: "Soft pink and lavender" },
+  { id: "nook", name: tx("Nook"), feel: tx("Calm indigo, the original") },
+  { id: "bamboo", name: tx("Bamboo"), feel: tx("Fresh green, quiet") },
+  { id: "ink", name: tx("Ink & Paper"), feel: tx("Ink-wash painting, red seal") },
+  { id: "sunset", name: tx("Sunset"), feel: tx("Warm orange and rose") },
+  { id: "ocean", name: tx("Ocean"), feel: tx("Cool teal and blue") },
+  { id: "lotus", name: tx("Lotus"), feel: tx("Soft pink and lavender") },
 ] as const;
 
 export type PaletteId = (typeof PALETTES)[number]["id"];

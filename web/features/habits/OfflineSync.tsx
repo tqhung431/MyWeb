@@ -9,7 +9,9 @@ import { CloudUpload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { flush, onWaitingChange, waitingCount } from "@/lib/offline";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 export function OfflineSync() {
+  const t = useT();
   const [waiting, setWaiting] = useState(0);
 
   useEffect(() => {
@@ -43,9 +45,9 @@ export function OfflineSync() {
       type="button"
       onClick={() => void flush()}
       className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-3 z-30 inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white shadow-lg lg:bottom-6 lg:left-auto lg:right-6"
-      title="Saved on this device. Tap to send now."
+      title={t("Saved on this device. Tap to send now.")}
     >
-      <CloudUpload className="h-4 w-4" aria-hidden="true" /> {waiting} waiting to sync
+      <CloudUpload className="h-4 w-4" aria-hidden="true" /> {t("{n} waiting to sync", { n: waiting })}
     </button>
   );
 }

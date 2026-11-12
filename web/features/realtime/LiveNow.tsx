@@ -30,6 +30,10 @@ import { Card, CardHeader } from "@/components/ui/Card";
 import { cn } from "@/lib/cn";
 import { useRealtime } from "./RealtimeProvider";
 
+import type { T } from "@/lib/i18n/core";
+import type { Activity } from "./RealtimeProvider";
+import { useT } from "@/lib/i18n/I18nProvider";
+import { tNow } from "@/lib/i18n/core";
 // The server names an icon; only these are drawn (it never sends markup).
 const ICONS: Record<string, LucideIcon> = {
   Timer,
@@ -54,6 +58,7 @@ const ICONS: Record<string, LucideIcon> = {
 };
 
 export function LivePill({ className }: { className?: string }) {
+  const t = useT();
   const { connected, presence } = useRealtime();
   if (!connected || !presence) return null;
   const focusing = presence.focusing;
@@ -66,12 +71,13 @@ export function LivePill({ className }: { className?: string }) {
       aria-live="polite"
     >
       <Pulse />
-      {focusing > 0 ? `${focusing} focusing now` : `${presence.online} online`}
+      {focusing > 0 ? t("{n} focusing now", { n: focusing }) : t("{n} online", { n: presence.online })}
     </span>
   );
 }
 
 export function LiveNow() {
+  const t = useT();
   const { connected, presence, activity } = useRealtime();
   const now = useNow(30_000); // refresh "2 min ago" every 30 s
 
@@ -79,20 +85,24 @@ export function LiveNow() {
     <Card aria-labelledby="live-title">
       <CardHeader
         id="live-title"
-        title={<span className="flex items-center gap-2">Live now {connected && <Pulse />}</span>}
-        subtitle={connected ? "Updates the moment something happens" : "Connecting…"}
+        title={
+          <span className="flex items-center gap-2">
+            {t("Live now")} {connected && <Pulse />}
+          </span>
+        }
+        subtitle={connected ? t("Updates the moment something happens") : t("Connecting…")}
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3">
-        <Stat value={presence?.online} label="here now" />
-        <Stat value={presence?.focusing} label="focusing" highlight />
+        <Stat value={presence?.online} label={t("here now")} />
+        <Stat value={presence?.focusing} label={t("focusing")} highlight />
       </div>
 
-      <h3 className="mb-2 text-xs font-semibold tracking-wider text-muted uppercase">Recent activity</h3>
+      <h3 className="mb-2 text-xs font-semibold tracking-wider text-muted uppercase">{t("Recent activity")}</h3>
       {/* Stage 19: room for 6 rows from the start, so the page below doesn't jump when the list arrives */}
       <div className="min-h-[17rem]">
         {activity.length === 0 ? (
-          <p className="text-sm text-muted">Nothing yet. Finish a focus session and it shows up here for everyone.</p>
+          <p className="text-sm text-muted">{t("Nothing yet. Finish a focus session and it shows up here for everyone.")}</p>
         ) : (
           <ul className="flex flex-col gap-1" aria-live="polite">
             {activity.slice(0, 6).map((a) => {
@@ -102,7 +112,7 @@ export function LiveNow() {
                   <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
                     <Icon className="h-4 w-4" aria-hidden="true" />
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-sm">{a.text}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm">{activityText(a, t)}</span>
                   <time dateTime={a.at} className="shrink-0 text-xs text-muted tabular-nums">
                     {ago(a.at, now)}
                   </time>
@@ -117,10 +127,11 @@ export function LiveNow() {
 }
 
 function Stat({ value, label, highlight }: { value: number | undefined; label: string; highlight?: boolean }) {
+  const t = useT();
   return (
     <div className={cn("rounded-2xl border border-border p-3", highlight ? "bg-emerald-500/8" : "bg-surface-muted")}>
       <p className={cn("text-2xl font-bold tabular-nums", highlight && "text-emerald-600 dark:text-emerald-300")}>{value ?? "–"}</p>
-      <p className="text-xs text-muted">{label}</p>
+      <p className="text-xs text-muted">{t(label)}</p>
     </div>
   );
 }
@@ -145,9 +156,17 @@ function useNow(everyMs: number): number {
 
 export function ago(iso: string, now: number): string {
   const s = Math.max(0, Math.round((now - Date.parse(iso)) / 1000));
-  if (s < 45) return "just now";
+  if (s < 45) return tNow("just now");
   const m = Math.round(s / 60);
-  if (m < 60) return `${m} min ago`;
+  if (m < 60) return tNow("{n} min ago", { n: m });
   const h = Math.round(m / 60);
-  return h < 24 ? `${h} h ago` : `${Math.round(h / 24)} d ago`;
+  return h < 24 ? tNow("{n} h ago", { n: h }) : tNow("{n} d ago", { n: Math.round(h / 24) });
+}
+
+// Stage 21: the server sends "{name} joined {group}" + values; keys starting with "_" are Nook's own words
+export function activityText(a: Activity, t: T): string {
+  const params: Record<string, string | number> = Object.fromEntries(
+    Object.entries(a.params ?? {}).map(([k, v]) => [k, k.startsWith("_") || v === "A guest" ? t(String(v)) : v]),
+  );
+  return t(a.text, params);
 }

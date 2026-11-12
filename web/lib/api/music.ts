@@ -1,5 +1,6 @@
 // Music: song files stored and streamed by Nook itself (Stage 8).
 
+import { tNow } from "@/lib/i18n/core";
 import { ApiError, apiFetch } from "./client";
 import { clientId } from "./clientId";
 
@@ -57,7 +58,7 @@ export function uploadSong(file: File, fields: UploadFields, onProgress: (fracti
       if (xhr.status >= 200 && xhr.status < 300) resolve(body);
       else reject(new ApiError(xhr.status, body.error ?? `Upload failed (${xhr.status})`, body.details));
     };
-    xhr.onerror = () => reject(new ApiError(0, "Can't reach Nook. Check your connection."));
+    xhr.onerror = () => reject(new ApiError(0, tNow("Can't reach Nook. Check your connection.")));
     xhr.send(form);
   });
 }

@@ -62,8 +62,11 @@ async function finished(g: Game, ranking: Player[]) {
     .values(ranking.map((p, i) => ({ gameId: game.id, userId: p.id, score: p.score, correct: p.correct, place: i + 1, players: ranking.length })));
   if (ranking.length > 1) {
     const others = ranking.slice(1).map((p) => p.name);
-    const against = others.length <= 2 ? others.join(" and ") : `${others.length} others`;
-    await publishActivity("Swords", `${ranking[0].name} won Quiz Party against ${against} (${ranking[0].score} pts)`);
+    const params = { name: ranking[0].name, score: ranking[0].score };
+    if (others.length === 1) await publishActivity("Swords", "{name} won Quiz Party against {a} ({score} pts)", { ...params, a: others[0] });
+    else if (others.length === 2)
+      await publishActivity("Swords", "{name} won Quiz Party against {a} and {b} ({score} pts)", { ...params, a: others[0], b: others[1] });
+    else await publishActivity("Swords", "{name} won Quiz Party against {n} others ({score} pts)", { ...params, n: others.length });
   }
 }
 

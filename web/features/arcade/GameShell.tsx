@@ -23,6 +23,8 @@ import { Leaderboard } from "./Leaderboard";
 import { isMuted, setMuted, sfx } from "./sfx";
 import type { GameProps } from "./types";
 
+import { useT } from "@/lib/i18n/I18nProvider";
+import { tx } from "@/lib/i18n/core";
 const loading = () => (
   <div className="flex aspect-square items-center justify-center text-muted">
     <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
@@ -39,13 +41,11 @@ const COMPONENTS: Record<GameId, ComponentType<GameProps>> = {
 };
 
 type Phase =
-  | { name: "ready" }
-  | { name: "countdown"; n: number }
-  | { name: "playing" }
-  | { name: "over"; score: number; saved: SaveResult | "saving" | "error" };
+  { name: "ready" } | { name: "countdown"; n: number } | { name: "playing" } | { name: "over"; score: number; saved: SaveResult | "saving" | "error" };
 const COUNT_MS = 600;
 
 export function GameShell({ gameId }: { gameId: GameId }) {
+  const t = useT();
   const game = getGame(gameId)!;
   const Game = COMPONENTS[gameId];
   const [phase, setPhase] = useState<Phase>({ name: "ready" });
@@ -117,7 +117,7 @@ export function GameShell({ gameId }: { gameId: GameId }) {
   return (
     <div className="flex flex-col gap-4">
       <Link href="/arcade" className={buttonClasses("ghost", "sm", "-mt-2 -ml-3 self-start sm:mt-0")}>
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> All games
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> {t("All games")}
       </Link>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -127,8 +127,8 @@ export function GameShell({ gameId }: { gameId: GameId }) {
               {game.emoji}
             </span>
             <div className="min-w-0 flex-1">
-              <h2 className="truncate text-lg font-bold tracking-tight">{game.name}</h2>
-              <p className="truncate text-sm text-muted">{game.tagline}</p>
+              <h2 className="truncate text-lg font-bold tracking-tight">{t(game.name)}</h2>
+              <p className="truncate text-sm text-muted">{t(game.tagline)}</p>
             </div>
             <Button
               variant="ghost"
@@ -139,7 +139,7 @@ export function GameShell({ gameId }: { gameId: GameId }) {
                 setMutedState(!muted);
               }}
               aria-pressed={muted}
-              aria-label={muted ? "Turn game sounds on" : "Turn game sounds off"}
+              aria-label={muted ? t("Turn game sounds on") : t("Turn game sounds off")}
             >
               {muted ? <VolumeX className="h-5 w-5" aria-hidden="true" /> : <Volume2 className="h-5 w-5" aria-hidden="true" />}
             </Button>
@@ -159,15 +159,15 @@ export function GameShell({ gameId }: { gameId: GameId }) {
 
         <aside className="flex flex-col gap-6">
           <Card>
-            <CardHeader title="How to play" />
+            <CardHeader title={t("How to play")} />
             <ul className="flex list-disc flex-col gap-2 pl-5 text-sm text-muted">
               {game.howTo.map((line) => (
-                <li key={line}>{line}</li>
+                <li key={line}>{t(line)}</li>
               ))}
             </ul>
           </Card>
           <Card>
-            <CardHeader title="Leaderboard" subtitle={game.better === "lower" ? "Each person's best · lower is better" : "Each person's best"} />
+            <CardHeader title={t("Leaderboard")} subtitle={game.better === "lower" ? t("Each person's best · lower is better") : t("Each person's best")} />
             <Leaderboard game={game} version={boardVersion} />
           </Card>
         </aside>
@@ -187,32 +187,34 @@ function Countdown({ n }: { n: number }) {
 }
 
 function StartScreen({ game, onStart, best }: { game: GameInfo; onStart: () => void; best: number | null }) {
+  const t = useT();
   return (
     <div className={cn("flex aspect-square flex-col items-center justify-center gap-5 rounded-2xl bg-linear-to-br p-6 text-center text-white", game.accent)}>
       <span className="animate-bounce text-7xl drop-shadow-lg sm:text-8xl" aria-hidden="true">
         {game.emoji}
       </span>
-      <p className="max-w-xs text-lg font-bold drop-shadow">{game.tagline}</p>
+      <p className="max-w-xs text-lg font-bold drop-shadow">{t(game.tagline)}</p>
       <Button variant="light" size="lg" className="shadow-xl" onClick={onStart} autoFocus>
-        <Play className="h-5 w-5" aria-hidden="true" /> Play
+        <Play className="h-5 w-5" aria-hidden="true" /> {t("Play")}
       </Button>
       <p className="text-sm font-semibold text-white/90 drop-shadow">
-        {best !== null ? `Your best: ${formatScore(game, best)} · ` : ""}
-        <span className="hidden sm:inline">Space or Enter to start</span>
+        {best !== null ? `${t("Your best: {score}", { score: formatScore(game, best) })} · ` : ""}
+        <span className="hidden sm:inline">{t("Space or Enter to start")}</span>
       </p>
     </div>
   );
 }
 
 const QUIPS = [
-  "Not bad. Not bad at all.",
-  "Your thumbs deserve a snack.",
-  "The leaderboard is shaking.",
-  "One more? Just one. Okay, two.",
-  "Somewhere, a duck is impressed.",
+  tx("Not bad. Not bad at all."),
+  tx("Your thumbs deserve a snack."),
+  tx("The leaderboard is shaking."),
+  tx("One more? Just one. Okay, two."),
+  tx("Somewhere, a duck is impressed."),
 ];
 
 function GameOver({ game, score, saved, onAgain }: { game: GameInfo; score: number; saved: SaveResult | "saving" | "error"; onAgain: () => void }) {
+  const t = useT();
   const result = typeof saved === "object" ? saved : null;
   const [quip] = useState(() => QUIPS[Math.floor(Math.random() * QUIPS.length)]);
 
@@ -227,26 +229,26 @@ function GameOver({ game, score, saved, onAgain }: { game: GameInfo; score: numb
         {result?.newBest ? "🏆" : "🎮"}
       </p>
       <h3 id="game-over-title" className="text-sm font-semibold tracking-wider text-muted uppercase">
-        {result?.newBest ? (result.previousBest === null ? "First score!" : "New best!") : "Game over"}
+        {result?.newBest ? (result.previousBest === null ? t("First score!") : t("New best!")) : t("Game over")}
       </h3>
       <p className="text-4xl font-extrabold tabular-nums">{formatScore(game, score)}</p>
       <p className="min-h-5 text-sm text-muted" aria-live="polite">
-        {saved === "saving" && "Saving…"}
-        {saved === "error" && "Couldn't save this score (can't reach Nook)."}
+        {saved === "saving" && t("Saving…")}
+        {saved === "error" && t("Couldn't save this score (can't reach Nook).")}
         {result &&
           (result.newBest
             ? result.rank === 1
-              ? "You're #1 on Nook! 👑"
-              : `You're #${result.rank} on Nook.`
-            : `Your best is ${formatScore(game, result.best)} · #${result.rank} on Nook.`)}
+              ? t("You're #1 on Nook! 👑")
+              : t("You're #{rank} on Nook.", { rank: result.rank })
+            : t("Your best is {score} · #{rank} on Nook.", { score: formatScore(game, result.best), rank: result.rank }))}
       </p>
-      <p className="text-sm italic text-muted">{quip}</p>
+      <p className="text-sm italic text-muted">{t(quip)}</p>
       <div className="mt-2 flex flex-wrap justify-center gap-2">
         <Button variant="primary" onClick={onAgain} autoFocus>
-          <RotateCcw className="h-4 w-4" aria-hidden="true" /> Play again
+          <RotateCcw className="h-4 w-4" aria-hidden="true" /> {t("Play again")}
         </Button>
         <Link href="/arcade" className={buttonClasses("secondary")}>
-          All games
+          {t("All games")}
         </Link>
       </div>
     </div>

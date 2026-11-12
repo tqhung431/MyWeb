@@ -9,7 +9,10 @@ import { WeekChart } from "@/features/focus/WeekChart";
 import { TipCard } from "@/features/tips/TipCard";
 import { getTips, type TipSummary } from "@/lib/api/tips";
 
-export const metadata: Metadata = { title: "Chill Corner" };
+import { getT } from "@/lib/i18n/server";
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("Chill Corner") };
+}
 
 async function randomTip(): Promise<TipSummary | null> {
   try {
@@ -21,6 +24,7 @@ async function randomTip(): Promise<TipSummary | null> {
 }
 
 export default async function ChillPage() {
+  const t = await getT();
   const tip = await randomTip();
 
   return (
@@ -35,7 +39,7 @@ export default async function ChillPage() {
       </div>
       {tip && (
         <div className="lg:col-span-2">
-          <TipCard tip={tip} eyebrow="Tip for this session" />
+          <TipCard tip={tip} eyebrow={t("Tip for this session")} />
         </div>
       )}
     </div>

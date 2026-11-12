@@ -20,6 +20,7 @@ import { cn } from "@/lib/cn";
 import { clockTime } from "@/lib/time";
 import { MAX_MB, pictureFrom, shrinkImage } from "./shrinkImage";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 export type ChatItem = {
   id: number;
   body: string;
@@ -51,6 +52,7 @@ type Props = {
 type Picture = { file: File; preview: string };
 
 export function ChatPanel(props: Props) {
+  const t = useT();
   const { messages, more, typingNames, blocked } = props;
   const [text, setText] = useState("");
   const [picture, setPicture] = useState<Picture | null>(null);
@@ -87,8 +89,8 @@ export function ChatPanel(props: Props) {
 
   function choose(file: File | null) {
     if (!file) return;
-    if (!file.type.startsWith("image/")) return setError("That isn't a picture.");
-    if (file.size > 30 * 1024 * 1024) return setError("That picture is too big.");
+    if (!file.type.startsWith("image/")) return setError(t("That isn't a picture."));
+    if (file.size > 30 * 1024 * 1024) return setError(t("That picture is too big."));
     setError("");
     setPicture({ file, preview: URL.createObjectURL(file) });
   }
@@ -103,7 +105,7 @@ export function ChatPanel(props: Props) {
       let imageId: string | undefined;
       if (picture) {
         const small = await shrinkImage(picture.file, picture.file.name || "picture");
-        if (small.blob.size > MAX_MB * 1024 * 1024) throw new Error(`Pictures can be up to ${MAX_MB} MB`);
+        if (small.blob.size > MAX_MB * 1024 * 1024) throw new Error(t("Pictures can be up to {n} MB", { n: MAX_MB }));
         imageId = (await uploadChatImage(small.blob, small.name)).id;
       }
       await props.onSend(body, imageId);
@@ -112,7 +114,11 @@ export function ChatPanel(props: Props) {
       setPicture(null);
     } catch (err) {
       setError(
-        err instanceof ApiError ? (err.details[0]?.message ?? err.message) : err instanceof Error && err.message ? err.message : "Not sent: can't reach Nook.",
+        err instanceof ApiError
+          ? (err.details[0]?.message ?? err.message)
+          : err instanceof Error && err.message
+            ? err.message
+            : t("Not sent: can't reach Nook."),
       );
     } finally {
       setSending(false);
@@ -145,7 +151,11 @@ export function ChatPanel(props: Props) {
   const typingText =
     typingNames.length === 0
       ? ""
-      : `${typingNames.slice(0, 2).join(" and ")}${typingNames.length > 2 ? " and others" : ""} ${typingNames.length === 1 ? "is" : "are"} typing…`;
+      : typingNames.length === 1
+        ? t("{name} is typing…", { name: typingNames[0] })
+        : typingNames.length === 2
+          ? t("{a} and {b} are typing…", { a: typingNames[0], b: typingNames[1] })
+          : t("{a}, {b} and others are typing…", { a: typingNames[0], b: typingNames[1] });
   const lastMine = messages?.findLast((m) => m.mine);
 
   return (
@@ -183,10 +193,10 @@ export function ChatPanel(props: Props) {
             onClick={props.onLoadOlder}
             className="mx-auto mb-2 cursor-pointer rounded-full px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/10"
           >
-            Show older messages
+            {t("Show older messages")}
           </button>
         )}
-        {messages === null && <p className="m-auto text-sm text-muted">Loading chat…</p>}
+        {messages === null && <p className="m-auto text-sm text-muted">{t("Loading chat…")}</p>}
         {messages?.length === 0 && <div className="m-auto max-w-xs text-center">{props.empty}</div>}
         {messages?.map((m, i) => {
           const prev = messages[i - 1];
@@ -202,7 +212,7 @@ export function ChatPanel(props: Props) {
                   <Link
                     href={href}
                     className="mb-0.5 px-3 text-xs font-semibold text-muted hover:text-primary hover:underline"
-                    title={`Message ${m.author.name}`}
+                    title={t("Message {name}", { name: m.author.name })}
                   >
                     {m.author.name}
                   </Link>
@@ -216,7 +226,7 @@ export function ChatPanel(props: Props) {
                       type="button"
                       onClick={() => setViewing(m.image)}
                       className="block cursor-zoom-in overflow-hidden rounded-2xl border border-border bg-surface-muted"
-                      aria-label="Open the picture"
+                      aria-label={t("Open the picture")}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element -- a private file from the API, not a static asset */}
                       <img
@@ -246,14 +256,14 @@ export function ChatPanel(props: Props) {
                   <button
                     type="button"
                     onClick={() => props.onDelete(m)}
-                    aria-label="Delete this message"
+                    aria-label={t("Delete this message")}
                     className="inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted opacity-60 hover:bg-surface-muted hover:text-rose-600 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                   >
                     <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
                 )}
               </div>
-              {m === lastMine && m.readAt && <span className="px-2 pt-0.5 text-[10px] font-semibold text-muted">Seen</span>}
+              {m === lastMine && m.readAt && <span className="px-2 pt-0.5 text-[10px] font-semibold text-muted">{t("Seen")}</span>}
             </div>
           );
         })}
@@ -270,9 +280,11 @@ export function ChatPanel(props: Props) {
           {picture && (
             <div className="flex items-center gap-3 rounded-2xl bg-surface-muted p-2">
               {/* eslint-disable-next-line @next/next/no-img-element -- a local preview (blob: URL) */}
-              <img src={picture.preview} alt="The picture you're about to send" className="h-14 w-14 rounded-xl object-cover" />
-              <span className="min-w-0 flex-1 truncate text-xs text-muted">{sending === "picture" ? "Sending the picture…" : "Picture ready to send"}</span>
-              <Button variant="ghost" size="icon" onClick={() => setPicture(null)} disabled={!!sending} aria-label="Don't send the picture">
+              <img src={picture.preview} alt={t("The picture you're about to send")} className="h-14 w-14 rounded-xl object-cover" />
+              <span className="min-w-0 flex-1 truncate text-xs text-muted">
+                {sending === "picture" ? t("Sending the picture…") : t("Picture ready to send")}
+              </span>
+              <Button variant="ghost" size="icon" onClick={() => setPicture(null)} disabled={!!sending} aria-label={t("Don't send the picture")}>
                 <X className="h-4 w-4" aria-hidden="true" />
               </Button>
             </div>
@@ -283,8 +295,8 @@ export function ChatPanel(props: Props) {
               size="icon"
               onClick={() => fileInput.current?.click()}
               disabled={!!sending}
-              aria-label="Add a picture"
-              title="Add a picture (or paste one)"
+              aria-label={t("Add a picture")}
+              title={t("Add a picture (or paste one)")}
             >
               <ImagePlus className="h-5 w-5" aria-hidden="true" />
             </Button>
@@ -309,10 +321,10 @@ export function ChatPanel(props: Props) {
               rows={1}
               maxLength={1000}
               placeholder={props.placeholder}
-              aria-label="Message"
+              aria-label={t("Message")}
               className="max-h-32 min-h-11 min-w-0 flex-1 resize-none rounded-2xl border border-border bg-surface-strong/70 px-4 py-2.5 text-sm [field-sizing:content] focus:border-primary focus:ring-4 focus:ring-primary/15 focus:outline-none"
             />
-            <Button type="submit" variant="primary" size="icon" disabled={(!text.trim() && !picture) || !!sending} aria-label="Send">
+            <Button type="submit" variant="primary" size="icon" disabled={(!text.trim() && !picture) || !!sending} aria-label={t("Send")}>
               {sending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ArrowUp className="h-5 w-5" aria-hidden="true" />}
             </Button>
           </div>
@@ -325,18 +337,18 @@ export function ChatPanel(props: Props) {
       )}
       {dragging && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-surface/80 text-sm font-semibold text-primary">
-          Drop the picture to send it
+          {t("Drop the picture to send it")}
         </div>
       )}
 
       <Dialog
         open={viewing !== null}
         onClose={() => setViewing(null)}
-        title="Picture"
+        title={t("Picture")}
         className="max-w-3xl"
         actions={
           <Button variant="secondary" onClick={() => setViewing(null)}>
-            Close
+            {t("Close")}
           </Button>
         }
       >

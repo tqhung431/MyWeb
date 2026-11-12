@@ -10,6 +10,7 @@ import { sfx } from "../sfx";
 import type { GameProps } from "../types";
 import { useLatest } from "../useLatest";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 type Up = {
   id: number;
   kind: Popper;
@@ -22,6 +23,7 @@ type Float = { id: number; hole: number; text: string; good: boolean };
 const EMOJI = { star: "🤩", cat: "😺" } as const;
 
 export default function Bonk({ onFinish }: GameProps) {
+  const t = useT();
   const [holes, setHoles] = useState<(Up | null)[]>(() => Array(HOLES).fill(null));
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
@@ -111,7 +113,7 @@ export default function Bonk({ onFinish }: GameProps) {
         <span>
           Score: <span className="tabular-nums">{score}</span>
         </span>
-        {combo >= 3 && <span className="animate-pop text-primary">Combo ×{combo}! 🔥</span>}
+        {combo >= 3 && <span className="animate-pop text-primary">{t("Combo ×{n}! 🔥", { n: combo })}</span>}
         <span className="text-muted tabular-nums">{Math.ceil(left / 1000)} s</span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-surface-muted" aria-hidden="true">
@@ -131,7 +133,13 @@ export default function Bonk({ onFinish }: GameProps) {
               bonk(i);
             }}
             onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && bonk(i)}
-            aria-label={h ? (h.kind === "cat" ? `Hole ${i + 1}: a cat, don't bonk!` : `Hole ${i + 1}: bonk it!`) : `Hole ${i + 1}: empty`}
+            aria-label={
+              h
+                ? h.kind === "cat"
+                  ? t("Hole {n}: a cat, don't bonk!", { n: i + 1 })
+                  : t("Hole {n}: bonk it!", { n: i + 1 })
+                : t("Hole {n}: empty", { n: i + 1 })
+            }
             className="relative aspect-square cursor-pointer touch-manipulation select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white rounded-full"
           >
             {/* the hole */}

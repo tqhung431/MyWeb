@@ -2,9 +2,12 @@
 import type { Metadata } from "next";
 import { GroupPage } from "@/features/hobby/GroupPage";
 
+import { getT } from "@/lib/i18n/server";
 type Props = { params: Promise<{ slug: string }> };
 
-export const metadata: Metadata = { title: "Hobby Hub" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("Hobby Hub") };
+}
 
 export default async function HobbyGroupPage({ params }: Props) {
   return <GroupPage slug={(await params).slug} />;

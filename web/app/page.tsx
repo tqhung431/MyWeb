@@ -11,22 +11,25 @@ import { TodayStats } from "@/features/focus/TodayStats";
 import { LiveNow } from "@/features/realtime/LiveNow";
 import { APPS, type AppInfo } from "@/lib/apps";
 import { cn } from "@/lib/cn";
+import type { T } from "@/lib/i18n/core";
 
-export default function HomePage() {
+import { getT } from "@/lib/i18n/server";
+export default async function HomePage() {
+  const t = await getT();
   return (
     <div className="flex flex-col gap-10">
       <section className="flex flex-col gap-6">
         <div>
           <Greeting />
-          <p className="mt-2 max-w-xl text-muted">A calm corner of the web for your free time. Pick up where you left off, or try something new.</p>
+          <p className="mt-2 max-w-xl text-muted">{t("A calm corner of the web for your free time. Pick up where you left off, or try something new.")}</p>
         </div>
         <div className="flex flex-wrap gap-3">
           <Link href="/chill" className={buttonClasses("primary", "lg")}>
-            Start focusing
+            {t("Start focusing")}
             <ArrowRight className="h-5 w-5" aria-hidden="true" />
           </Link>
           <Link href="/chill/tips" className={buttonClasses("secondary", "lg")}>
-            Read a tip
+            {t("Read a tip")}
           </Link>
         </div>
       </section>
@@ -34,7 +37,7 @@ export default function HomePage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <section aria-labelledby="today-title">
           <h2 id="today-title" className="mb-3 text-sm font-semibold tracking-wider text-muted uppercase">
-            Today
+            {t("Today")}
           </h2>
           <TodayStats />
         </section>
@@ -43,12 +46,12 @@ export default function HomePage() {
 
       <section aria-labelledby="apps-title">
         <h2 id="apps-title" className="mb-3 text-sm font-semibold tracking-wider text-muted uppercase">
-          Your apps
+          {t("Your apps")}
         </h2>
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {APPS.map((app) => (
             <li key={app.id}>
-              <AppTile app={app} />
+              <AppTile app={app} t={t} />
             </li>
           ))}
         </ul>
@@ -57,17 +60,23 @@ export default function HomePage() {
   );
 }
 
-function AppTile({ app }: { app: AppInfo }) {
+function AppTile({ app, t }: { app: AppInfo; t: T }) {
   const live = app.status === "live";
   const body = (
     <>
       <div className="flex items-start justify-between">
         <AppIcon icon={app.icon} accent={app.accent} size="lg" muted={!live} />
-        {live ? <Badge tone="success">Live</Badge> : <Badge>Soon · {app.phase}</Badge>}
+        {live ? (
+          <Badge tone="success">{t("Live")}</Badge>
+        ) : (
+          <Badge>
+            {t("Soon")} · {app.phase}
+          </Badge>
+        )}
       </div>
       <div className="mt-5">
-        <h3 className="font-bold">{app.name}</h3>
-        <p className="mt-1 text-sm text-muted">{app.tagline}</p>
+        <h3 className="font-bold">{t(app.name)}</h3>
+        <p className="mt-1 text-sm text-muted">{t(app.tagline)}</p>
       </div>
     </>
   );

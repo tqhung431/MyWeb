@@ -124,7 +124,12 @@ async function saveTitle(t: Title): Promise<number> {
   return row.id;
 }
 
-const STATUS_WORDS = { want: "wants to watch", watching: "is watching", done: "finished", dropped: "stopped watching" } as const;
+const STATUS_WORDS = {
+  want: "{name} wants to watch “{title}”",
+  watching: "{name} is watching “{title}”",
+  done: "{name} finished “{title}”{stars}",
+  dropped: "{name} stopped watching “{title}”",
+} as const;
 
 watchRouter.put("/list/:source/:externalId", requireUser, async (req, res) => {
   const source = sourceParam.parse(req.params.source);
@@ -179,7 +184,7 @@ watchRouter.put("/list/:source/:externalId", requireUser, async (req, res) => {
   // Only status changes make the live feed (not every star or note)
   if (before?.status !== input.status) {
     const stars = input.stars ? ` ${"★".repeat(input.stars)}` : "";
-    await publishActivity("Clapperboard", `${req.user!.name} ${STATUS_WORDS[input.status]} “${name}”${input.status === "done" ? stars : ""}`);
+    await publishActivity("Clapperboard", STATUS_WORDS[input.status], { name: req.user!.name, title: name, stars });
   }
 });
 

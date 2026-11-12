@@ -90,7 +90,7 @@ meRouter.post("/", ...newNameLimits, async (req, res) => {
   await claimGuestData(user.id, req.get("x-client-id")); // what you did before picking a name stays yours
   res.status(201).json({ user: publicUser(user) });
 
-  await publishActivity("UserPlus", `${user.name} joined Nook`);
+  await publishActivity("UserPlus", "{name} joined Nook", { name: user.name });
   await enqueue("achievements", { userId: user.id, clientId: null, timeZone: timeZoneOf(req) });
 });
 

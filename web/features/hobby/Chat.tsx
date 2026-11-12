@@ -15,7 +15,9 @@ import { deleteMessage, getMessages, sendMessage, type Message } from "@/lib/api
 import { ChatPanel, type ChatItem } from "./ChatPanel";
 import { useTyping } from "./useTyping";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 export function Chat({ slug, joined, onJoin, className }: { slug: string; joined: boolean; onJoin: () => void; className?: string }) {
+  const t = useT();
   const confirm = useConfirm();
   const { user, askName } = useMe();
   const { socket } = useRealtime();
@@ -74,7 +76,7 @@ export function Chat({ slug, joined, onJoin, className }: { slug: string; joined
   }
 
   async function remove(m: ChatItem) {
-    if (!(await confirm({ title: "Delete this message?", confirmLabel: "Delete", danger: true }))) return;
+    if (!(await confirm({ title: t("Delete this message?"), confirmLabel: t("Delete"), danger: true }))) return;
     await deleteMessage(m.id).catch(() => {});
     setMessages((list) => list?.filter((x) => x.id !== m.id) ?? null);
   }
@@ -90,7 +92,7 @@ export function Chat({ slug, joined, onJoin, className }: { slug: string; joined
 
   return (
     <ChatPanel
-      label="Group chat"
+      label={t("Group chat")}
       className={className}
       messages={items}
       more={more}
@@ -99,25 +101,25 @@ export function Chat({ slug, joined, onJoin, className }: { slug: string; joined
       onDelete={remove}
       onTyping={onTyping}
       typingNames={typing.names}
-      placeholder={user ? `Message as ${user.name}` : ""}
+      placeholder={user ? t("Message as {name}", { name: user.name }) : ""}
       authorHref={(id) => (user ? `/hobby-hub/messages/${id}` : null)}
       empty={
         <>
           <p className="text-4xl" aria-hidden="true">
             💬
           </p>
-          <p className="mt-2 font-semibold">No messages yet</p>
-          <p className="text-sm text-muted">Say hi! Messages are kept for 30 days.</p>
+          <p className="mt-2 font-semibold">{t("No messages yet")}</p>
+          <p className="text-sm text-muted">{t("Say hi! Messages are kept for 30 days.")}</p>
         </>
       }
       blocked={
         !user ? (
           <Button variant="primary" className="w-full" onClick={askName}>
-            Pick a name to chat
+            {t("Pick a name to chat")}
           </Button>
         ) : !joined ? (
           <Button variant="primary" className="w-full" onClick={onJoin}>
-            <UserPlus className="h-4 w-4" aria-hidden="true" /> Join to chat
+            <UserPlus className="h-4 w-4" aria-hidden="true" /> {t("Join to chat")}
           </Button>
         ) : undefined
       }

@@ -9,6 +9,8 @@ import { sfx } from "../sfx";
 import type { GameProps } from "../types";
 import { useLatest } from "../useLatest";
 
+import { useT } from "@/lib/i18n/I18nProvider";
+import { tNow, tx } from "@/lib/i18n/core";
 const W = 400;
 const H = 500;
 const LAYER = 22; // pancake thickness
@@ -16,11 +18,11 @@ const BASE_W = 200;
 const GROUND = H - 40; // where the plate is
 const TOPPINGS = ["🍓", "🫐", "🍌", "🧈", "🍒", "🍫"];
 const MILESTONES: Record<number, string> = {
-  5: "Breakfast for one! 🍳",
-  10: "Breakfast for the family!",
-  20: "Breakfast for the whole street!",
-  30: "Is this a skyscraper? 🏙️",
-  45: "Pilots are complaining. ✈️",
+  5: tx("Breakfast for one! 🍳"),
+  10: tx("Breakfast for the family!"),
+  20: tx("Breakfast for the whole street!"),
+  30: tx("Is this a skyscraper? 🏙️"),
+  45: tx("Pilots are complaining. ✈️"),
   60: "NASA called. 🚀",
 };
 
@@ -45,13 +47,14 @@ function startWorld(): World {
     falling: [],
     cameraY: 0,
     over: false,
-    banner: { text: "Tap to drop! 🥞", until: performance.now() + 1800 },
+    banner: { text: tNow("Tap to drop! 🥞"), until: performance.now() + 1800 },
   };
 }
 
 const layerY = (i: number) => GROUND - (i + 1) * LAYER; // top edge of layer i
 
 export default function Pancakes({ onFinish }: GameProps) {
+  const t = useT();
   const canvas = useRef<HTMLCanvasElement>(null);
   const world = useRef<World>(startWorld());
   const [count, setCount] = useState(0);
@@ -137,7 +140,7 @@ export default function Pancakes({ onFinish }: GameProps) {
           spin: (w.moving.x < below.x ? -1 : 1) * 0.06,
         });
         w.over = true;
-        w.banner = { text: "Splat! 💥", until: now + 2000 };
+        w.banner = { text: tNow("Splat! 💥"), until: now + 2000 };
         sfx("miss");
         return;
       }
@@ -153,7 +156,7 @@ export default function Pancakes({ onFinish }: GameProps) {
       const stacked = w.stack.length - 1;
       setCount(stacked);
       sfx(result.perfect ? "perfect" : "drop");
-      if (MILESTONES[stacked]) w.banner = { text: MILESTONES[stacked], until: now + 1800 };
+      if (MILESTONES[stacked]) w.banner = { text: tNow(MILESTONES[stacked]), until: now + 1800 };
       else if (result.perfect) w.banner = { text: "PERFECT! ✨", until: now + 900 };
       // the next one starts from a random side
       const fromLeft = Math.random() < 0.5;
@@ -174,7 +177,7 @@ export default function Pancakes({ onFinish }: GameProps) {
         <span>
           Pancakes: <span className="tabular-nums">{count}</span>
         </span>
-        <span className="text-muted">Tap the board or press Space</span>
+        <span className="text-muted">{t("Tap the board or press Space")}</span>
       </div>
       <canvas
         ref={canvas}
@@ -184,7 +187,7 @@ export default function Pancakes({ onFinish }: GameProps) {
         }}
         className="aspect-[4/5] w-full cursor-pointer touch-none rounded-2xl select-none"
         role="img"
-        aria-label={`Pancake Tower: ${count} pancakes stacked. Tap or press Space to drop the next one.`}
+        aria-label={t("Pancake Tower: {n} pancakes stacked. Tap or press Space to drop the next one.", { n: count })}
       />
     </div>
   );

@@ -16,7 +16,9 @@ import { deleteDirectMessage, getDirectMessages, markDirectRead, sendDirectMessa
 import { ChatPanel, type ChatItem } from "./ChatPanel";
 import { useTyping } from "./useTyping";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 export function DirectChat({ userId }: { userId: string }) {
+  const t = useT();
   const confirm = useConfirm();
   const { user, askName } = useMe();
   const { socket } = useRealtime();
@@ -97,7 +99,8 @@ export function DirectChat({ userId }: { userId: string }) {
   }
 
   async function remove(m: ChatItem) {
-    if (!(await confirm({ title: "Delete this message?", description: "It disappears for both of you.", confirmLabel: "Delete", danger: true }))) return;
+    if (!(await confirm({ title: t("Delete this message?"), description: t("It disappears for both of you."), confirmLabel: t("Delete"), danger: true })))
+      return;
     await deleteDirectMessage(m.id).catch(() => {});
     setMessages((list) => list?.filter((x) => x.id !== m.id) ?? null);
   }
@@ -112,9 +115,9 @@ export function DirectChat({ userId }: { userId: string }) {
   if (!user) {
     return (
       <div className="flex flex-col items-start gap-3 p-2">
-        <p className="font-semibold">Pick a name to chat privately.</p>
+        <p className="font-semibold">{t("Pick a name to chat privately.")}</p>
         <button type="button" onClick={askName} className={buttonClasses("primary", "sm")}>
-          Pick a name
+          {t("Pick a name")}
         </button>
       </div>
     );
@@ -122,9 +125,9 @@ export function DirectChat({ userId }: { userId: string }) {
   if (missing) {
     return (
       <div className="flex flex-col items-start gap-3 p-2">
-        <p className="font-semibold">This person isn&apos;t on Nook any more.</p>
+        <p className="font-semibold">{t("This person isn't on Nook any more.")}</p>
         <Link href="/hobby-hub/messages" className={buttonClasses("secondary", "sm")}>
-          All messages
+          {t("All messages")}
         </Link>
       </div>
     );
@@ -133,17 +136,17 @@ export function DirectChat({ userId }: { userId: string }) {
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       <div className="flex items-center gap-3">
-        <Link href="/hobby-hub/messages" className={buttonClasses("ghost", "icon", "lg:hidden")} aria-label="All messages">
+        <Link href="/hobby-hub/messages" className={buttonClasses("ghost", "icon", "lg:hidden")} aria-label={t("All messages")}>
           <ArrowLeft className="h-5 w-5" aria-hidden="true" />
         </Link>
         {person && <Avatar name={person.name} size="md" />}
         <div className="min-w-0">
           <h2 className="truncate text-lg font-bold">{person?.name ?? "…"}</h2>
-          <p className="text-xs text-muted">Private: only the two of you see this chat. Kept for 30 days.</p>
+          <p className="text-xs text-muted">{t("Private: only the two of you see this chat. Kept for 30 days.")}</p>
         </div>
       </div>
       <ChatPanel
-        label={person ? `Chat with ${person.name}` : "Private chat"}
+        label={person ? t("Chat with {name}", { name: person.name }) : t("Private chat")}
         className="min-h-0 flex-1"
         messages={messages?.map((m) => ({ ...m })) ?? null}
         more={more}
@@ -152,14 +155,14 @@ export function DirectChat({ userId }: { userId: string }) {
         onDelete={remove}
         onTyping={onTyping}
         typingNames={typing.names}
-        placeholder={person ? `Message ${person.name}` : "Message"}
+        placeholder={person ? t("Message {name}", { name: person.name }) : t("Message")}
         empty={
           <>
             <p className="text-4xl" aria-hidden="true">
               👋
             </p>
-            <p className="mt-2 font-semibold">Start the conversation</p>
-            <p className="text-sm text-muted">Say hi, or paste a picture.</p>
+            <p className="mt-2 font-semibold">{t("Start the conversation")}</p>
+            <p className="text-sm text-muted">{t("Say hi, or paste a picture.")}</p>
           </>
         }
       />

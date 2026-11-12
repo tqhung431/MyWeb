@@ -6,6 +6,7 @@ import { cn } from "@/lib/cn";
 import { Equalizer } from "./Equalizer";
 import type { Track } from "./tracks";
 
+import { useT } from "@/lib/i18n/I18nProvider";
 type Props = {
   track: Track;
   active: boolean;
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export function TrackCard({ track, active, onToggle, volume = 70, onVolume }: Props) {
+  const t = useT();
   return (
     <div
       className={cn(
@@ -32,8 +34,8 @@ export function TrackCard({ track, active, onToggle, volume = 70, onVolume }: Pr
       >
         <AppIcon icon={track.icon} accent={track.accent} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-semibold">{track.label}</span>{" "}
-          <span className="block truncate text-xs text-muted">{track.description}</span>
+          <span className="block truncate font-semibold">{t(track.label)}</span>{" "}
+          <span className="block truncate text-xs text-muted">{t(track.description)}</span>
         </span>
         <span className={cn("shrink-0 text-primary", !active && "text-muted opacity-0 transition group-hover:opacity-100")}>
           {active ? <Equalizer /> : <Play className="h-4 w-4" aria-hidden="true" />}
@@ -44,7 +46,7 @@ export function TrackCard({ track, active, onToggle, volume = 70, onVolume }: Pr
         <label className="flex items-center gap-2 px-1 text-xs text-muted">
           <input
             type="range"
-            aria-label={`${track.label} volume`}
+            aria-label={t("{name} volume", { name: t(track.label) })}
             min={0}
             max={100}
             value={volume}
