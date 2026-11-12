@@ -25,8 +25,12 @@ export type UploadedSong = Song & { detectedGenre: Genre; starterPack: boolean }
 
 const who = () => ({ "X-Client-Id": clientId() });
 
-export function getCharts(period: Period, genre: Genre | "all"): Promise<ChartSong[]> {
-  return apiFetch<ChartSong[]>(`/api/songs?period=${period}&genre=${genre}`, { headers: who() });
+// Stage 18 fix: songs come in pages (the list used to stop at 50), and can be searched by title or artist
+export const CHART_PAGE = 100;
+export function getCharts(period: Period, genre: Genre | "all", opts: { q?: string; offset?: number; limit?: number } = {}): Promise<ChartSong[]> {
+  const params = new URLSearchParams({ period, genre, limit: String(opts.limit ?? CHART_PAGE), offset: String(opts.offset ?? 0) });
+  if (opts.q?.trim()) params.set("q", opts.q.trim());
+  return apiFetch<ChartSong[]>(`/api/songs?${params}`, { headers: who() });
 }
 
 export type UploadFields = { license: string; licenseUrl?: string; credit?: string; sourceUrl?: string; genre?: Genre | "auto" };

@@ -5,7 +5,7 @@
 
 import { Select } from "@/components/ui/Select";
 import { useConfirm } from "@/components/ui/Dialog";
-import { Check, CloudOff, Heart, ListMusic, ListPlus, Play, Plus, Shuffle, Trash2 } from "lucide-react";
+import { Check, CloudOff, Heart, ListMusic, ListPlus, Loader2, Play, Plus, Search, Shuffle, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
@@ -13,7 +13,7 @@ import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useRealtimeEvent } from "@/features/realtime/RealtimeProvider";
-import { deleteSong, getCharts, setLike, updateSong, type ChartSong as Song, type Genre, type Period } from "@/lib/api/music";
+import { CHART_PAGE, deleteSong, getCharts, setLike, updateSong, type ChartSong as Song, type Genre, type Period } from "@/lib/api/music";
 import { cn } from "@/lib/cn";
 import { genreOf, GENRES } from "./genres";
 import { useMusic } from "./MusicProvider";
@@ -30,20 +30,49 @@ export function Charts() {
   const [genre, setGenre] = useState<Genre | "all">("all");
   const [songs, setSongs] = useState<Song[] | null>(null);
   const [offline, setOffline] = useState(false);
+  const [q, setQ] = useState("");
+  const [search, setSearch] = useState(""); // what was searched, a moment after typing stops
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const shown = useRef(CHART_PAGE); // how many songs are on screen, so live reloads keep them all
   const { play, current, queue, enqueue } = useMusic();
+
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(q), 350);
+    return () => clearTimeout(t);
+  }, [q]);
 
   const load = useCallback(async () => {
     try {
-      setSongs(await getCharts(period, genre));
+      const limit = Math.max(CHART_PAGE, shown.current);
+      const list = await getCharts(period, genre, { q: search, limit });
+      setSongs(list);
+      setHasMore(list.length === limit);
       setOffline(false);
     } catch {
       setOffline(true);
     }
-  }, [period, genre]);
+  }, [period, genre, search]);
 
   useEffect(() => {
+    shown.current = CHART_PAGE;
     void load();
   }, [load]);
+
+  async function loadMore() {
+    if (!songs) return;
+    setLoadingMore(true);
+    try {
+      const page = await getCharts(period, genre, { q: search, offset: songs.length });
+      setSongs((list) => [...(list ?? []), ...page.filter((s) => !list?.some((x) => x.id === s.id))]);
+      setHasMore(page.length === CHART_PAGE);
+      shown.current = songs.length + page.length;
+    } catch {
+      setOffline(true);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   // Live: anyone played, liked or added a song → reload and re-sort (at most every 0.8 s)
   const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -106,6 +135,18 @@ export function Charts() {
         onChange={setGenre}
       />
 
+      <label className="relative">
+        <span className="sr-only">Search songs</span>
+        <Search className="pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-muted" aria-hidden="true" />
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search by title or artist…"
+          className="h-11 w-full rounded-full border border-border bg-surface-strong/70 pr-4 pl-12 focus:border-primary focus:ring-4 focus:ring-primary/15 focus:outline-none"
+        />
+      </label>
+
       <Card className="p-2 sm:p-3">
         {offline && (
           <p className="flex items-center gap-2 p-4 text-sm text-muted">
@@ -113,7 +154,7 @@ export function Charts() {
           </p>
         )}
         {!offline && songs === null && <p className="p-4 text-sm text-muted">Loading the charts…</p>}
-        {!offline && songs?.length === 0 && <Empty genre={genre} />}
+        {!offline && songs?.length === 0 && (search ? <p className="p-4 text-sm text-muted">No songs match “{search}”.</p> : <Empty genre={genre} />)}
         {songs && songs.length > 0 && (
           <ol className="flex flex-col">
             {songs.map((song, i) => (
@@ -132,6 +173,13 @@ export function Charts() {
               />
             ))}
           </ol>
+        )}
+        {songs && hasMore && (
+          <div className="flex justify-center p-3">
+            <Button variant="secondary" size="sm" onClick={loadMore} disabled={loadingMore}>
+              {loadingMore && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />} Show more songs
+            </Button>
+          </div>
         )}
       </Card>
 

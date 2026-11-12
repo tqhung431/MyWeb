@@ -37,7 +37,7 @@ export type Player = {
   record: { runs: number; deaths: number; kills: number; deepest: number; tribulations: number; crafted: number };
 };
 
-export type StatusKind = "burn" | "stun" | "weak" | "shield" | "reflect" | "block" | "echo" | "empower";
+export type StatusKind = "burn" | "stun" | "weak" | "shield" | "reflect" | "block" | "echo" | "empower" | "bless-atk" | "bless-def" | "regen";
 export type Status = { kind: StatusKind; turns: number; value: number };
 
 export type Enemy = {
@@ -52,8 +52,37 @@ export type Enemy = {
   cooldown: number;
 };
 
-export type ThingKind = "herb" | "chest" | "stairs" | "portal" | "trap" | "stones" | "hazard";
-export type Thing = { uid: string; kind: ThingKind; pos: Pos; hidden?: boolean; amount?: number; hazard?: Hazard };
+export type ThingKind = "herb" | "chest" | "stairs" | "portal" | "trap" | "stones" | "hazard" | "urn" | "crate" | "shrine" | "merchant" | "deco";
+// Stage 18: decorations that make a floor feel lived in (they don't block anything)
+export type Deco =
+  | "torch"
+  | "lantern"
+  | "bones"
+  | "banner"
+  | "statue"
+  | "bush"
+  | "crystal"
+  | "rock"
+  | "mushroom"
+  | "flowers"
+  | "coral"
+  | "spear"
+  | "skull"
+  | "campfire";
+export type Offer = { id: ItemId; price: number; sold?: boolean };
+export type Thing = {
+  uid: string;
+  kind: ThingKind;
+  pos: Pos;
+  hidden?: boolean;
+  amount?: number;
+  hazard?: Hazard;
+  deco?: Deco;
+  used?: boolean; // a shrine you've prayed at
+  offers?: Offer[]; // a merchant's goods
+};
+// Urns, crates and merchants stand in the way (you break urns and crates by walking into them)
+export const BLOCKING: ThingKind[] = ["urn", "crate", "merchant"];
 
 // Stage 17: soldiers and archers summoned by Binh gia
 export type Ally = { uid: string; kind: AllyKind; pos: Pos; hp: number; maxHp: number; atk: number; def: number; turns: number };

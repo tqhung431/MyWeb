@@ -4,15 +4,16 @@
 // GET    /api/games/saves/:game         one save, with its data
 // PUT    /api/games/saves/:game  { version, data, summary }   save (replaces the old one)
 // DELETE /api/games/saves/:game         start over
+// GET    /api/games/leaderboard/:game   Stage 18: the highest cultivators on Nook (public)
 //
 // The browser also keeps a save of its own; it loads whichever is newer.
 // A save is just JSON to the API: the game checks its shape when loading. We only limit its size.
 
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, gt } from "drizzle-orm";
 import express, { Router } from "express";
 import { z } from "zod";
 import { db } from "../db/client.js";
-import { gameSaves } from "../db/schema.js";
+import { gameSaves, users } from "../db/schema.js";
 import { requireUser } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
 import { rateLimit } from "../middleware/security.js";
@@ -31,6 +32,14 @@ const saveBody = z.object({
   version: z.number().int().min(1).max(1000),
   data: z.record(z.string(), z.unknown()),
   summary: z.string().trim().max(120).default(""),
+  // Stage 18: what the leaderboard shows. The game sends it; a player could fake it, which is fine on a home network.
+  board: z
+    .object({
+      path: z.string().trim().max(20),
+      level: z.number().int().min(0).max(100),
+      kills: z.number().int().min(0).max(10_000_000),
+    })
+    .optional(),
 });
 
 // Saving happens often while playing, but not more than every couple of seconds
@@ -58,13 +67,31 @@ gamesRouter.get("/saves/:game", requireUser, async (req, res) => {
 gamesRouter.put("/saves/:game", requireUser, saveLimit, async (req, res) => {
   const game = gameParam.parse(req.params.game);
   const body = saveBody.parse(req.body);
-  const values = { userId: req.user!.id, game, version: body.version, data: body.data, summary: body.summary, updatedAt: new Date() };
+  const values = {
+    userId: req.user!.id,
+    game,
+    version: body.version,
+    data: body.data,
+    summary: body.summary,
+    path: body.board?.path ?? "",
+    level: body.board?.level ?? 0,
+    kills: body.board?.kills ?? 0,
+    updatedAt: new Date(),
+  };
   await db
     .insert(gameSaves)
     .values(values)
     .onConflictDoUpdate({
       target: [gameSaves.userId, gameSaves.game],
-      set: { version: values.version, data: values.data, summary: values.summary, updatedAt: values.updatedAt },
+      set: {
+        version: values.version,
+        data: values.data,
+        summary: values.summary,
+        path: values.path,
+        level: values.level,
+        kills: values.kills,
+        updatedAt: values.updatedAt,
+      },
     });
   res.json({ ok: true, updatedAt: values.updatedAt });
 });
@@ -73,4 +100,17 @@ gamesRouter.delete("/saves/:game", requireUser, async (req, res) => {
   const game = gameParam.parse(req.params.game);
   await db.delete(gameSaves).where(and(eq(gameSaves.userId, req.user!.id), eq(gameSaves.game, game)));
   res.status(204).end();
+});
+
+// Highest realm first; on the same level, more enemies defeated; then whoever got there first
+gamesRouter.get("/leaderboard/:game", async (req, res) => {
+  const game = gameParam.parse(req.params.game);
+  const rows = await db
+    .select({ userId: gameSaves.userId, name: users.name, path: gameSaves.path, level: gameSaves.level, kills: gameSaves.kills, summary: gameSaves.summary })
+    .from(gameSaves)
+    .innerJoin(users, eq(users.id, gameSaves.userId))
+    .where(and(eq(gameSaves.game, game), gt(gameSaves.level, 0)))
+    .orderBy(desc(gameSaves.level), desc(gameSaves.kills), asc(gameSaves.updatedAt))
+    .limit(20);
+  res.json(rows.map(({ userId, ...r }, i) => ({ rank: i + 1, ...r, me: userId === req.user?.id })));
 });

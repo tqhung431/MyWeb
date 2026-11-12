@@ -133,7 +133,7 @@ function StartScreen({ game, onStart }: { game: GameInfo; onStart: () => void })
         {game.emoji}
       </span>
       <p className="max-w-xs text-lg font-bold drop-shadow">{game.tagline}</p>
-      <Button size="lg" className="bg-white text-slate-900 shadow-xl hover:bg-white/90" onClick={onStart} autoFocus>
+      <Button variant="light" size="lg" className="shadow-xl" onClick={onStart} autoFocus>
         <Play className="h-5 w-5" aria-hidden="true" /> Play
       </Button>
     </div>

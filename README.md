@@ -13,6 +13,9 @@ everyone on your network (family, roommates, classmates).
   Odd Emoji Out) with high scores and live leaderboards for everyone on your Nook.
 - ✨ **Free-time Companion**: an AI buddy that suggests songs and tips from Nook, in English or Vietnamese.
   It runs **on your PC** (Ollama), so your chats never leave your network. Optional.
+- ⚔️ **Nook Games: Vân Lộ**: a cultivation adventure (a turn-based roguelite) in Vietnamese or English. Pick one of
+  six paths, explore secret realms, smash urns, meet merchants, brew pills, survive the heavenly tribulation and climb
+  from Luyện Khí to Nguyên Anh. Your save follows you to any device, and a leaderboard shows who's furthest.
 - 🎉 **Arcade Online**: Quiz Party, a live quiz for up to 8 people on Nook. The server runs the game, so
   nobody can cheat; a leaderboard of wins.
 - 📺 **WatchList**: search TV shows and anime (TVmaze and MyAnimeList, free), keep your list with stars and
@@ -23,7 +26,7 @@ everyone on your network (family, roommates, classmates).
   comments, likes and a live chat.
 - 👥 **Together, live**: see who's online and what others are doing, as it happens. No sign-up: you just
   pick a name, so everyone knows who's who. Nook keeps data only for a while (90 days of not using it).
-- 🌗 Light and dark themes, works on phones and desktops.
+- 🌗 Light and dark modes with 6 colour themes, works on phones and desktops (and can be installed as an app).
 
 It's also my **web programming learning project for 2026**: it grows one stage at a time, from a single
 HTML page to a full system. Every stage has an explainer in [docs/](#stages).
@@ -34,7 +37,7 @@ HTML page to a full system. Every stage has an explainer in [docs/](#stages).
 
 [Install](#install-from-scratch) · [Settings](#settings-the-env-file) · [Extras: AI and Grafana](#optional-extras-ai-and-grafana) ·
 [Upgrade](#upgrade-to-the-latest-version) · [Stop and clean up](#stop-and-clean-up) · [Problems?](#problems) ·
-[What runs, and why](#what-runs-and-why) · [Coming from MyWeb](#coming-from-myweb) · [For developers](#for-developers) · [Stages](#stages)
+[What runs, and why](#what-runs-and-why) · [Coming from MyWeb](#coming-from-myweb) · [For developers](#for-developers) · [Stages](#stages) · [Licence](#licence)
 
 ## Install from scratch
 
@@ -229,7 +232,7 @@ See [docs/stage-9.md](docs/stage-9.md).
 ```
 web/                   the website (Next.js, React, TypeScript, Tailwind)
   app/                 pages (folders = URLs)
-  features/            each app's parts: focus, ambient, music, companion, auth, realtime...
+  features/            each app's parts: focus, ambient, music, companion, games/van-lo (the game), realtime...
   components/          the design system (ui/) and the app shell (shell/)
   lib/apps.ts          the app registry: add a new app here
   lib/api/             talking to the API
@@ -270,5 +273,8 @@ stage-1-static/        Stage 1: the plain HTML/CSS/JS version
 15. Design system — 6 colour themes, Nook's own dropdowns and dialogs, a /design page, a Figma library ✅ · [docs](docs/stage-15.md)
 16. A real game — Nook Games and Vân Lộ, a cultivation roguelite (own engine: field of view, A*, map generation, seeded saves) ✅ · [docs](docs/stage-16.md)
 17. Vân Lộ grows — six paths, abilities as data, realms up to Nguyên Anh, alchemy and forging, music made with Web Audio ✅ · [docs](docs/stage-17.md)
+18. Vân Lộ comes alive — sprites for each path, hold-to-walk and a joystick, particles and lighting, urns/shrines/merchants, a leaderboard, light effects for older phones ✅ · [docs](docs/stage-18.md)
 
-Credits and licences: [CREDITS.md](CREDITS.md)
+## Licence
+
+Nook's code is under the [MIT licence](LICENSE). Songs, fonts and libraries keep their own licences: see [CREDITS.md](CREDITS.md).

@@ -5,10 +5,14 @@
 // Controls
 //   keyboard  arrows / WASD to move (Q E Z C diagonals), Space to wait, Enter to take stairs or a portal,
 //             1–9 for the action bar, Esc to stop aiming
-//   touch     tap next to you to step or attack, tap further away to walk there, tap yourself to wait
+//             hold a direction to keep walking (Stage 18); two arrows together walk diagonally
+//   touch     tap next to you to step or attack, tap further away to walk there, tap yourself to wait,
+//             or hold the joystick in the corner of the map
 
-import { ArrowDownToLine, Hourglass, Pill, ScrollText, X, type LucideIcon } from "lucide-react";
+import { ArrowDownToLine, Feather, Hourglass, Pill, ScrollText, Sparkles, X, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { Dialog } from "@/components/ui/Dialog";
 import { Popover } from "@/components/ui/Popover";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
@@ -17,8 +21,22 @@ import { findPath } from "../engine/path";
 import { ABILITIES, ITEMS, MAJOR_REALMS, PATHS, realmInfo, TREASURES, type AbilityId, type ItemId, type Targeting } from "../logic/data";
 import { abilityQi, realmName, stats } from "../logic/player";
 import type { Game } from "../logic/types";
-import { abilityTargets, act, enemyAt, finishRun, MAX_INTENT, runBagCount, visible, type Action, type Outcome, type Result } from "../logic/world";
-import { Board } from "./Board";
+import {
+  abilityTargets,
+  act,
+  blockingAt,
+  enemyAt,
+  finishRun,
+  MAX_INTENT,
+  purse,
+  runBagCount,
+  visible,
+  type Action,
+  type Outcome,
+  type Result,
+} from "../logic/world";
+import { Board, liteDefault, saveLite } from "./Board";
+import { Joystick } from "./Joystick";
 import { ABILITY_ICON, TREASURE_ICON } from "./icons";
 import { setMusic, sfx, type SfxName } from "./audio";
 
@@ -36,6 +54,8 @@ const RUN_ITEMS: ItemId[] = [
   "ket-kim-dan",
   "hoa-anh-dan",
 ];
+
+const HOLD_MS = 150;
 
 type Aim = { kind: "ability" | "treasure" | "item"; id: string; targets: Pos[] };
 type Slot = { key: string; label: string; icon: LucideIcon; cost?: number; cooldown: number; disabled: boolean; onUse: () => void };
@@ -71,6 +91,8 @@ function playSounds(list: Result["fx"], outcome: Outcome) {
     else if (f.type === "heal") names.add("heal");
     else if (f.type === "die") names.add("die");
     else if (f.type === "summon") names.add("summon");
+    else if (f.type === "break") names.add("break");
+    else if (f.type === "bless") names.add("bless");
     else if (f.type === "text" && f.tone === "loot") names.add("pickup");
   }
   if (outcome === "won") names.add("gong");
@@ -87,6 +109,9 @@ export function RunScreen({ game, update, dark }: Props) {
   const [aim, setAim] = useState<Aim | null>(null);
   const [ending, setEnding] = useState<Outcome | null>(null);
   const walking = useRef<Pos[] | null>(null);
+  const [shop, setShop] = useState<string | null>(null);
+  const [lite, setLite] = useState(false);
+  useEffect(() => setLite(liteDefault()), []);
   const seen = useMemo(() => visible(game), [game]);
   useEffect(() => setMusic(r.kind === "tribulation" ? "tribulation" : "realm"), [r.kind]);
   const here = r.floor.things.find((x) => same(x.pos, r.pos) && (x.kind === "stairs" || x.kind === "portal"));
@@ -114,6 +139,12 @@ export function RunScreen({ game, update, dark }: Props) {
       });
       if (!res) return;
       if (!res.ok) {
+        if (res.reason === "merchant" && res.shop) {
+          holdRef.current(null);
+          walking.current = null;
+          setShop(res.shop);
+          return res;
+        }
         const text = reasonText(res.reason);
         if (text && a.type !== "move") toast(text, { tone: "error" });
         return res;
@@ -192,7 +223,7 @@ export function RunScreen({ game, update, dark }: Props) {
     if (r.floor.seen[i] !== "1" || !isFloor(r.floor, tile.x, tile.y)) return;
     const path = findPath(r.floor, r.pos, tile, {
       walkable: (q) => r.floor.seen[q.y * r.floor.w + q.x] === "1",
-      blocked: (q) => !!enemyAt(r, q),
+      blocked: (q) => !!enemyAt(r, q) || (!!blockingAt(r, q) && !same(q, tile)),
     });
     if (!path?.length) return;
     walking.current = path;
@@ -230,23 +261,69 @@ export function RunScreen({ game, update, dark }: Props) {
     }),
   ];
 
+  // Holding a direction (keys or joystick) keeps walking: one step every HOLD_MS
+  const hold = useRef<{ dir: Pos | null; timer: ReturnType<typeof setInterval> | null }>({ dir: null, timer: null });
+  const setHold = useCallback((dir: Pos | null) => {
+    const h = hold.current;
+    const same = h.dir && dir && h.dir.x === dir.x && h.dir.y === dir.y;
+    if (same) return;
+    h.dir = dir;
+    if (!dir) {
+      if (h.timer) clearInterval(h.timer);
+      h.timer = null;
+      return;
+    }
+    walking.current = null;
+    const step = () => {
+      const d = hold.current.dir;
+      if (d) keys.current.perform({ type: "move", dir: d });
+    };
+    if (!h.timer) {
+      step();
+      h.timer = setInterval(step, HOLD_MS);
+    }
+  }, []);
+  const holdRef = useRef(setHold);
+  holdRef.current = setHold;
+  useEffect(() => () => setHold(null), [setHold]);
+  useEffect(() => {
+    if (ending || shop) setHold(null);
+  }, [ending, shop, setHold]);
+
   // Keyboard
   const keys = useRef({ perform, slots, aim, here });
   keys.current = { perform, slots, aim, here };
   useEffect(() => {
+    const held: string[] = [];
+    const heldDir = (): Pos | null => {
+      let x = 0;
+      let y = 0;
+      for (const k of held) {
+        x += KEY_DIRS[k].x;
+        y += KEY_DIRS[k].y;
+      }
+      x = Math.max(-1, Math.min(1, x));
+      y = Math.max(-1, Math.min(1, y));
+      return x || y ? { x, y } : null;
+    };
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey || (e.target as HTMLElement).closest("input, textarea, [role=dialog], [role=listbox]")) return;
       const k = keys.current;
       const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-      walking.current = null;
       if (KEY_DIRS[key]) {
         e.preventDefault();
+        if (e.repeat) return; // our own timer repeats steps, at a steady pace
+        walking.current = null;
         if (k.aim && ["kiem-khi", "ngu-kiem"].includes(k.aim.id)) {
           const pos = (game.run ?? r).pos;
           return fire(k.aim, { x: pos.x + KEY_DIRS[key].x, y: pos.y + KEY_DIRS[key].y });
         }
-        k.perform({ type: "move", dir: KEY_DIRS[key] });
-      } else if (key === " " || key === ".") {
+        if (!held.includes(key)) held.push(key);
+        setHold(heldDir());
+        return;
+      }
+      walking.current = null;
+      if (key === " " || key === ".") {
         e.preventDefault();
         k.perform({ type: "wait" });
       } else if (key === "Enter" || key === ">") {
@@ -254,9 +331,26 @@ export function RunScreen({ game, update, dark }: Props) {
       } else if (key === "Escape") setAim(null);
       else if (/^[1-9]$/.test(key)) k.slots[Number(key) - 1]?.onUse();
     };
+    const onUp = (e: KeyboardEvent) => {
+      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      const i = held.indexOf(key);
+      if (i < 0) return;
+      held.splice(i, 1);
+      setHold(heldDir());
+    };
+    const onBlur = () => {
+      held.length = 0;
+      setHold(null);
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [fire, game.run, r]);
+    window.addEventListener("keyup", onUp);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onUp);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, [fire, game.run, r, setHold]);
 
   const hpPct = Math.max(0, (p.hp / s.hp) * 100);
   const qiPct = Math.max(0, (p.qi / s.qi) * 100);
@@ -315,13 +409,20 @@ export function RunScreen({ game, update, dark }: Props) {
         <Board
           run={r}
           path={p.path}
+          major={p.major}
           seen={seen}
           dark={dark}
+          lite={lite}
+          onSlow={() => {
+            setLite(true);
+            toast(t("Đã bật hiệu ứng nhẹ cho mượt hơn.", "Switched to light effects so it runs smoother."), { tone: "info" });
+          }}
           fx={fx}
           targets={aim?.targets ?? null}
           onTap={onTap}
           className="block h-[46dvh] w-full cursor-pointer sm:h-[58vh]"
         />
+        {!ending && <Joystick onDir={setHold} label={t("Cần điều khiển", "Joystick")} />}
         {aim && (
           <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-2 bg-black/55 px-4 py-2 text-sm font-semibold text-white">
             {t("Chọn mục tiêu (ô xanh)", "Pick a target (green tiles)")}
@@ -394,12 +495,38 @@ export function RunScreen({ game, update, dark }: Props) {
           </li>
         ))}
       </ol>
-      <p className="hidden text-xs text-muted sm:block">
-        {t(
-          "Phím: mũi tên/WASD di chuyển (Q E Z C đi chéo), Space nghỉ, Enter dùng cầu thang/trận truyền tống, 1–9 thần thông và pháp bảo, Esc hủy.",
-          "Keys: arrows/WASD to move (Q E Z C diagonal), Space to wait, Enter for stairs/portal, 1–9 abilities and treasures, Esc to cancel.",
-        )}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+        <p className="hidden sm:block">
+          {t(
+            "Phím: giữ mũi tên/WASD để đi (Q E Z C đi chéo), Space nghỉ, Enter dùng cầu thang/trận truyền tống, 1–9 thần thông và pháp bảo, Esc hủy.",
+            "Keys: hold arrows/WASD to walk (Q E Z C diagonal), Space to wait, Enter for stairs/portal, 1–9 abilities and treasures, Esc to cancel.",
+          )}
+        </p>
+        <button
+          type="button"
+          aria-pressed={lite}
+          onClick={() => {
+            saveLite(!lite);
+            setLite(!lite);
+          }}
+          className="ml-auto inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-surface-strong px-3 py-1 font-semibold text-text"
+        >
+          {lite ? <Feather className="h-3.5 w-3.5" aria-hidden="true" /> : <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />}
+          {lite ? t("Hiệu ứng nhẹ", "Light effects") : t("Hiệu ứng đầy đủ", "Full effects")}
+        </button>
+      </div>
+
+      <MerchantDialog
+        game={game}
+        uid={shop}
+        onClose={() => setShop(null)}
+        t={t}
+        onBuy={(index) => {
+          if (!shop) return;
+          const res = perform({ type: "buy", uid: shop, index });
+          if (res?.ok) sfx("pickup");
+        }}
+      />
     </div>
   );
 }
@@ -507,8 +634,63 @@ function BagButton({ game, t, onUse }: { game: Game; t: (vi: string, en: string)
   );
 }
 
+// Stage 18: a wandering merchant's three goods, paid with the stones from this trip first
+function MerchantDialog({
+  game,
+  uid,
+  onClose,
+  onBuy,
+  t,
+}: {
+  game: Game;
+  uid: string | null;
+  onClose: () => void;
+  onBuy: (index: number) => void;
+  t: (vi: string, en: string) => string;
+}) {
+  const m = uid ? game.run?.floor.things.find((x) => x.uid === uid) : undefined;
+  const money = purse(game);
+  return (
+    <Dialog
+      open={!!m}
+      onClose={onClose}
+      title={t("Tán tu thương nhân", "Wandering merchant")}
+      description={t(`"Hàng tốt, giá phải chăng." Bạn có ${money} 💎.`, `"Good wares, fair prices." You have ${money} 💎.`)}
+      actions={
+        <Button variant="secondary" onClick={onClose}>
+          {t("Đi tiếp", "Move on")}
+        </Button>
+      }
+    >
+      <ul className="flex flex-col gap-2">
+        {(m?.offers ?? []).map((o, i) => (
+          <li key={o.id} className="flex items-center gap-3 rounded-2xl border border-border bg-surface-muted px-3 py-2">
+            <span className="flex-1">
+              <span className="block text-sm font-semibold">{t(ITEMS[o.id].vi, ITEMS[o.id].en)}</span>
+              <span className="block text-xs text-muted">{t(ITEMS[o.id].about, ITEMS[o.id].aboutEn)}</span>
+            </span>
+            <Button size="sm" disabled={o.sold || money < o.price} onClick={() => onBuy(i)}>
+              {o.sold ? t("Đã mua", "Sold") : `${o.price} 💎`}
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </Dialog>
+  );
+}
+
 function statusLabel(kind: string, lang: "vi" | "en") {
-  const vi: Record<string, string> = { shield: "🛡 Lá chắn", reflect: "🪞 Phản", echo: "✨ Kiếm ảnh", block: "🐢 Chặn", empower: "💪 Cường", burn: "🔥 Bỏng" };
+  const vi: Record<string, string> = {
+    shield: "🛡 Lá chắn",
+    reflect: "🪞 Phản",
+    echo: "✨ Kiếm ảnh",
+    block: "🐢 Chặn",
+    empower: "💪 Cường",
+    burn: "🔥 Bỏng",
+    "bless-atk": "⚔️ Thần lực",
+    "bless-def": "🪷 Thần hộ",
+    regen: "💧 Linh tuyền",
+  };
   const en: Record<string, string> = {
     shield: "🛡 Shield",
     reflect: "🪞 Reflect",
@@ -516,6 +698,9 @@ function statusLabel(kind: string, lang: "vi" | "en") {
     block: "🐢 Block",
     empower: "💪 Empowered",
     burn: "🔥 Burning",
+    "bless-atk": "⚔️ Blessed might",
+    "bless-def": "🪷 Blessed guard",
+    regen: "💧 Spring",
   };
   return (lang === "vi" ? vi : en)[kind] ?? kind;
 }

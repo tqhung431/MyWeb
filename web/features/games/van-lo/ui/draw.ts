@@ -4,8 +4,9 @@
 
 import { makeRng } from "../engine/rng";
 import type { Pos } from "../engine/grid";
-import { ALLIES, ENEMIES, PATHS, type PathId } from "../logic/data";
+import { ALLIES, ENEMIES } from "../logic/data";
 import type { Ally, Enemy, Floor, Thing } from "../logic/types";
+import { drawProp } from "./sprites";
 
 export type Ink = { paper: string; paperDeep: string; ink: string; inkSoft: string; seal: string; mist: string; text: string; gold: string; jade: string };
 export const LIGHT: Ink = {
@@ -126,167 +127,7 @@ function drawPine(g: CanvasRenderingContext2D, x: number, y: number, s: number, 
   }
 }
 
-// ---- Characters ----
-// Each path looks a little different: robe colour, headwear and what they carry
-export function drawPlayer(
-  g: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  t: number,
-  ink: Ink,
-  opts: { shield?: boolean; echo?: boolean; path?: PathId } = {},
-) {
-  const s = t;
-  const path = opts.path ?? "kiem";
-  const dark = ink === DARK;
-  const bob = Math.sin(performance.now() / 500) * s * 0.015;
-  g.save();
-  g.translate(x, y + bob);
-  // shadow
-  g.fillStyle = "rgba(0,0,0,0.12)";
-  g.beginPath();
-  g.ellipse(0, s * 0.38, s * 0.28, s * 0.07, 0, 0, Math.PI * 2);
-  g.fill();
-  if (opts.shield) {
-    g.strokeStyle = "rgba(122,167,199,0.7)";
-    g.lineWidth = 2;
-    g.beginPath();
-    g.arc(0, 0, s * 0.48, 0, Math.PI * 2);
-    g.stroke();
-  }
-  const robes: Record<PathId, [string, string]> = {
-    kiem: ["#2b2722", "#d9d1bf"],
-    vo: ["#5a3a22", "#c9a27a"],
-    nho: ["#2f4a3a", "#bcd6c3"],
-    dao: ["#3a2f55", "#c7b8e6"],
-    phat: ["#a8651e", "#e6b366"],
-    binh: ["#5a1f1a", "#d98a7f"],
-  };
-  // robe: a brushy triangle (martial artists wear short trousers instead)
-  g.fillStyle = robes[path][dark ? 1 : 0];
-  g.beginPath();
-  g.moveTo(0, -s * 0.18);
-  g.quadraticCurveTo(s * 0.3, s * 0.1, s * 0.24, s * 0.38);
-  g.lineTo(-s * 0.24, s * 0.38);
-  g.quadraticCurveTo(-s * 0.3, s * 0.1, 0, -s * 0.18);
-  g.fill();
-  // inner robe
-  g.fillStyle = dark ? "#1b1915" : "#f3ecdc";
-  g.beginPath();
-  g.moveTo(0, -s * 0.12);
-  g.lineTo(s * 0.06, s * 0.38);
-  g.lineTo(-s * 0.06, s * 0.38);
-  g.fill();
-  // sash in the path's colour
-  g.strokeStyle = path === "kiem" ? ink.seal : PATHS[path].color;
-  g.lineWidth = s * 0.05;
-  g.beginPath();
-  g.moveTo(-s * 0.16, s * 0.1);
-  g.lineTo(s * 0.16, s * 0.08);
-  g.stroke();
-  // head
-  const skin = dark ? "#e9e1cf" : "#1d1a16";
-  g.fillStyle = skin;
-  g.beginPath();
-  g.arc(0, -s * 0.26, s * 0.1, 0, Math.PI * 2);
-  g.fill();
-  g.lineCap = "round";
-  switch (path) {
-    case "kiem": // hair bun and a sword on the back
-      g.beginPath();
-      g.arc(0, -s * 0.37, s * 0.05, 0, Math.PI * 2);
-      g.fill();
-      g.strokeStyle = opts.echo ? "#9fd3e6" : "#4f8a9a";
-      g.lineWidth = s * 0.035;
-      g.beginPath();
-      g.moveTo(-s * 0.22, s * 0.22);
-      g.lineTo(s * 0.26, -s * 0.36);
-      g.stroke();
-      break;
-    case "vo": // red headband, bare fists
-      g.strokeStyle = ink.seal;
-      g.lineWidth = s * 0.035;
-      g.beginPath();
-      g.moveTo(-s * 0.1, -s * 0.29);
-      g.lineTo(s * 0.1, -s * 0.29);
-      g.lineTo(s * 0.2, -s * 0.24);
-      g.stroke();
-      g.fillStyle = skin;
-      for (const k of [-1, 1]) {
-        g.beginPath();
-        g.arc(k * s * 0.27, s * 0.05, s * 0.055, 0, Math.PI * 2);
-        g.fill();
-      }
-      break;
-    case "nho": // scholar's cap and a brush
-      g.fillRect(-s * 0.09, -s * 0.42, s * 0.18, s * 0.08);
-      g.strokeStyle = "#8a6a3f";
-      g.lineWidth = s * 0.03;
-      g.beginPath();
-      g.moveTo(s * 0.2, s * 0.15);
-      g.lineTo(s * 0.32, -s * 0.12);
-      g.stroke();
-      g.fillStyle = skin;
-      g.beginPath();
-      g.arc(s * 0.33, -s * 0.15, s * 0.03, 0, Math.PI * 2);
-      g.fill();
-      break;
-    case "dao": // lotus crown and a horsetail whisk
-      g.fillStyle = ink.gold;
-      g.beginPath();
-      g.moveTo(-s * 0.06, -s * 0.34);
-      g.lineTo(0, -s * 0.44);
-      g.lineTo(s * 0.06, -s * 0.34);
-      g.fill();
-      g.strokeStyle = dark ? "#e9e1cf" : "#6b5a7a";
-      g.lineWidth = s * 0.02;
-      g.beginPath();
-      g.moveTo(-s * 0.2, s * 0.12);
-      g.lineTo(-s * 0.28, -s * 0.08);
-      for (let i = -2; i <= 2; i++) {
-        g.moveTo(-s * 0.28, -s * 0.08);
-        g.lineTo(-s * 0.36 + i * s * 0.02, s * 0.06);
-      }
-      g.stroke();
-      break;
-    case "phat": // shaved head and prayer beads
-      g.fillStyle = dark ? "#f0e6cf" : "#c48a52";
-      g.beginPath();
-      g.arc(0, -s * 0.26, s * 0.1, 0, Math.PI * 2);
-      g.fill();
-      g.fillStyle = "#7a3f1e";
-      for (let i = 0; i < 7; i++) {
-        const a = Math.PI * (0.15 + (i / 6) * 0.7);
-        g.beginPath();
-        g.arc(Math.cos(a) * s * 0.12, -s * 0.12 + Math.sin(a) * s * 0.08, s * 0.025, 0, Math.PI * 2);
-        g.fill();
-      }
-      break;
-    case "binh": // helmet with a plume and a spear
-      g.beginPath();
-      g.arc(0, -s * 0.28, s * 0.12, Math.PI, 0);
-      g.fill();
-      g.fillStyle = ink.seal;
-      g.beginPath();
-      g.ellipse(0, -s * 0.42, s * 0.04, s * 0.06, 0, 0, Math.PI * 2);
-      g.fill();
-      g.strokeStyle = dark ? "#cfc6b2" : "#3a3129";
-      g.lineWidth = s * 0.03;
-      g.beginPath();
-      g.moveTo(s * 0.26, s * 0.36);
-      g.lineTo(s * 0.26, -s * 0.42);
-      g.stroke();
-      g.fillStyle = "#9aa4ad";
-      g.beginPath();
-      g.moveTo(s * 0.26, -s * 0.5);
-      g.lineTo(s * 0.22, -s * 0.4);
-      g.lineTo(s * 0.3, -s * 0.4);
-      g.fill();
-      break;
-  }
-  g.restore();
-}
-
+// ---- Characters (heroes are sprites now: see sprites.ts) ----
 // A summoned soldier or archer: small, in the strategist's red, with a life bar
 export function drawAlly(g: CanvasRenderingContext2D, a: Ally, x: number, y: number, s: number, ink: Ink) {
   const dark = ink === DARK;
@@ -645,6 +486,18 @@ export function drawThing(g: CanvasRenderingContext2D, th: Thing, x: number, y: 
       }
       break;
     }
+    // Stage 18: props from the sprite library
+    case "urn":
+    case "crate":
+    case "merchant":
+      drawProp(g, th.kind, 0, 0, s, ink, t);
+      break;
+    case "shrine":
+      drawProp(g, th.used ? "shrine-used" : "shrine", 0, 0, s, ink, t);
+      break;
+    case "deco":
+      if (th.deco) drawProp(g, th.deco, 0, 0, s, ink, t + th.pos.x * 0.37);
+      break;
     case "trap": {
       if (th.hidden) break;
       g.strokeStyle = ink.seal;

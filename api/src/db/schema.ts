@@ -453,9 +453,13 @@ export const gameSaves = pgTable(
     version: integer("version").notNull(),
     data: jsonb("data").notNull(),
     summary: text("summary").notNull().default(""), // a short line for lists, e.g. "Luyện Khí tầng 5"
+    // Stage 18: for the cultivation leaderboard (the game sends them with each save)
+    path: text("path").notNull().default(""),
+    level: integer("level").notNull().default(0), // Luyện Khí 1 = 1 … Nguyên Anh 9 = 36
+    kills: integer("kills").notNull().default(0),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [primaryKey({ columns: [t.userId, t.game] })],
+  (t) => [primaryKey({ columns: [t.userId, t.game] }), index("game_saves_board_idx").on(t.game, t.level)],
 );
 
 export type Preferences = { timer?: { focus: number; short: number; long: number } };

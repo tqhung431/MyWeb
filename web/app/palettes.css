@@ -12,6 +12,12 @@
   and --on-primary: the contrast test reads those.
 */
 
+/* Stage 18 fix: a section with its own palette (e.g. the ink-wash game cards) follows the page's light/dark mode,
+   and sets its own text colour, so it never shows light text on a light box. */
+[data-palette] {
+  color: var(--text);
+}
+
 /* Nook: the original look (also the fallback before the theme script runs) */
 :root,
 [data-palette="nook"] {
@@ -32,7 +38,8 @@
   color-scheme: light;
 }
 :root:not([data-palette])[data-theme="dark"],
-[data-palette="nook"][data-theme="dark"] {
+[data-palette="nook"][data-theme="dark"],
+[data-theme="dark"] [data-palette="nook"]:not([data-theme="light"]) {
   --background: #0b0915;
   --surface: rgb(255 255 255 / 0.045);
   --surface-strong: #18152b;
@@ -68,7 +75,8 @@
   --shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 18px 40px -20px rgb(20 70 40 / 0.22);
   color-scheme: light;
 }
-[data-palette="bamboo"][data-theme="dark"] {
+[data-palette="bamboo"][data-theme="dark"],
+[data-theme="dark"] [data-palette="bamboo"]:not([data-theme="light"]) {
   --background: #08110b;
   --surface: rgb(255 255 255 / 0.045);
   --surface-strong: #132018;
@@ -104,7 +112,8 @@
   --shadow: 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 18px 40px -22px rgb(40 30 20 / 0.28);
   color-scheme: light;
 }
-[data-palette="ink"][data-theme="dark"] {
+[data-palette="ink"][data-theme="dark"],
+[data-theme="dark"] [data-palette="ink"]:not([data-theme="light"]) {
   --background: #12110f;
   --surface: rgb(255 248 235 / 0.04);
   --surface-strong: #1f1d19;
@@ -140,7 +149,8 @@
   --shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 18px 40px -20px rgb(110 40 10 / 0.22);
   color-scheme: light;
 }
-[data-palette="sunset"][data-theme="dark"] {
+[data-palette="sunset"][data-theme="dark"],
+[data-theme="dark"] [data-palette="sunset"]:not([data-theme="light"]) {
   --background: #140c0a;
   --surface: rgb(255 255 255 / 0.045);
   --surface-strong: #261814;
@@ -176,7 +186,8 @@
   --shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 18px 40px -20px rgb(10 50 80 / 0.22);
   color-scheme: light;
 }
-[data-palette="ocean"][data-theme="dark"] {
+[data-palette="ocean"][data-theme="dark"],
+[data-theme="dark"] [data-palette="ocean"]:not([data-theme="light"]) {
   --background: #071218;
   --surface: rgb(255 255 255 / 0.045);
   --surface-strong: #10222c;
@@ -212,7 +223,8 @@
   --shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 18px 40px -20px rgb(100 20 60 / 0.22);
   color-scheme: light;
 }
-[data-palette="lotus"][data-theme="dark"] {
+[data-palette="lotus"][data-theme="dark"],
+[data-theme="dark"] [data-palette="lotus"]:not([data-theme="light"]) {
   --background: #130a10;
   --surface: rgb(255 255 255 / 0.045);
   --surface-strong: #24141e;

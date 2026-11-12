@@ -1,6 +1,6 @@
 # Nook: notes for Claude
 
-Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–17).
+Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–18).
 
 ## The project
 
@@ -25,7 +25,11 @@ Read this first in every session. It carries the context from the sessions that 
   17: six paths (`logic/paths.ts`: abilities/treasures are `Effect` data run by `applyEffect()`), Binh gia allies on `floor.allies`,
   realms to Nguyên Anh (shared `curve()`), 4 secret realms with hazards, furnace (`logic/craft.ts`), Web Audio music/sfx (`ui/audio.ts`),
   save v2 (`upgradeFromV1`). Balance with a throwaway bot script (tsx from api/node_modules) before changing numbers.
-  Next: Stage 18 (balance between paths, cultivation leaderboard, performance on older phones).
+  18: hero sprites per path in `ui/sprites.ts` (drawn in code, cached offscreen canvases, `drawProp` for props), `ui/particles.ts`,
+  hold-to-walk + `Joystick.tsx`, lighting/soft mist in `Board.tsx`, urns/crates/shrines/merchant (`BLOCKING` things, `buy` action),
+  leaderboard (`game_saves.path/level/kills`, `GET /api/games/leaderboard/:game`), light-effects mode, `/games/van-lo/assets` gallery.
+  Music charts take `limit/offset/q` (X-Total-Count). Repo licence: MIT (`LICENSE`).
+  Next: Stage 19 (see the learning plan).
   Original world only: don't copy names/characters/plots from existing novels or films.
   Each stage has an explainer in `docs/stage-N.md`; write one for every new stage and update the README's stage list.
 - Apps: **Chill Corner** (focus timer, generated sounds, tips, achievements), **Music** (uploaded songs
