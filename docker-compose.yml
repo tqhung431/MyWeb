@@ -141,6 +141,8 @@ services:
       - "${BIND_IP:-0.0.0.0}:${HTTP_PORT:-80}:80"
       - "${BIND_IP:-0.0.0.0}:${HTTPS_PORT:-443}:443"
       - "${BIND_IP:-0.0.0.0}:${HTTPS_PORT:-443}:443/udp" # HTTP/3
+      # Stage 20: the entrance for a reverse proxy on this machine (nginx on a cloud server). This PC only, always.
+      - "127.0.0.1:${PROXY_PORT:-8081}:8081"
     environment:
       # Stage 8: tracing_on / tracing_off, and where Caddy sends traces (gRPC port 4317)
       CADDY_TRACING: ${CADDY_TRACING:-tracing_off}

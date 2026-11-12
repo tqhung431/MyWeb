@@ -41,6 +41,8 @@ Read this first in every session. It carries the context from the sessions that 
   private-range proxies (TRUST_PROXY "loopback, linklocal, uniquelocal"); `BIND_IP` for Caddy's ports; start scripts make a random
   DB password on fresh installs; X-Frame-Options + Permissions-Policy. Never suggest port forwarding: Nook has no passwords.
   Caddy can be built locally for tests: `go install github.com/caddyserver/caddy/v2/cmd/caddy@v2.11.0`.
+  Cloud VM (docs/deploy-gcp.md): nginx (`deploy/nginx/nook.conf`: basic auth, certbot, Host $http_host, XFF=$remote_addr,
+  WebSocket upgrade, 110m body, no buffering) → Caddy `:8081` (published on 127.0.0.1:PROXY_PORT only, trusts private ranges).
   Next: Stage 21 (ask the owner).
   Original world only: don't copy names/characters/plots from existing novels or films.
   Each stage has an explainer in `docs/stage-N.md`; write one for every new stage and update the README's stage list.
