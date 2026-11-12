@@ -68,7 +68,7 @@ function Section({ title, subtitle, children }: { title: string; subtitle?: stri
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="grid gap-2 border-t border-border py-4 first:border-t-0 first:pt-0 last:pb-0 sm:grid-cols-[9rem_1fr] sm:items-center">
+    <div className="grid grid-cols-1 gap-2 border-t border-border py-4 first:border-t-0 first:pt-0 last:pb-0 sm:grid-cols-[9rem_1fr] sm:items-center">
       <p className="text-xs font-semibold tracking-wide text-muted uppercase">{label}</p>
       <div className="flex flex-wrap items-center gap-3">{children}</div>
     </div>
@@ -79,7 +79,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 function Themes() {
   return (
     <Section title="Colour themes" subtitle="Six palettes, each light and dark. Tap one to use it.">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {PALETTES.map((p) => (
           <button
             key={p.id}
@@ -164,7 +164,7 @@ function Fields() {
 
   return (
     <Section title="Fields and dropdowns" subtitle="Dropdowns open as a sheet from the bottom on phones. Try the keyboard: ↓ ↑, Enter, Esc, or type a letter.">
-      <div className="grid gap-5 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <Input label="Name" placeholder="e.g. Linh" hint="Others on Nook see this name." />
         <Input label="Group name" defaultValue="x" error="At least 2 letters, please." />
         <Select label="Realm" showLabel value={realm} onChange={setRealm} options={REALMS} />

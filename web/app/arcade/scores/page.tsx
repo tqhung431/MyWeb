@@ -13,7 +13,7 @@ export default function ScoresPage() {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted">Everyone on this Nook, each person&apos;s best score. They update live as people play.</p>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {GAMES.map((game) => (
           <Card key={game.id} className="flex flex-col gap-4">
             <Link href={`/arcade/${game.id}`} className="flex items-center gap-3 rounded-2xl hover:opacity-80">

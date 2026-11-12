@@ -126,7 +126,7 @@ export function AddSongForm() {
   const problems = items.filter((i) => i.status === "error").length;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
       <Card className="flex flex-col gap-5">
         {/* Drop zone */}
         <div
@@ -235,7 +235,7 @@ export function AddSongForm() {
             </label>
           ))}
           {rights === "cc" && (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Input label="Licence" value={license} onChange={(e) => setLicense(e.target.value)} hint="e.g. CC BY 4.0, CC BY-NC 3.0" />
               <Input label="Credit (optional)" value={credit} onChange={(e) => setCredit(e.target.value)} hint="feat. …, original artists" />
               <Input

@@ -93,6 +93,9 @@ docker compose config -q                           # no Docker daemon in the san
 ```
 
 After pushing, check the GitHub Actions run (api, web, docker smoke test through Caddy) with the GitHub tools.
+**Merging (when asked):** open the PR, then WAIT for the PR's own CI run to finish green before merging. A green run on
+the branch push isn't enough: flaky tests and parallel e2e runs can still fail (Stage 19's merge broke main this way).
+Phone layouts: a `grid` with only `sm:`/`lg:grid-cols-…` sizes its phone column to the widest child; always add `grid-cols-1`.
 
 ## Sandbox tips
 

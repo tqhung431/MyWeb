@@ -123,8 +123,8 @@ describe("live events", () => {
     const guest = randomUUID();
     const owner = tab({ clientId: guest });
     const stranger = tab();
-    await next(owner, "presence");
-    await next(stranger, "presence");
+    // Listen on both at once: one broadcast can reach both tabs together (waiting for one first could miss the other)
+    await Promise.all([next(owner, "presence"), next(stranger, "presence")]);
 
     let strangerGotBadge = false;
     stranger.on("achievement", () => (strangerGotBadge = true));

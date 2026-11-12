@@ -19,7 +19,7 @@ export function Lobby() {
   }, []);
 
   return (
-    <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {GAMES.map((game) => {
         const best = bests[game.id];
         return (

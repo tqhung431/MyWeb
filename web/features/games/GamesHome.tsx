@@ -42,7 +42,7 @@ export function GamesHome() {
         </div>
       </Link>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Link href="/arcade" className="flex items-center gap-4 rounded-3xl border border-border bg-surface p-5 shadow-card transition hover:-translate-y-0.5">
           <Gamepad2 className="h-8 w-8 text-primary" aria-hidden="true" />
           <span>

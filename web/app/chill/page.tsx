@@ -24,7 +24,7 @@ export default async function ChillPage() {
   const tip = await randomTip();
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-6">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-6">
       <div className="lg:row-span-2">
         <FocusPanel />
       </div>

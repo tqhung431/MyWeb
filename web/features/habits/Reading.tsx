@@ -74,7 +74,7 @@ export function Reading() {
   const finished = books?.filter((b) => b.status === "finished") ?? [];
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="flex flex-col gap-5">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-semibold tracking-wider text-muted uppercase">Reading now</h2>
@@ -268,7 +268,7 @@ function NewBook({ onDone, onCancel }: { onDone: () => void; onCancel: () => voi
   return (
     <form onSubmit={submit} className="flex flex-col gap-3 rounded-3xl border border-border bg-surface p-5 shadow-card">
       <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} autoFocus error={error} />
-      <div className="grid gap-3 sm:grid-cols-[1fr_8rem_10rem]">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_8rem_10rem]">
         <Input label="Author (optional)" value={author} onChange={(e) => setAuthor(e.target.value)} maxLength={120} />
         <Input label="Pages" value={pages} onChange={(e) => setPages(e.target.value.replace(/\D/g, ""))} inputMode="numeric" placeholder="e.g. 320" />
         <Select<BookStatus>

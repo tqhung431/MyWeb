@@ -280,7 +280,7 @@ function Cultivate({ game, t, onMeditate, onTribulation }: { game: Game; t: T; o
   const max = Math.floor(p.stones / meditateCost(p));
   const pill = MAJOR_REALMS[p.major].pill;
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <Panel
         title={t("Tọa thiền", "Meditate")}
         subtitle={t(
@@ -345,7 +345,7 @@ function Cultivate({ game, t, onMeditate, onTribulation }: { game: Game; t: T; o
 function Methods({ game, t, update, toast }: { game: Game; t: T; update: Update; toast: Toast }) {
   const p = game.player;
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
       {techniquesOf(p.path).map((id) => {
         const info = TECHNIQUES[id];
         const known = p.techniques.find((x) => x.id === id);
@@ -434,7 +434,7 @@ function Abilities({ game, t, update, toast }: { game: Game; t: T; update: Updat
         "Abilities come from method levels. Each major realm gives another slot.",
       )}
     >
-      <ul className="grid gap-3 sm:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {abilitiesOf(p.path).map((id) => {
           const a = ABILITIES[id];
           const Icon = ABILITY_ICON[id];
@@ -484,7 +484,7 @@ function Treasures({ game, t, update, toast }: { game: Game; t: T; update: Updat
         `Refine with spirit stones and beast cores (you have ${p.bag["yeu-dan"] ?? 0}). At level 10 it moves up a grade.`,
       )}
     >
-      <ul className="grid gap-3 md:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {p.treasures.map((tr) => {
           const info = TREASURES[tr.kind];
           const Icon = TREASURE_ICON[tr.kind];
@@ -531,7 +531,7 @@ function GearTab({ game, t, update }: { game: Game; t: T; update: Update }) {
   return (
     <div className="flex flex-col gap-4">
       <Panel title={t("Đang mặc", "Wearing")}>
-        <ul className="grid gap-2 sm:grid-cols-5">
+        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-5">
           {(Object.keys(SLOTS) as Slot[]).map((slot) => {
             const item = p.gear.find((x) => x.uid === p.equipped[slot]);
             return (
@@ -556,7 +556,7 @@ function GearTab({ game, t, update }: { game: Game; t: T; update: Update }) {
         {p.gear.length === 0 ? (
           <p className="text-sm text-muted">{t("Chưa có gì. Tìm trang bị trong bí cảnh.", "Nothing yet. Find gear in secret realms.")}</p>
         ) : (
-          <ul className="grid gap-3 md:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {p.gear.map((item) => {
               const on = equipped.has(item.uid);
               const q = QUALITIES[item.quality];
@@ -603,7 +603,7 @@ function BagTab({ game, t, update, toast }: { game: Game; t: T; update: Update; 
   const items = (Object.entries(p.bag) as [ItemId, number][]).filter(([, n]) => n > 0);
   const usable = (id: ItemId) => isSlip(id) || ["hoi-xuan", "dai-hoi-xuan", "hoi-linh", "tu-khi", "boi-nguyen"].includes(id);
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <Panel title={t("Túi đồ", "Bag")} subtitle={t("Đan dược và phù lục mang theo vào bí cảnh.", "Pills and talismans come with you into realms.")}>
         {items.length === 0 ? (
           <p className="text-sm text-muted">{t("Trống.", "Empty.")}</p>
@@ -655,7 +655,7 @@ function BagTab({ game, t, update, toast }: { game: Game; t: T; update: Update; 
 function Realms({ game, t, onEnter }: { game: Game; t: T; onEnter: (realm: RealmId) => void }) {
   const p = game.player;
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       {REALM_IDS.map((id) => {
         const realm = realmInfo(id);
         const open = p.major >= realm.minMajor;
