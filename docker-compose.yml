@@ -74,7 +74,10 @@ services:
       VALKEY_URL: redis://valkey:6379
       HOST: 0.0.0.0 # inside Docker's private network; only Caddy can reach it
       PORT: "4000"
-      TRUST_PROXY: "1" # Caddy is one trusted hop in front: real visitor IPs, HTTPS detection
+      # Caddy is in front: real visitor IPs and HTTPS detection. Stage 20: trust every private address (Caddy, and
+      # cloudflared behind it), so a visitor through the Cloudflare tunnel is counted by their own IP, not as one.
+      # Caddy replaces X-Forwarded-For for everyone it doesn't trust, so a browser can't fake its IP.
+      TRUST_PROXY: "loopback, linklocal, uniquelocal"
       # Stage 11: how long Nook keeps data (days). See .env.example.
       DATA_RETENTION_DAYS: ${DATA_RETENTION_DAYS:-90}
       CHAT_RETENTION_DAYS: ${CHAT_RETENTION_DAYS:-30}
@@ -85,6 +88,9 @@ services:
       OLLAMA_URL: ${OLLAMA_URL-http://ollama:11434}
       AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen2.5:1.5b}
       AI_EMBED_MODEL: ${AI_EMBED_MODEL:-paraphrase-multilingual}
+      # Stage 20: Cloudflare Access, for the "tunnel" profile (docs/stage-20.md). Empty = the tunnel lets nobody in.
+      CF_ACCESS_TEAM_DOMAIN: ${CF_ACCESS_TEAM_DOMAIN:-}
+      CF_ACCESS_AUD: ${CF_ACCESS_AUD:-}
     volumes:
       - media-data:/app/media # uploaded songs and their covers
       - ./music-import:/import:ro # songs to import: docker compose exec api node dist/music/import.js /import
@@ -130,9 +136,11 @@ services:
     profiles: [app]
     image: caddy:2.11
     ports:
-      - "${HTTP_PORT:-80}:80" # open to your network: other PCs use http://<this PC's IP>
-      - "${HTTPS_PORT:-443}:443"
-      - "${HTTPS_PORT:-443}:443/udp" # HTTP/3
+      # Open to your network: other PCs use http://<this PC's IP>. Stage 20: BIND_IP=127.0.0.1 in .env closes
+      # Nook to the network (this PC only, plus Tailscale's `tailscale serve` on this PC). See docs/stage-20.md.
+      - "${BIND_IP:-0.0.0.0}:${HTTP_PORT:-80}:80"
+      - "${BIND_IP:-0.0.0.0}:${HTTPS_PORT:-443}:443"
+      - "${BIND_IP:-0.0.0.0}:${HTTPS_PORT:-443}:443/udp" # HTTP/3
     environment:
       # Stage 8: tracing_on / tracing_off, and where Caddy sends traces (gRPC port 4317)
       CADDY_TRACING: ${CADDY_TRACING:-tracing_off}
@@ -143,6 +151,20 @@ services:
       - caddy-data:/data # its certificates, incl. the local certificate authority
       - caddy-config:/config
     depends_on: [web, api]
+    restart: unless-stopped
+
+  # --- Away from home (Stage 20) ----------------------------------------------------
+  # Profile "tunnel": a public web address through Cloudflare, with Cloudflare Access in front (only the people
+  # you list get in). cloudflared connects OUT to Cloudflare, so no port is opened on your router.
+  # It reaches Caddy's :8080 entrance on Docker's private network; that port isn't published anywhere.
+  # Set TUNNEL_TOKEN, CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_AUD in .env first (docs/stage-20.md).
+  cloudflared:
+    profiles: [tunnel]
+    image: cloudflare/cloudflared:2026.10.7
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-} # from the Cloudflare dashboard (keep it secret, like a password)
+    depends_on: [caddy]
     restart: unless-stopped
 
   # --- Monitoring (profile "monitoring", Stage 8) --------------------------------------

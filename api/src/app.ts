@@ -23,6 +23,7 @@ import { meRouter } from "./routes/me.js";
 import { musicRouter } from "./routes/music.js";
 import { sessionsRouter } from "./routes/sessions.js";
 import { openApiDocument } from "./openapi.js";
+import { accessRouter } from "./routes/access.js";
 import { tipsRouter } from "./routes/tips.js";
 import { watchRouter } from "./routes/watch.js";
 import { valkey, valkeyReady } from "./valkey/client.js";
@@ -60,6 +61,9 @@ export function createApp() {
   app.get("/api/openapi.json", (_req, res) => {
     res.set("Cache-Control", "public, max-age=300").json(openApi);
   });
+
+  // Stage 20: Caddy asks this before letting a request in through the Cloudflare tunnel
+  app.use("/internal", accessRouter);
 
   app.use("/api/tips", tipsRouter);
   app.use("/api/sessions", sessionsRouter);

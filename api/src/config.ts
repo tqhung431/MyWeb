@@ -26,7 +26,12 @@ export const configSchema = z.object({
   ALLOWED_ORIGINS: z
     .string()
     .default("")
-    .transform((v) => v.split(",").map((o) => o.trim()).filter(Boolean)),
+    .transform((v) =>
+      v
+        .split(",")
+        .map((o) => o.trim())
+        .filter(Boolean),
+    ),
 
   // --- Stage 5 ---
   // Valkey (a fast in-memory store, compatible with Redis). Used for the cache,
@@ -70,6 +75,13 @@ export const configSchema = z.object({
   // --- Stage 12: WatchList's sources (free, no key). Tests point these at a fake server. ---
   TVMAZE_URL: z.url().default("https://api.tvmaze.com"),
   JIKAN_URL: z.url().default("https://api.jikan.moe/v4"),
+
+  // --- Stage 20: Cloudflare Access (only for the "tunnel" profile: Nook on a public web address) ---
+  // Your Zero Trust team domain, e.g. https://nookfamily.cloudflareaccess.com, and the Access application's
+  // "Application Audience (AUD) tag". Requests that come through the tunnel must carry a pass (JWT) signed by
+  // that team for that application; without these two settings every tunnel request is refused.
+  CF_ACCESS_TEAM_DOMAIN: z.preprocess((v) => (v === "" ? undefined : v), z.url().optional()),
+  CF_ACCESS_AUD: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(10).optional()),
 
   // OpenTelemetry: where traces and metrics go (Grafana's all-in-one "otel-lgtm" in docker-compose).
   // Not set → telemetry off. Read by the OpenTelemetry SDK itself; listed here so it's documented.

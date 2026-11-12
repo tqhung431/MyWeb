@@ -36,7 +36,7 @@ HTML page to a full system. Every stage has an explainer in [docs/](#stages).
 ## Contents
 
 [Install](#install-from-scratch) · [Settings](#settings-the-env-file) · [Extras: AI and Grafana](#optional-extras-ai-and-grafana) ·
-[Upgrade](#upgrade-to-the-latest-version) · [Stop and clean up](#stop-and-clean-up) · [Problems?](#problems) ·
+[Away from home](#use-nook-away-from-home) · [Upgrade](#upgrade-to-the-latest-version) · [Stop and clean up](#stop-and-clean-up) · [Problems?](#problems) ·
 [What runs, and why](#what-runs-and-why) · [Coming from MyWeb](#coming-from-myweb) · [For developers](#for-developers) · [Stages](#stages) · [Licence](#licence)
 
 ## Install from scratch
@@ -76,7 +76,7 @@ Then open:
 - **https://localhost** on this PC. The first time, the browser warns about the certificate. That's expected:
   click "Advanced → Continue", or trust it for good (see [docs/stage-7.md](docs/stage-7.md)).
 - **http://&lt;this PC's IP&gt;** from other PCs and phones on the same Wi-Fi (find the IP with `ipconfig` on
-  Windows, `ip addr` on Linux). If they can't connect, allow port 80 in this PC's firewall.
+  Windows, `ip addr` on Linux). If they can't connect, allow port 80 in this PC's firewall (home network only).
 
 ## Settings: the .env file
 
@@ -110,6 +110,17 @@ Turn extras on with **`COMPOSE_PROFILES`** in `.env`, then run `docker compose u
 | `app,ai` | + the **AI Companion** | Downloads Ollama and the models once (a few GB). On a low-end PC, also set `AI_CHAT_MODEL=qwen2.5:0.5b`. Watch the download: `docker compose logs -f ollama-models` |
 | `app,monitoring` | + **Grafana** at http://localhost:3001 | Also remove the `#` from the 3 monitoring lines in `.env`. Needs ~1-2 GB of RAM |
 | `app,ai,monitoring` | everything | Needs 8 GB+ of RAM |
+
+## Use Nook away from home
+
+Nook has no passwords (just names), so **never forward ports on your router to it**. Instead:
+
+- **Tailscale** (recommended, free for 6 people): a private network for your own phones and PCs. Install it on this
+  PC and each device, then run `tailscale serve --bg 80` here. Nook gets a private HTTPS address only your devices can open.
+- **Cloudflare Tunnel + Access** (needs a domain): a normal web address where Cloudflare emails a code to the people you
+  listed before letting them in, and Nook checks Cloudflare's signed pass on every request. Add `tunnel` to `COMPOSE_PROFILES`.
+
+Step by step, plus firewall rules for Windows, macOS and Linux: **[docs/stage-20.md](docs/stage-20.md)**.
 
 ## Upgrade to the latest version
 
@@ -283,6 +294,7 @@ stage-1-static/        Stage 1: the plain HTML/CSS/JS version
 17. Vân Lộ grows — six paths, abilities as data, realms up to Nguyên Anh, alchemy and forging, music made with Web Audio ✅ · [docs](docs/stage-17.md)
 18. Vân Lộ comes alive — sprites for each path, hold-to-walk and a joystick, particles and lighting, urns/shrines/merchants, a leaderboard, light effects for older phones ✅ · [docs](docs/stage-18.md)
 19. Quality and speed — Playwright end-to-end tests, Lighthouse 90+ on every page, a k6 load test, OpenAPI docs; a smoother Mini Arcade ✅ · [docs](docs/stage-19.md)
+20. Going out — Nook away from home, safely: Tailscale, or a Cloudflare tunnel behind Cloudflare Access (checked by Nook itself); firewall rules ✅ · [docs](docs/stage-20.md)
 
 ## Licence
 
