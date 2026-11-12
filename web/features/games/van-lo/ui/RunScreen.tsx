@@ -60,19 +60,21 @@ const HOLD_MS = 150;
 type Aim = { kind: "ability" | "treasure" | "item"; id: string; targets: Pos[] };
 type Slot = { key: string; label: string; icon: LucideIcon; cost?: number; cooldown: number; disabled: boolean; onUse: () => void };
 
+// By physical key (KeyboardEvent.code), not by the letter it types: with a Vietnamese typing tool (Unikey, Telex)
+// or Caps Lock, "w" can come back as "ư" or "W" when you let go, and the game would never hear the key go up.
 const KEY_DIRS: Record<string, Pos> = {
   ArrowUp: { x: 0, y: -1 },
   ArrowDown: { x: 0, y: 1 },
   ArrowLeft: { x: -1, y: 0 },
   ArrowRight: { x: 1, y: 0 },
-  w: { x: 0, y: -1 },
-  s: { x: 0, y: 1 },
-  a: { x: -1, y: 0 },
-  d: { x: 1, y: 0 },
-  q: { x: -1, y: -1 },
-  e: { x: 1, y: -1 },
-  z: { x: -1, y: 1 },
-  c: { x: 1, y: 1 },
+  KeyW: { x: 0, y: -1 },
+  KeyS: { x: 0, y: 1 },
+  KeyA: { x: -1, y: 0 },
+  KeyD: { x: 1, y: 0 },
+  KeyQ: { x: -1, y: -1 },
+  KeyE: { x: 1, y: -1 },
+  KeyZ: { x: -1, y: 1 },
+  KeyC: { x: 1, y: 1 },
 };
 
 type Props = {
@@ -290,11 +292,15 @@ export function RunScreen({ game, update, dark }: Props) {
     if (ending || shop) setHold(null);
   }, [ending, shop, setHold]);
 
-  // Keyboard
-  const keys = useRef({ perform, slots, aim, here });
-  keys.current = { perform, slots, aim, here };
+  // Keyboard.
+  // Fix (after Stage 19): the keys being held live in a ref and the listeners are added once. Before, they were
+  // re-added after every step (the effect depended on the game), each time with a new, empty list of held keys,
+  // so letting go of an arrow was never noticed and the character walked on until it hit a wall.
+  const keys = useRef({ perform, slots, aim, here, fire, pos: (game.run ?? r).pos });
+  keys.current = { perform, slots, aim, here, fire, pos: (game.run ?? r).pos };
+  const heldKeys = useRef<string[]>([]);
   useEffect(() => {
-    const held: string[] = [];
+    const held = heldKeys.current;
     const heldDir = (): Pos | null => {
       let x = 0;
       let y = 0;
@@ -310,15 +316,13 @@ export function RunScreen({ game, update, dark }: Props) {
       if (e.ctrlKey || e.metaKey || e.altKey || (e.target as HTMLElement).closest("input, textarea, [role=dialog], [role=listbox]")) return;
       const k = keys.current;
       const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-      if (KEY_DIRS[key]) {
+      const dir = KEY_DIRS[e.code];
+      if (dir) {
         e.preventDefault();
         if (e.repeat) return; // our own timer repeats steps, at a steady pace
         walking.current = null;
-        if (k.aim && ["kiem-khi", "ngu-kiem"].includes(k.aim.id)) {
-          const pos = (game.run ?? r).pos;
-          return fire(k.aim, { x: pos.x + KEY_DIRS[key].x, y: pos.y + KEY_DIRS[key].y });
-        }
-        if (!held.includes(key)) held.push(key);
+        if (k.aim && ["kiem-khi", "ngu-kiem"].includes(k.aim.id)) return k.fire(k.aim, { x: k.pos.x + dir.x, y: k.pos.y + dir.y });
+        if (!held.includes(e.code)) held.push(e.code);
         setHold(heldDir());
         return;
       }
@@ -332,25 +336,29 @@ export function RunScreen({ game, update, dark }: Props) {
       else if (/^[1-9]$/.test(key)) k.slots[Number(key) - 1]?.onUse();
     };
     const onUp = (e: KeyboardEvent) => {
-      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-      const i = held.indexOf(key);
+      const i = held.indexOf(e.code);
       if (i < 0) return;
       held.splice(i, 1);
       setHold(heldDir());
     };
-    const onBlur = () => {
+    // Let go of everything when the window or tab loses focus (a key released elsewhere never reaches us)
+    const stopAll = () => {
       held.length = 0;
       setHold(null);
     };
+    const onHidden = () => document.visibilityState === "hidden" && stopAll();
     window.addEventListener("keydown", onKey);
     window.addEventListener("keyup", onUp);
-    window.addEventListener("blur", onBlur);
+    window.addEventListener("blur", stopAll);
+    document.addEventListener("visibilitychange", onHidden);
     return () => {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("keyup", onUp);
-      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("blur", stopAll);
+      document.removeEventListener("visibilitychange", onHidden);
+      stopAll();
     };
-  }, [fire, game.run, r, setHold]);
+  }, [setHold]);
 
   const hpPct = Math.max(0, (p.hp / s.hp) * 100);
   const qiPct = Math.max(0, (p.qi / s.qi) * 100);
