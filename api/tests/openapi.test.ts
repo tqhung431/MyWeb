@@ -31,7 +31,9 @@ function routesInCode() {
 
 describe("OpenAPI", () => {
   it("lists every route in src/routes, and nothing that doesn't exist", () => {
-    const code = routesInCode().sort();
+    const code = routesInCode()
+      .filter((r) => r.split(" ")[1].startsWith("/api/"))
+      .sort(); // /internal/* is for Caddy only, not part of the public API
     const documented = ENDPOINTS.filter((e) => e.path.startsWith("/api/"))
       .map((e) => `${e.method} ${e.path}`)
       .sort();

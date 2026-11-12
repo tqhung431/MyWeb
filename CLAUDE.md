@@ -1,6 +1,6 @@
 # Nook: notes for Claude
 
-Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–19).
+Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–20).
 
 ## The project
 
@@ -35,7 +35,16 @@ Read this first in every session. It carries the context from the sessions that 
   (`api/src/openapi.ts`, `GET /api/openapi.json`, page `/developers`; test fails if a route is missing). Speed rules: no animated
   blur behind backdrop-blur cards, CSS inlined (`inlineCss`), reserve space for late content, name prompt opens after first interaction.
   Measure Lighthouse on a production build (`npm run build`, standalone server), never dev mode. Arcade: 3-2-1 countdown, Space/Enter.
-  Next: Stage 20 (ask the owner; the learning plan's numbered stages are done).
+  20: remote access without open router ports. Recommended Tailscale on the host (`tailscale serve --bg 80`); optional profile
+  `tunnel` (cloudflared → Caddy `:8080`, unpublished) with Caddy `forward_auth` → API `GET /internal/access-check`, which verifies
+  the Cloudflare Access JWT (jose, team JWKS, iss + AUD, fail closed without CF_ACCESS_TEAM_DOMAIN/CF_ACCESS_AUD). API trusts
+  private-range proxies (TRUST_PROXY "loopback, linklocal, uniquelocal"); `BIND_IP` for Caddy's ports; start scripts make a random
+  DB password on fresh installs; X-Frame-Options + Permissions-Policy. Never suggest port forwarding: Nook has no passwords.
+  Caddy can be built locally for tests: `go install github.com/caddyserver/caddy/v2/cmd/caddy@v2.11.0`.
+  Cloud VM is OPTIONAL, not the default (owner's choice: Nook runs on a home PC). docs/deploy-gcp.md: nginx (`deploy/nginx/nook.conf`: basic auth, certbot, Host $http_host, XFF=$remote_addr,
+  WebSocket upgrade, 110m body, no buffering) → Caddy `:8081` (trusts private ranges; published on 127.0.0.1:PROXY_PORT only via
+  `COMPOSE_FILE=docker-compose.yml:deploy/nginx/compose.proxy.yml`).
+  Next: Stage 21 (ask the owner).
   Original world only: don't copy names/characters/plots from existing novels or films.
   Each stage has an explainer in `docs/stage-N.md`; write one for every new stage and update the README's stage list.
 - Apps: **Chill Corner** (focus timer, generated sounds, tips, achievements), **Music** (uploaded songs

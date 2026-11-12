@@ -11,7 +11,14 @@ fi
 
 if [ ! -f .env ]; then
   cp .env.example .env
-  echo "Created .env from .env.example. Edit it to change the password, the AI or monitoring."
+  echo "Created .env from .env.example. Edit it to change the AI, monitoring or remote access."
+  # Stage 20: a brand-new install gets a random database password instead of "nook".
+  # (Only if there's no database yet: an existing one keeps the password it was created with.)
+  if ! docker volume inspect nook_db-data >/dev/null 2>&1; then
+    pw=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24)
+    sed -i.bak "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$pw/" .env && rm -f .env.bak
+    echo "Made a random database password (it's in .env; keep that file safe)."
+  fi
 fi
 
 echo "Starting Nook... the first time takes 5-10 minutes."

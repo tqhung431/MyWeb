@@ -12,7 +12,14 @@ if errorlevel 1 (
 
 if not exist .env (
   copy .env.example .env >nul
-  echo Created .env from .env.example. Edit it to change the password, the AI or monitoring.
+  echo Created .env from .env.example. Edit it to change the AI, monitoring or remote access.
+  rem Stage 20: a brand-new install gets a random database password instead of "nook"
+  rem (only if there's no database yet: an existing one keeps the password it was created with).
+  docker volume inspect nook_db-data >nul 2>&1
+  if errorlevel 1 (
+    powershell -NoProfile -Command "$b = New-Object byte[] 18; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); $pw = [Convert]::ToBase64String($b) -replace '[+/=]', 'x'; $f = Join-Path (Get-Location) '.env'; $t = [IO.File]::ReadAllText($f) -replace '(?m)^POSTGRES_PASSWORD=.*$', ('POSTGRES_PASSWORD=' + $pw); [IO.File]::WriteAllText($f, $t)"
+    echo Made a random database password ^(it's in .env; keep that file safe^).
+  )
 )
 
 echo Starting Nook... the first time takes 5-10 minutes.

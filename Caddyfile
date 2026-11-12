@@ -12,6 +12,19 @@
 # API_UPSTREAM / WEB_UPSTREAM default to the Docker service names; you can point them elsewhere
 # to try Caddy without Docker, e.g. API_UPSTREAM=127.0.0.1:4000 WEB_UPSTREAM=127.0.0.1:3000 caddy run
 
+# Stage 20: the Cloudflare tunnel's entrance (:8080, below) is reached only by the cloudflared container,
+# which passes on the visitor's real IP and "https" in X-Forwarded-For / -Proto. Trust those headers there only.
+{
+	servers :8080 {
+		trusted_proxies static private_ranges
+	}
+	# Optional: your own reverse proxy (nginx on a cloud server, docs/deploy-gcp.md) comes in on :8081 and passes on
+	# the visitor's real IP and "https". :8081 is only published (on 127.0.0.1) with deploy/nginx/compose.proxy.yml.
+	servers :8081 {
+		trusted_proxies static private_ranges
+	}
+}
+
 # Stage 8: tracing. With monitoring on (CADDY_TRACING=tracing_on), Caddy starts each request's
 # trace and passes it on ("traceparent"), so Grafana shows Caddy → website → API → database.
 (tracing_on) {
@@ -39,6 +52,10 @@
 	header {
 		X-Content-Type-Options nosniff
 		Referrer-Policy strict-origin-when-cross-origin
+		# Stage 20: no other site may show Nook inside a frame (stops "clickjacking"),
+		# and Nook never asks for the camera, microphone, location or payments
+		X-Frame-Options DENY
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
 		-Server
 	}
 }
@@ -51,5 +68,26 @@ localhost {
 
 # Other PCs and phones on your network: http://<this PC's IP>, e.g. http://192.168.1.20
 :80 {
+	import nook
+}
+
+# Stage 20: Nook on a public web address, through a Cloudflare tunnel (profile "tunnel").
+# This port is NOT published to your PC or network: only the cloudflared container can reach it.
+# Before anything else, Caddy asks the API whether the request carries a valid Cloudflare Access pass
+# (GET /internal/access-check). No valid pass → a short "Nook is private" page. Nothing gets through
+# if Access isn't set up ("fail closed"). See docs/stage-20.md.
+:8080 {
+	forward_auth {$API_UPSTREAM:api:4000} {
+		uri /internal/access-check
+	}
+	header Strict-Transport-Security "max-age=31536000"
+	import nook
+}
+
+# Optional (Stage 20): Nook behind your own reverse proxy (nginx with HTTPS and a password, e.g. on a cloud server).
+# Not reachable by default: deploy/nginx/compose.proxy.yml publishes it on 127.0.0.1:${PROXY_PORT} for nginx.
+# The proxy must check who you are (Nook has no passwords): see deploy/nginx/nook.conf and docs/deploy-gcp.md.
+:8081 {
+	header Strict-Transport-Security "max-age=31536000"
 	import nook
 }
