@@ -42,7 +42,7 @@ export function NameForm({ mode, initial = "", onDone, autoFocus }: Props) {
         maxLength={30}
         autoComplete="nickname"
         autoFocus={autoFocus}
-        placeholder={t("e.g. Linh, Dad, Bà Ngoại")}
+        placeholder={t("e.g. Bou, Dad, Bà Ngoại")}
         error={error}
         hint={t("How others on this Nook see you. 30 characters, emoji welcome.")}
       />

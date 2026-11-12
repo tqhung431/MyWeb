@@ -165,7 +165,7 @@ function Fields() {
   return (
     <Section title="Fields and dropdowns" subtitle="Dropdowns open as a sheet from the bottom on phones. Try the keyboard: ↓ ↑, Enter, Esc, or type a letter.">
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-        <Input label="Name" placeholder="e.g. Linh" hint="Others on Nook see this name." />
+        <Input label="Name" placeholder="e.g. Bou" hint="Others on Nook see this name." />
         <Input label="Group name" defaultValue="x" error="At least 2 letters, please." />
         <Select label="Realm" showLabel value={realm} onChange={setRealm} options={REALMS} />
         <Select label="Genre" showLabel searchable value={genre} onChange={setGenre} options={GENRES} />
@@ -296,7 +296,7 @@ function Bits() {
         <Badge>★ 8.6</Badge>
       </Row>
       <Row label="Avatars">
-        <Avatar name="Linh Tran" size="sm" />
+        <Avatar name="Bou Tran" size="sm" />
         <Avatar name="Mai 🌸" />
         <Avatar name="Dad" size="lg" />
         <Avatar />
