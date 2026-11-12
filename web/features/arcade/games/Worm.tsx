@@ -2,9 +2,13 @@
 
 // Hungry Worm: a classic grid game, drawn on a <canvas>.
 //
-// A game loop: requestAnimationFrame calls draw() about 60 times a second, and every
+// A game loop: requestAnimationFrame calls draw() once per screen refresh (60, 90 or 120 times a second), and every
 // tickMs() milliseconds the rules move the worm one cell (logic/worm.ts).
 // The worm's state lives in a ref, not React state: it changes too often for re-rendering.
+//
+// Stage 19: smooth movement. The rules still move in whole cells, but the drawing slides each segment from where it
+// was at the last tick to where it is now ("interpolation"), so the worm glides instead of jumping 8 times a second.
+// The grass is painted once into an offscreen canvas, crumbs fly when it eats, and the board shakes when it crashes.
 
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -62,10 +66,14 @@ export default function Worm({ onFinish }: GameProps) {
   useEffect(() => {
     const ctx = canvas.current?.getContext("2d");
     if (!ctx) return;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(2, window.devicePixelRatio || 1); // 3× screens gain nothing visible but cost 2× the pixels
     ctx.canvas.width = PX * dpr;
     ctx.canvas.height = PX * dpr;
     ctx.scale(dpr, dpr);
+    const grass = paintGrass(dpr);
+    let prev: WormState = game.current; // where the worm was at the last tick
+    let crumbs: Crumb[] = [];
+    let shake = 0;
 
     let raf = 0;
     let last = performance.now();
@@ -83,7 +91,20 @@ export default function Worm({ onFinish }: GameProps) {
           tick(now);
         }
       }
-      draw(ctx, game.current, bubble.current && bubble.current.until > now ? bubble.current.text : null);
+      const g2 = game.current;
+      const t = g2.alive && started.current ? Math.min(1, acc / tickMs(g2.eaten)) : 1;
+      crumbs = crumbs.filter((c) => (c.life -= dt) > 0);
+      for (const c of crumbs) {
+        c.vy += 0.0012 * dt;
+        c.x += c.vx * dt;
+        c.y += c.vy * dt;
+      }
+      shake *= Math.exp(-dt / 80);
+      ctx.save();
+      if (shake > 0.3) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+      ctx.drawImage(grass, 0, 0, PX, PX);
+      draw(ctx, g2, prev, t, bubble.current && bubble.current.until > now ? bubble.current.text : null, crumbs);
+      ctx.restore();
       if (!game.current.alive) {
         deadAt ||= now;
         if (now - deadAt > 700) return finish.current(game.current.score); // a moment to see the 😵
@@ -102,9 +123,27 @@ export default function Worm({ onFinish }: GameProps) {
         }
       }
       const after = step({ ...before, dir });
+      prev = before;
       game.current = after;
-      if (!after.alive) sfx("bonk");
-      else if (after.eaten > before.eaten) {
+      if (!after.alive) {
+        sfx("bonk");
+        shake = 12;
+        prev = after; // stay where it crashed
+      } else if (after.eaten > before.eaten) {
+        const cx = before.snack.x * CELL + CELL / 2;
+        const cy = before.snack.y * CELL + CELL / 2;
+        for (let i = 0; i < 14; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const v = 0.05 + Math.random() * 0.12;
+          crumbs.push({
+            x: cx,
+            y: cy,
+            vx: Math.cos(a) * v,
+            vy: Math.sin(a) * v - 0.12,
+            life: 450 + Math.random() * 250,
+            color: before.snack.spicy ? "#ff6a3d" : CRUMB[i % CRUMB.length],
+          });
+        }
         sfx(before.snack.spicy ? "spicy" : "eat");
         bubble.current = {
           text: before.snack.spicy ? "SPICY! 🔥" : NOMS[after.eaten % NOMS.length],
@@ -183,15 +222,33 @@ function DPad({ onSteer }: { onSteer: (d: Dir) => void }) {
   );
 }
 
-function draw(ctx: CanvasRenderingContext2D, g: WormState, bubble: string | null) {
-  // The board: a soft checkerboard of grass
+type Crumb = { x: number; y: number; vx: number; vy: number; life: number; color: string };
+const CRUMB = ["#fff3b0", "#ffd166", "#ffffff", "#f7a9c8"];
+
+// The board: a soft checkerboard of grass, painted once
+function paintGrass(dpr: number) {
+  const c = document.createElement("canvas");
+  c.width = PX * dpr;
+  c.height = PX * dpr;
+  const g = c.getContext("2d")!;
+  g.scale(dpr, dpr);
   for (let y = 0; y < SIZE; y++) {
     for (let x = 0; x < SIZE; x++) {
-      ctx.fillStyle = (x + y) % 2 ? "#a7d97a" : "#b5e186";
-      ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+      g.fillStyle = (x + y) % 2 ? "#a7d97a" : "#b5e186";
+      g.fillRect(x * CELL, y * CELL, CELL, CELL);
     }
   }
+  return c;
+}
 
+// Where segment i is drawn: part of the way from its last spot to its new one
+function segment(g: WormState, prev: WormState, i: number, t: number) {
+  const now = g.worm[i];
+  const was = prev.worm[i] ?? prev.worm[prev.worm.length - 1] ?? now;
+  return { x: (was.x + (now.x - was.x) * t) * CELL + CELL / 2, y: (was.y + (now.y - was.y) * t) * CELL + CELL / 2 };
+}
+
+function draw(ctx: CanvasRenderingContext2D, g: WormState, prev: WormState, t: number, bubble: string | null, crumbs: Crumb[]) {
   // The snack (it bobs up and down a little)
   const bob = Math.sin(performance.now() / 180) * 2;
   ctx.font = `${CELL - 4}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
@@ -199,21 +256,28 @@ function draw(ctx: CanvasRenderingContext2D, g: WormState, bubble: string | null
   ctx.textBaseline = "middle";
   ctx.fillText(g.snack.emoji, g.snack.x * CELL + CELL / 2, g.snack.y * CELL + CELL / 2 + bob);
 
-  // The worm, tail first so the head is drawn on top
-  for (let i = g.worm.length - 1; i >= 0; i--) {
-    const c = g.worm[i];
-    const t = i / Math.max(1, g.worm.length - 1);
-    ctx.fillStyle = i % 2 ? `hsl(${330 - t * 20} 70% ${62 - t * 8}%)` : `hsl(${340 - t * 20} 75% ${68 - t * 8}%)`;
-    const r = i === 0 ? CELL / 2 : CELL / 2 - 2 - t * 3;
+  // The worm, tail first so the head is drawn on top. A thick line joins the segments, so the body looks round
+  // and continuous while it slides.
+  const pts = g.worm.map((_, i) => segment(g, prev, i, t));
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  for (let i = pts.length - 1; i > 0; i--) {
+    const k = i / Math.max(1, pts.length - 1);
+    ctx.strokeStyle = `hsl(${335 - k * 20} 72% ${65 - k * 8}%)`;
+    ctx.lineWidth = CELL - 4 - k * 6;
     ctx.beginPath();
-    ctx.arc(c.x * CELL + CELL / 2, c.y * CELL + CELL / 2, r, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(pts[i].x, pts[i].y);
+    ctx.lineTo(pts[i - 1].x, pts[i - 1].y);
+    ctx.stroke();
   }
+  ctx.fillStyle = "hsl(340 75% 68%)";
+  ctx.beginPath();
+  ctx.arc(pts[0].x, pts[0].y, CELL / 2, 0, Math.PI * 2);
+  ctx.fill();
 
   // Eyes on the head, looking where it's going (or dizzy when it crashed)
-  const head = g.worm[0];
-  const hx = head.x * CELL + CELL / 2;
-  const hy = head.y * CELL + CELL / 2;
+  const hx = pts[0].x;
+  const hy = pts[0].y;
   if (!g.alive) {
     ctx.font = `${CELL}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
     ctx.fillText("😵", hx, hy);
@@ -233,6 +297,14 @@ function draw(ctx: CanvasRenderingContext2D, g: WormState, bubble: string | null
       ctx.fill();
     }
   }
+
+  // Crumbs from the last snack
+  for (const c of crumbs) {
+    ctx.globalAlpha = Math.min(1, c.life / 300);
+    ctx.fillStyle = c.color;
+    ctx.fillRect(c.x - 2, c.y - 2, 4, 4);
+  }
+  ctx.globalAlpha = 1;
 
   // "nom!" speech bubble
   if (bubble && g.alive) {

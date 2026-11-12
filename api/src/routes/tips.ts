@@ -17,10 +17,7 @@ export const tipsRouter = Router();
 
 tipsRouter.get("/", async (_req, res) => {
   const { value, hit } = await cached("tips:list", TTL, () =>
-    db
-      .select({ slug: tips.slug, title: tips.title, summary: tips.summary, minutes: tips.minutes })
-      .from(tips)
-      .orderBy(asc(tips.id)),
+    db.select({ slug: tips.slug, title: tips.title, summary: tips.summary, minutes: tips.minutes }).from(tips).orderBy(asc(tips.id)),
   );
   res.set("X-Cache", hit ? "HIT" : "MISS").json(value);
 });

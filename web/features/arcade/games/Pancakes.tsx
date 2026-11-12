@@ -77,7 +77,7 @@ export default function Pancakes({ onFinish }: GameProps) {
   useEffect(() => {
     const ctx = canvas.current?.getContext("2d");
     if (!ctx) return;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
     ctx.canvas.width = W * dpr;
     ctx.canvas.height = H * dpr;
     ctx.scale(dpr, dpr);
@@ -112,7 +112,7 @@ export default function Pancakes({ onFinish }: GameProps) {
       w.falling = w.falling.filter((p) => p.y - w.cameraY < H + 200);
       // keep the top of the tower around the middle of the screen
       const wanted = Math.min(0, topY - H * 0.5);
-      w.cameraY += (wanted - w.cameraY) * 0.08 * f;
+      w.cameraY += (wanted - w.cameraY) * (1 - Math.pow(0.92, f)); // the same glide at 60 or 120 fps
 
       draw(ctx, w, now);
       if (w.over) {

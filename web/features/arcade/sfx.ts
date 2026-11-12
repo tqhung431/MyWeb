@@ -40,6 +40,7 @@ const SOUNDS = {
     { from: 1568, ms: 160, wave: "triangle", at: 160 },
   ],
   go: [{ from: 1046, ms: 120, wave: "square", gain: 0.07 }],
+  tick: [{ from: 660, ms: 70, wave: "square", gain: 0.05 }],
   cluck: [
     { from: 900, to: 500, ms: 70, wave: "square", gain: 0.06 },
     { from: 900, to: 500, ms: 70, wave: "square", at: 110, gain: 0.06 },

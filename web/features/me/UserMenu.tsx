@@ -27,7 +27,7 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
       <button
         type="button"
         onClick={askName}
-        className="flex cursor-pointer items-center gap-2 rounded-full py-1 pr-1 pl-3 text-xs font-semibold text-muted hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="flex cursor-pointer items-center gap-2 rounded-full border border-border bg-surface-strong py-1 pr-1 pl-3 text-xs font-semibold text-muted hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         Pick a name
         <Avatar size="sm" />

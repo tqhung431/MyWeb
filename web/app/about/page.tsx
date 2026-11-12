@@ -60,7 +60,11 @@ export default function AboutPage() {
         <Link href="/design" className="font-semibold text-primary underline-offset-4 hover:underline">
           See the design system
         </Link>{" "}
-        with every colour theme and component.
+        with every colour theme and component, or{" "}
+        <Link href="/developers" className="font-semibold text-primary underline-offset-4 hover:underline">
+          the API docs
+        </Link>
+        .
       </p>
     </div>
   );

@@ -34,7 +34,7 @@ function ownedBy(o: Owner): SQL {
 
 // --- POST /api/sessions ------------------------------------------------------
 
-const newSession = z.object({
+export const newSession = z.object({
   mode: z.enum(["focus", "short", "long"]),
   minutes: z.number().int().min(1).max(120),
 });
@@ -82,7 +82,7 @@ function isTimeZone(tz: string): boolean {
   }
 }
 
-const summaryQuery = z.object({
+export const summaryQuery = z.object({
   tz: z.string().refine(isTimeZone, "Unknown time zone").default("UTC"),
   days: z.coerce.number().int().min(1).max(31).default(7),
 });

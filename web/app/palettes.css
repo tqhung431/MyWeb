@@ -28,7 +28,7 @@
   --border: rgb(28 24 48 / 0.09);
   --text: #1c1830;
   --muted: #645e80;
-  --primary: #6e51ff;
+  --primary: #684bf8; /* Stage 19: a shade darker than #6e51ff, for 4.5:1 contrast on the page background */
   --primary-2: #e2509c;
   --on-primary: #ffffff;
   --glow-1: #c3b4ff;

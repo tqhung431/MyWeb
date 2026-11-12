@@ -37,7 +37,7 @@ export const COLORS = ["violet", "rose", "amber", "emerald", "sky", "fuchsia"] a
 
 // --- habits -----------------------------------------------------------------------------------
 
-const habitFields = z.object({
+export const habitFields = z.object({
   name: z.string().trim().min(1, "Give it a name").max(40),
   emoji: z
     .string()
@@ -54,6 +54,9 @@ const habitFields = z.object({
     .default(null),
 });
 
+export const habitsQuery = z.object({ weeks: z.coerce.number().int().min(1).max(53).default(12) });
+export const dayBody = z.object({ done: z.boolean() });
+
 async function ownHabit(req: Request) {
   const id = idParam.parse(req.params.id);
   const [habit] = await db
@@ -65,7 +68,7 @@ async function ownHabit(req: Request) {
 }
 
 habitsRouter.get("/", async (req, res) => {
-  const weeks = z.coerce.number().int().min(1).max(53).default(12).parse(req.query.weeks);
+  const { weeks } = habitsQuery.parse(req.query);
   const today = todayIn(timeZoneOf(req));
   // enough history for the chart, and for streaks up to a year
   const since = addDays(today, -Math.max(weeks * 7, 400));
@@ -132,7 +135,7 @@ habitsRouter.delete("/:id", async (req, res) => {
 habitsRouter.put("/:id/days/:day", async (req, res) => {
   const habit = await ownHabit(req);
   const day = String(req.params.day);
-  const { done } = z.object({ done: z.boolean() }).parse(req.body);
+  const { done } = dayBody.parse(req.body);
   const today = todayIn(timeZoneOf(req));
   // A day too early or in the future isn't allowed; the browser may be a day ahead of us around midnight
   if (!isDay(day) || day > addDays(today, 1) || day < addDays(today, -30)) throw new HttpError(400, "You can tick today or up to 30 days back");
@@ -151,12 +154,16 @@ habitsRouter.put("/:id/days/:day", async (req, res) => {
 
 // --- books --------------------------------------------------------------------------------------
 
-const bookFields = z.object({
+export const bookFields = z.object({
   title: z.string().trim().min(1, "Give the book a title").max(200),
   author: z.string().trim().max(120).default(""),
   totalPages: z.number().int().min(1).max(20_000).nullable().default(null),
   status: z.enum(BOOK_STATUSES).default("reading"),
 });
+
+export const bookEdits = bookFields.partial().extend({ currentPage: z.number().int().min(0).max(20_000).optional() });
+export const statsQuery = z.object({ days: z.coerce.number().int().min(7).max(365).default(30) });
+export const pagesBody = z.object({ pages: z.number().int().min(1).max(2000), day: z.string().refine(isDay).optional() });
 
 async function ownBook(req: Request) {
   const id = idParam.parse(req.params.id);
@@ -185,10 +192,7 @@ booksRouter.post("/", async (req, res) => {
 
 booksRouter.patch("/:id", async (req, res) => {
   const book = await ownBook(req);
-  const changes = bookFields
-    .partial()
-    .extend({ currentPage: z.number().int().min(0).max(20_000).optional() })
-    .parse(req.body);
+  const changes = bookEdits.parse(req.body);
   const today = todayIn(timeZoneOf(req));
   const status = changes.status ?? book.status;
   const [updated] = await db
@@ -217,7 +221,7 @@ booksRouter.delete("/:id", async (req, res) => {
 booksRouter.post("/:id/pages", async (req, res) => {
   const book = await ownBook(req);
   const today = todayIn(timeZoneOf(req));
-  const input = z.object({ pages: z.number().int().min(1).max(2000), day: z.string().refine(isDay).optional() }).parse(req.body);
+  const input = pagesBody.parse(req.body);
   const day = input.day ?? today;
   if (day > addDays(today, 1) || day < addDays(today, -30)) throw new HttpError(400, "Log today or up to 30 days back");
 
@@ -243,7 +247,7 @@ booksRouter.post("/:id/pages", async (req, res) => {
 });
 
 booksRouter.get("/stats", async (req, res) => {
-  const days = z.coerce.number().int().min(7).max(365).default(30).parse(req.query.days);
+  const { days } = statsQuery.parse(req.query);
   const today = todayIn(timeZoneOf(req));
   const from = addDays(today, -(days - 1));
   const rows = await db

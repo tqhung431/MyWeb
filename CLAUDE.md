@@ -1,6 +1,6 @@
 # Nook: notes for Claude
 
-Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–18).
+Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–19).
 
 ## The project
 
@@ -29,7 +29,13 @@ Read this first in every session. It carries the context from the sessions that 
   hold-to-walk + `Joystick.tsx`, lighting/soft mist in `Board.tsx`, urns/crates/shrines/merchant (`BLOCKING` things, `buy` action),
   leaderboard (`game_saves.path/level/kills`, `GET /api/games/leaderboard/:game`), light-effects mode, `/games/van-lo/assets` gallery.
   Music charts take `limit/offset/q` (X-Total-Count). Repo licence: MIT (`LICENSE`).
-  Next: Stage 19 (see the learning plan).
+  19: Playwright e2e (`web/e2e`, `npm run e2e`; each test makes its own data; CI runs them through Caddy at https://localhost),
+  Lighthouse (`quality/lighthouse.mjs`, phone settings, all pages ≥ 90; CI perf floor 80), k6 (`quality/k6/load.js`, STRESS=1;
+  built locally with `go install go.k6.io/k6@v1.3.0`, CI uses the grafana/k6 image), OpenAPI from the routes' Zod schemas
+  (`api/src/openapi.ts`, `GET /api/openapi.json`, page `/developers`; test fails if a route is missing). Speed rules: no animated
+  blur behind backdrop-blur cards, CSS inlined (`inlineCss`), reserve space for late content, name prompt opens after first interaction.
+  Measure Lighthouse on a production build (`npm run build`, standalone server), never dev mode. Arcade: 3-2-1 countdown, Space/Enter.
+  Next: Stage 20 (ask the owner; the learning plan's numbered stages are done).
   Original world only: don't copy names/characters/plots from existing novels or films.
   Each stage has an explainer in `docs/stage-N.md`; write one for every new stage and update the README's stage list.
 - Apps: **Chill Corner** (focus timer, generated sounds, tips, achievements), **Music** (uploaded songs

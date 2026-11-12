@@ -221,7 +221,13 @@ cd web && npm install && npm run dev          # 3. website (new terminal)
 docker compose exec db createdb -U nook nook_test
 ```
 
-GitHub Actions runs all tests, plus a full Docker start, on every push.
+**End-to-end, speed and load checks** (Stage 19): `npm run e2e` in `web/` (Playwright, with the dev servers running),
+`npm run lighthouse` in `quality/` (against a production build), `k6 run quality/k6/load.js`. See [docs/stage-19.md](docs/stage-19.md).
+
+**API docs**: open **/developers** on your Nook, or get the OpenAPI document at `/api/openapi.json`.
+
+GitHub Actions runs all of this on every push: unit tests, a full Docker start, then the browser tests,
+Lighthouse and the load test against it.
 
 **AI**: `docker compose up -d ollama-models` starts Ollama and downloads the models (or install
 [Ollama](https://ollama.com) yourself), then set `OLLAMA_URL=http://127.0.0.1:11434` in `api/.env`.
@@ -243,6 +249,8 @@ api/                   the API and the worker (Express, TypeScript)
   src/realtime/        live updates (Socket.IO)
   src/db/, drizzle/    database schema and migrations
 docs/                  one explainer per stage
+quality/               Lighthouse script and the k6 load test (not part of the app)
+web/e2e/               end-to-end tests (Playwright)
 docker-compose.yml     every service, with the "app", "ai" and "monitoring" profiles
 .env.example           every setting for Docker, explained (copy to .env)
 start.cmd, start.sh    1-click start
@@ -274,6 +282,7 @@ stage-1-static/        Stage 1: the plain HTML/CSS/JS version
 16. A real game — Nook Games and Vân Lộ, a cultivation roguelite (own engine: field of view, A*, map generation, seeded saves) ✅ · [docs](docs/stage-16.md)
 17. Vân Lộ grows — six paths, abilities as data, realms up to Nguyên Anh, alchemy and forging, music made with Web Audio ✅ · [docs](docs/stage-17.md)
 18. Vân Lộ comes alive — sprites for each path, hold-to-walk and a joystick, particles and lighting, urns/shrines/merchants, a leaderboard, light effects for older phones ✅ · [docs](docs/stage-18.md)
+19. Quality and speed — Playwright end-to-end tests, Lighthouse 90+ on every page, a k6 load test, OpenAPI docs; a smoother Mini Arcade ✅ · [docs](docs/stage-19.md)
 
 ## Licence
 

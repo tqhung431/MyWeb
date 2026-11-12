@@ -32,7 +32,10 @@ export function MeProvider({ initialUser, children }: { initialUser: User | null
   // When the server's answer changes (after router.refresh()), follow it.
   useEffect(() => setUserState(initialUser), [initialUser]);
 
-  // First visit: ask for a name (unless "Not now" was pressed in this browser session)
+  // First visit: ask for a name (unless "Not now" was pressed in this browser session).
+  // Stage 19: not the moment the page opens, but a little after you first scroll, tap or type. You see the page
+  // first, and the box doesn't land on top of what you were about to click (it also kept phones from showing the
+  // page's real content quickly: Lighthouse counted the box as the "largest content").
   useEffect(() => {
     if (initialUser) return;
     let later = false;
@@ -41,7 +44,19 @@ export function MeProvider({ initialUser, children }: { initialUser: User | null
     } catch {
       // storage blocked: ask
     }
-    if (!later) setPrompt(true);
+    if (later) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const events = ["pointerdown", "keydown", "scroll", "wheel", "touchstart"] as const;
+    const stop = () => events.forEach((e) => window.removeEventListener(e, onFirst));
+    function onFirst() {
+      stop();
+      timer = setTimeout(() => setPrompt(true), 1200);
+    }
+    events.forEach((e) => window.addEventListener(e, onFirst, { once: true, passive: true }));
+    return () => {
+      stop();
+      clearTimeout(timer);
+    };
   }, [initialUser]);
 
   const setUser = useCallback(

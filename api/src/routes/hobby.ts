@@ -47,7 +47,7 @@ const text = (max: number, what: string) =>
     .pipe(z.string().min(1, `Write a ${what}`).max(max, `Keep it under ${max} characters`));
 
 const idParam = z.coerce.number().int().positive();
-const beforeQuery = z.object({ before: z.coerce.number().int().positive().optional() });
+export const beforeQuery = z.object({ before: z.coerce.number().int().positive().optional() });
 
 async function groupBySlug(slug: string) {
   const [group] = await db.select().from(hobbyGroups).where(eq(hobbyGroups.slug, slug));
@@ -111,7 +111,7 @@ hobbyRouter.get("/groups", async (req, res) => {
   res.json(result.rows);
 });
 
-const newGroup = z.object({
+export const newGroup = z.object({
   name: text(40, "group name"),
   emoji: z
     .string()
@@ -222,7 +222,7 @@ hobbyRouter.get("/groups/:slug/posts", async (req, res) => {
   res.json({ posts: rows.slice(0, PAGE).map((p) => ({ ...p, mine: p.author.id === req.user?.id })), more: rows.length > PAGE });
 });
 
-const postBody = z.object({ body: text(4000, "post") });
+export const postBody = z.object({ body: text(4000, "post") });
 
 hobbyRouter.post("/groups/:slug/posts", requireUser, perUser("post-new", 10 * 60 * 1000, 10), async (req, res) => {
   const group = await groupBySlug(String(req.params.slug));
@@ -291,7 +291,7 @@ hobbyRouter.get("/posts/:id/comments", async (req, res) => {
   res.json(rows.map((c) => ({ ...c, mine: c.author.id === req.user?.id })));
 });
 
-const commentBody = z.object({ body: text(1000, "comment") });
+export const commentBody = z.object({ body: text(1000, "comment") });
 
 hobbyRouter.post("/posts/:id/comments", requireUser, perUser("comment-new", 5 * 60 * 1000, 30), async (req, res) => {
   const { post, slug } = await postWithGroup(idParam.parse(req.params.id));
@@ -334,7 +334,7 @@ hobbyRouter.get("/groups/:slug/messages", async (req, res) => {
   res.json({ messages: page.map((m) => ({ ...m, mine: m.author.id === req.user?.id })), more: rows.length > CHAT_PAGE });
 });
 
-const messageBody = z.object({ body: text(1000, "message") });
+export const messageBody = z.object({ body: text(1000, "message") });
 
 // 20 messages per 30 seconds: plenty for a chat, too few for a flood.
 hobbyRouter.post("/groups/:slug/messages", requireUser, perUser("chat", 30_000, 20), async (req, res) => {
