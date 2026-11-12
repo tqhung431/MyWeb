@@ -71,7 +71,7 @@ function Section({ title, groups }: { title: string; groups: Group[] }) {
   return (
     <section>
       <h2 className="mb-3 text-sm font-semibold tracking-wider text-muted uppercase">{title}</h2>
-      <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {groups.map((g) => (
           <li key={g.id}>
             <GroupCard group={g} />

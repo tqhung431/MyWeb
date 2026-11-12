@@ -22,7 +22,7 @@ export function Progress() {
 
   const firstMonday = addDays(mondayOf(data.today), -(WEEKS - 1) * 7);
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {data.habits.map((h) => {
         const done = new Set(h.days);
         const total = h.days.length;

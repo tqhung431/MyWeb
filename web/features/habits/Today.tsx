@@ -122,7 +122,7 @@ export function Today() {
         </div>
       )}
 
-      <ul className="grid gap-4 md:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {habits?.map((h) =>
           editing === h.id ? (
             <li key={h.id} className="md:col-span-2">

@@ -120,7 +120,7 @@ export function GameShell({ gameId }: { gameId: GameId }) {
         <ArrowLeft className="h-4 w-4" aria-hidden="true" /> All games
       </Link>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <Card className="scroll-mt-20 p-3 sm:p-5" ref={board}>
           <header className="mb-3 flex items-center gap-3">
             <span className={cn("inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-br text-2xl", game.accent)} aria-hidden="true">

@@ -12,7 +12,7 @@ export default async function TipsPage() {
   return (
     <section aria-label="Focus tips">
       <p className="mb-4 text-muted">Short ideas to make each session count. Your timer keeps running while you read.</p>
-      <ul className="grid gap-4 md:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {tips.map((tip) => (
           <li key={tip.slug}>
             <TipCard tip={tip} />

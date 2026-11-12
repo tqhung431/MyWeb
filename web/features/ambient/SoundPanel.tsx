@@ -45,7 +45,7 @@ export function SoundPanel() {
         />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" role="group" aria-label="Sounds">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3" role="group" aria-label="Sounds">
         {TRACKS.filter((t) => t.category === category).map((track) => (
           <TrackCard
             key={track.name}

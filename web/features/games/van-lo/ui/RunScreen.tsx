@@ -367,7 +367,7 @@ export function RunScreen({ game, update, dark }: Props) {
   return (
     <div className="flex flex-col gap-3">
       {/* Bars */}
-      <div className="grid gap-2 rounded-3xl border border-border bg-surface p-3 shadow-card backdrop-blur-xl sm:grid-cols-[1fr_auto] sm:items-center sm:p-4">
+      <div className="grid grid-cols-1 gap-2 rounded-3xl border border-border bg-surface p-3 shadow-card backdrop-blur-xl sm:grid-cols-[1fr_auto] sm:items-center sm:p-4">
         <div className="flex flex-col gap-1.5">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-sm">
             <span className="font-bold">
