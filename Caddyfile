@@ -42,6 +42,10 @@
 
 	# Song uploads can be large (Stage 8); Caddy itself sets no limit, the API checks the size.
 
+	# Stage 22: the game server (Nook Arena) is its own program
+	handle /api/arena* {
+		reverse_proxy {$ARENA_UPSTREAM:arena:4100}
+	}
 	handle /api/* {
 		reverse_proxy {$API_UPSTREAM:api:4000}
 	}
@@ -53,9 +57,9 @@
 		X-Content-Type-Options nosniff
 		Referrer-Policy strict-origin-when-cross-origin
 		# Stage 20: no other site may show Nook inside a frame (stops "clickjacking"),
-		# and Nook never asks for the camera, microphone, location or payments
+		# and Nook never asks for the camera, microphone, location or payments (Stage 22: screen sharing only on Nook itself)
 		X-Frame-Options DENY
-		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), display-capture=(self)"
 		-Server
 	}
 }

@@ -12,6 +12,7 @@ export default defineConfig({
       OLLAMA_URL: "http://127.0.0.1:4997", // a fake Ollama (tests/fake-ollama.ts)
       TVMAZE_URL: "http://127.0.0.1:4995/tvmaze", // fake TVmaze and Jikan (tests/fake-watch.ts)
       JIKAN_URL: "http://127.0.0.1:4995/jikan",
+      ADMIN_PASSCODE: "let-me-in-please", // Stage 22: the admin passcode in tests
     },
     fileParallelism: false, // one shared test database: run files one at a time
   },

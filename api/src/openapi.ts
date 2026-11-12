@@ -9,6 +9,7 @@
 
 import { z } from "zod";
 import { boardQuery, newScore } from "./routes/arcade.js";
+import { chessListQuery, nookGameBody, passcodeBody, tvBody, tvEdits } from "./routes/arena.js";
 import { periodQuery } from "./routes/arcadeOnline.js";
 import { chatBody } from "./routes/companion.js";
 import { saveBody } from "./routes/games.js";
@@ -192,6 +193,19 @@ export const ENDPOINTS: Endpoint[] = [
   { method: "put", path: "/api/games/saves/{game}", tag: "Nook Games", summary: "Save a game (up to 200 KB of JSON)", who: "name", body: saveBody },
   { method: "delete", path: "/api/games/saves/{game}", tag: "Nook Games", summary: "Delete a saved game", who: "name" },
   { method: "get", path: "/api/games/leaderboard/{game}", tag: "Nook Games", summary: "Bảng phong vân: the top 20 by level, then kills" },
+
+  // Stage 22: Nook Arena (playing happens on the game server: Socket.IO on /api/arena)
+  { method: "get", path: "/api/admin", tag: "Nook Arena", summary: "Is there an admin passcode, and are you the admin on this browser?" },
+  { method: "post", path: "/api/admin", tag: "Nook Arena", summary: "Become the admin on this browser (the passcode from .env)", who: "name", body: passcodeBody },
+  { method: "delete", path: "/api/admin", tag: "Nook Arena", summary: "Stop being the admin on this browser", who: "name" },
+  { method: "get", path: "/api/tv", tag: "Nook Arena", summary: "Nook TV: the shelves of YouTube videos" },
+  { method: "post", path: "/api/tv", tag: "Nook Arena", summary: "Add a YouTube video or playlist (admin)", who: "name", body: tvBody },
+  { method: "patch", path: "/api/tv/{id}", tag: "Nook Arena", summary: "Rename or move a video (admin)", who: "name", body: tvEdits },
+  { method: "delete", path: "/api/tv/{id}", tag: "Nook Arena", summary: "Remove a video (admin)", who: "name" },
+  { method: "get", path: "/api/chess/games", tag: "Nook Arena", summary: "Recent chess games", query: chessListQuery },
+  { method: "get", path: "/api/chess/games/{id}", tag: "Nook Arena", summary: "One chess game with its moves (PGN)" },
+  { method: "get", path: "/api/chess/leaderboard", tag: "Nook Arena", summary: "Chess ratings (Elo) from live games" },
+  { method: "post", path: "/api/chess/nook", tag: "Nook Arena", summary: "Save a finished game against Nook (checked, no rating change)", who: "name", body: nookGameBody },
 ];
 
 const WHO_TEXT: Record<Who, string> = {

@@ -4,6 +4,8 @@ import type { NextConfig } from "next";
 // 127.0.0.1 rather than "localhost": some computers resolve localhost to IPv6 (::1),
 // but the API only listens on 127.0.0.1.
 const API_URL = process.env.API_URL ?? "http://127.0.0.1:4000";
+// Stage 22: the game server (Nook Arena), a separate program. Caddy sends /api/arena there in Docker.
+const ARENA_URL = process.env.ARENA_URL ?? "http://127.0.0.1:4100";
 
 // Stage 12: the biggest song upload, in MB (the API checks the same number, MAX_UPLOAD_MB).
 const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB ?? 100);
@@ -44,7 +46,10 @@ const nextConfig: NextConfig = {
   //   - other PCs only need to reach port 3000; the API stays private on this computer
   // In Stage 7, Caddy does this job instead.
   async rewrites() {
-    return [{ source: "/api/:path*", destination: `${API_URL}/api/:path*` }];
+    return [
+      { source: "/api/arena", destination: `${ARENA_URL}/api/arena` }, // Stage 22: game server (first: more specific)
+      { source: "/api/:path*", destination: `${API_URL}/api/:path*` },
+    ];
   },
 
   // Stage 3.5 moved Tips inside Chill Corner. Old links keep working with a permanent (308) redirect.

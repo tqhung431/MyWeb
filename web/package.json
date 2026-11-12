@@ -19,6 +19,7 @@
     "@opentelemetry/sdk-metrics": "^2.12.1",
     "@opentelemetry/sdk-trace-base": "^2.12.1",
     "@vercel/otel": "^2.3.0",
+    "chess.js": "^1.4.0",
     "clsx": "^2.1.1",
     "lucide-react": "^1.71.0",
     "next": "16.4.6",

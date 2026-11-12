@@ -5,7 +5,7 @@
 // (tests/apps.test.ts fails if a "live" app has no page.)
 
 import type { LucideIcon } from "lucide-react";
-import { Clapperboard, Disc3, Gamepad2, ListChecks, Moon, Mountain, Sparkles, Swords, Users } from "lucide-react";
+import { Clapperboard, Crown, Disc3, Gamepad2, ListChecks, Moon, Mountain, Sparkles, Swords, Tv, Users } from "lucide-react";
 
 import { tx } from "@/lib/i18n/core";
 // Stage 21: names and labels are wrapped in tx() so the translation test finds them; shown with t(app.name).
@@ -132,6 +132,37 @@ export const APPS: AppInfo[] = [
     links: [
       { href: "/arcade-online", label: tx("Play") },
       { href: "/arcade-online/leaderboard", label: tx("Leaderboard") },
+    ],
+  },
+  {
+    id: "arena",
+    name: tx("Nook Arena"),
+    shortName: tx("Arena"),
+    tagline: tx("Live chess and Listen Together, on Nook's own game server"),
+    href: "/arena",
+    icon: Crown,
+    accent: "from-indigo-500 to-violet-600",
+    status: "live",
+    phase: "Stage 22",
+    links: [
+      { href: "/arena", label: tx("Play") },
+      { href: "/arena/chess", label: tx("Chess") },
+      { href: "/arena/listen", label: tx("Listen Together") },
+    ],
+  },
+  {
+    id: "tv",
+    name: tx("Nook TV"),
+    shortName: tx("TV"),
+    tagline: tx("YouTube picks from the admin, and live screen shares"),
+    href: "/tv",
+    icon: Tv,
+    accent: "from-red-500 to-rose-600",
+    status: "live",
+    phase: "Stage 22",
+    links: [
+      { href: "/tv", label: tx("Watch") },
+      { href: "/tv/live", label: tx("Live") },
     ],
   },
   {

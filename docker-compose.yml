@@ -91,6 +91,8 @@ services:
       # Stage 20: Cloudflare Access, for the "tunnel" profile (docs/stage-20.md). Empty = the tunnel lets nobody in.
       CF_ACCESS_TEAM_DOMAIN: ${CF_ACCESS_TEAM_DOMAIN:-}
       CF_ACCESS_AUD: ${CF_ACCESS_AUD:-}
+      # Stage 22: the passcode that makes someone Nook's admin (Nook TV). Empty = nobody can be admin.
+      ADMIN_PASSCODE: ${ADMIN_PASSCODE:-}
     volumes:
       - media-data:/app/media # uploaded songs and their covers
       - ./music-import:/import:ro # songs to import: docker compose exec api node dist/music/import.js /import
@@ -114,6 +116,26 @@ services:
       OTEL_SERVICE_NAME: nook-worker
     depends_on:
       api: { condition: service_healthy } # the API runs the database migrations first
+    restart: unless-stopped
+
+  # Stage 22: the game server (chess, Listen Together, Nook TV screen share). Same code as the API, its own program,
+  # so a busy game never slows down the rest of Nook. Caddy sends /api/arena here.
+  arena:
+    profiles: [app]
+    build: ./api
+    image: nook-api
+    command: ["node", "--import", "./dist/telemetry.js", "dist/arena.js"]
+    environment:
+      <<: *api-env
+      OTEL_SERVICE_NAME: nook-arena
+      ARENA_PORT: "4100"
+    depends_on:
+      api: { condition: service_healthy } # the API runs the database migrations first
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4100/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      start_period: 10s
+      retries: 5
     restart: unless-stopped
 
   web:
@@ -150,7 +172,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data # its certificates, incl. the local certificate authority
       - caddy-config:/config
-    depends_on: [web, api]
+    depends_on: [web, api, arena]
     restart: unless-stopped
 
   # --- Away from home (Stage 20) ----------------------------------------------------

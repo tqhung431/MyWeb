@@ -174,8 +174,8 @@ were running, stop them with `docker compose --profile ai --profile monitoring d
 ```
                 ┌──────────────────────────── docker compose ─────────────────────────────┐
 Browsers ──► caddy ──► web (Next.js) ──► api (+ live updates) ──► db (PostgreSQL + pgvector)
- (:80, :443)    └── /api/* ─────────────►  │  worker ───────────► valkey
-                                           └──► ollama (AI, profile "ai")
+ (:80, :443)    ├── /api/* ─────────────►  │  worker ───────────► valkey
+                └── /api/arena ──► arena (game server)  └──► ollama (AI, profile "ai")
                 every service ── traces + metrics ──► otel-lgtm / Grafana (profile "monitoring")
 ```
 
@@ -185,6 +185,7 @@ Browsers ──► caddy ──► web (Next.js) ──► api (+ live updates) 
 | **web** | yes | The website (Next.js + React) |
 | **api** | yes | The data and the rules: names, timer history, songs, charts, Hobby Hub, live updates, the AI chat. Updates the database when it starts |
 | **worker** | yes | Background jobs: achievements, the daily clean-up of old data, preparing songs and tips for the AI |
+| **arena** | yes | Stage 22: the game server for Nook Arena (live chess, Listen Together) and Nook TV's screen sharing. Same code as the API, its own program, so games never slow the rest down |
 | **db** | yes | PostgreSQL: where everything is stored; pgvector lets the AI search by meaning |
 | **valkey** | yes | Fast memory store: cache, rate limits, the job queue, live updates across services |
 | **ollama** | AI only | Runs the AI models on your PC |
@@ -224,6 +225,7 @@ cd api && cp .env.example .env && npm install # 2. API: api/.env's DATABASE_URL 
 npm run db:migrate && npm run db:seed         #    same password as POSTGRES_PASSWORD (default: nook)
 npm run dev                                   #    http://localhost:4000/health
 npm run worker                                #    background jobs (new terminal, in api/)
+npm run arena                                 #    game server, port 4100 (new terminal, in api/)
 
 cd web && npm install && npm run dev          # 3. website (new terminal)
                                               #    http://localhost:3000
@@ -373,6 +375,7 @@ https://<random-name>.trycloudflare.com
 19. Quality and speed — Playwright end-to-end tests, Lighthouse 90+ on every page, a k6 load test, OpenAPI docs; a smoother Mini Arcade ✅ · [docs](docs/stage-19.md)
 20. Going out — Nook away from home, safely: Tailscale, or a Cloudflare tunnel behind Cloudflare Access (checked by Nook itself); firewall rules ✅ · [docs](docs/stage-20.md)
 21. Hobby Hub gets personal (private chats, pictures in chats, joining that matters, unread badges) and Nook in Vietnamese, with a Settings page ✅ · [docs](docs/stage-21.md)
+22. Nook Arena — a game server of its own: live chess (clocks, ratings, play Nook the computer), Listen Together, and Nook TV (YouTube shelves chosen by the admin, live screen sharing) ✅ · [docs](docs/stage-22.md)
 
 ## Licence
 

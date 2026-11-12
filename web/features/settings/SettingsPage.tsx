@@ -1,14 +1,19 @@
 "use client";
 
-// Stage 21: Settings: language, light or dark, and the colour theme.
+// Stage 21: Settings: language, light or dark, and the colour theme. Stage 22: the admin passcode.
 // Language is a cookie (the server renders pages in it); light/dark and colours stay in this browser.
 
-import { Check } from "lucide-react";
+import { Check, ShieldCheck } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { ModeSwitch, PalettePicker } from "@/features/theme/ThemeSwitcher";
 import { LANGS } from "@/lib/i18n/core";
 import { saveLang, useLang, useT } from "@/lib/i18n/I18nProvider";
 import { cn } from "@/lib/cn";
+import { useMe } from "@/features/me/MeProvider";
+import { becomeAdmin, getAdmin, stopAdmin, type AdminStatus } from "@/lib/api/arena";
+import { ApiError } from "@/lib/api/client";
 
 export function SettingsPage() {
   const t = useT();
@@ -60,6 +65,74 @@ export function SettingsPage() {
         <CardHeader title={t("Colours")} subtitle={t("Six colour themes, each with a light and a dark look.")} />
         <PalettePicker />
       </Card>
+
+      <AdminCard />
     </div>
+  );
+}
+
+// Stage 22: Nook's admin (chooses what's on Nook TV, can share a screen). Shown only when the owner set
+// ADMIN_PASSCODE in .env. Being admin is remembered on this browser only.
+function AdminCard() {
+  const t = useT();
+  const { user } = useMe();
+  const [status, setStatus] = useState<AdminStatus | null>(null);
+  const [passcode, setPasscode] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    getAdmin().then(setStatus, () => {});
+  }, [user?.id]);
+  if (!status?.enabled) return null;
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      setStatus(await becomeAdmin(passcode));
+      setPasscode("");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("That didn't work"));
+    }
+    setBusy(false);
+  };
+
+  return (
+    <Card id="admin">
+      <CardHeader title={t("Admin")} subtitle={t("The admin chooses the videos on Nook TV and can share a screen with everyone.")} />
+      {status.isAdmin ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="flex flex-1 items-center gap-2 text-sm font-semibold">
+            <ShieldCheck className="h-5 w-5 text-emerald-500" aria-hidden="true" /> {t("You're the admin on this browser.")}
+          </p>
+          <Button variant="secondary" size="sm" onClick={() => stopAdmin().then(setStatus, () => {})}>
+            {t("Stop being admin")}
+          </Button>
+        </div>
+      ) : !user ? (
+        <p className="text-sm text-muted">{t("Pick a name first (top right), then enter the passcode.")}</p>
+      ) : (
+        <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row">
+          <input
+            type="password"
+            value={passcode}
+            onChange={(e) => setPasscode(e.target.value)}
+            placeholder={t("Admin passcode")}
+            aria-label={t("Admin passcode")}
+            autoComplete="off"
+            className="h-11 min-w-0 flex-1 rounded-2xl border border-border bg-surface-strong/70 px-3 focus:border-primary focus:outline-none"
+          />
+          <Button type="submit" variant="primary" disabled={!passcode || busy}>
+            {t("Become admin")}
+          </Button>
+        </form>
+      )}
+      {error && (
+        <p role="alert" className="mt-2 text-sm text-rose-600 dark:text-rose-300">
+          {error}
+        </p>
+      )}
+    </Card>
   );
 }

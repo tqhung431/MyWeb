@@ -120,6 +120,13 @@
       "when": 1794479813344,
       "tag": "0016_private_chats",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794501210773,
+      "tag": "0017_nook_arena",
+      "breakpoints": true
     }
   ]
 }

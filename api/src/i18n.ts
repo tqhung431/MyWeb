@@ -21,6 +21,18 @@ export function langOf(req: Request): Lang {
 const VI: Record<string, string> = {
   // People and access
   "Pick a name first": "Hãy chọn tên trước",
+  "Enter the passcode": "Hãy nhập mã",
+  "There's no admin passcode on this Nook": "Nook này chưa đặt mã quản trị",
+  "That passcode isn't right": "Mã không đúng",
+  "Only the admin can do this": "Chỉ quản trị viên mới làm được việc này",
+  "Paste a YouTube link": "Hãy dán một liên kết YouTube",
+  "Pick a shelf": "Hãy chọn một kệ",
+  "That isn't a YouTube video or playlist link": "Đó không phải liên kết video hay danh sách phát YouTube",
+  "That video is already on Nook TV": "Video này đã có trên Nook TV",
+  "Video not found": "Không tìm thấy video",
+  "Game not found": "Không tìm thấy ván cờ",
+  "Those moves aren't a valid chess game": "Các nước đi này không hợp lệ",
+  "That game isn't over yet": "Ván cờ chưa kết thúc",
   "Enter a name": "Hãy nhập tên",
   "Use 30 characters or fewer": "Tối đa 30 ký tự",
   "Someone here is already called “{name}”. Try adding an initial or an emoji.": "Ở đây đã có người tên “{name}”. Thử thêm một chữ cái hoặc một emoji.",
