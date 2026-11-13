@@ -141,3 +141,12 @@ export type AlleyTick = {
 };
 export type AlleyBoardRow = { rank: number; name: string; games: number; wins: number; me: boolean };
 export const getAlleyBoard = () => apiFetch<AlleyBoardRow[]>("/api/alley/leaderboard");
+
+// --- Giữ Làng (Stage 24) -----------------------------------------------------------------------
+export type VillageLobbyState = { hostId: string | null; map: "riverside" | "terraces" | "festival"; endless: boolean; seats: Person[]; playing: boolean; speed: 1 | 2; paused: boolean };
+export type VillageRoomState = { code: string; kind: "village"; members: (Person & { online: boolean })[]; village: VillageLobbyState };
+export type OpenVillageRoom = { code: string; kind: "village"; host: string | null; players: number; map: string; status: "waiting" | "playing"; people: number };
+export type VillageBoardRow = { rank: number; name: string; score: number; waves: number; me: boolean };
+export const getVillageBoard = (map: string) => apiFetch<VillageBoardRow[]>(`/api/village/leaderboard?map=${map}`);
+export const saveVillageScore = (body: { map: string; waves: number; rice: number; won: boolean; endless: boolean }) =>
+  apiFetch<{ score: number }>("/api/village/scores", { method: "POST", body: JSON.stringify(body) });

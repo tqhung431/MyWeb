@@ -24,13 +24,14 @@ import { Server, type Socket } from "socket.io";
 import { z } from "zod";
 import { COOKIE_NAME, isAdminToken, userFromToken } from "../auth/sessions.js";
 import { db } from "../db/client.js";
-import { arenaRatings, chessGames, songs } from "../db/schema.js";
+import { arenaRatings, chessGames, songs, villageScores } from "../db/schema.js";
 import { isAllowedOrigin } from "../middleware/security.js";
 import { publishActivity } from "../realtime/emit.js";
 import * as C from "./chess-game.js";
 import * as L from "./listen.js";
 import * as A from "./alley.js";
 import * as AR from "./alley-room.js";
+import * as V from "./village.js";
 
 type Person = { id: string; name: string };
 type Member = { person: Person; sockets: Set<string> };
@@ -47,7 +48,20 @@ type ChessRoom = Base & {
 };
 type ListenRoomState = Base & { kind: "listen"; listen: L.ListenRoom };
 type AlleyRoom = Base & { kind: "alley" } & AR.AlleyLobby;
-type Room = ChessRoom | ListenRoomState | AlleyRoom;
+// Stage 24: Giữ Làng co-op (1–2 people on one map; each builds on their own side)
+type VillageRoom = Base & {
+  kind: "village";
+  hostId: string | null;
+  map: V.MapId;
+  endless: boolean;
+  seats: Person[];
+  game: V.VillageGame | null;
+  speed: 1 | 2;
+  paused: boolean;
+  saved: boolean;
+  lastStep: number;
+};
+type Room = ChessRoom | ListenRoomState | AlleyRoom | VillageRoom;
 
 const rooms = new Map<string, Room>();
 let io: Server | null = null;
@@ -101,6 +115,10 @@ function roomSummary(r: Room) {
       people,
     };
   }
+  if (r.kind === "village") {
+    const host = r.seats.find((s) => s.id === r.hostId)?.name ?? null;
+    return { code: r.code, kind: r.kind, host, players: r.seats.length, map: r.map, status: r.game ? "playing" : "waiting", people };
+  }
   if (r.kind === "alley") {
     const host = r.seats.find((s) => s.id === r.hostId)?.name ?? null;
     return { code: r.code, kind: r.kind, host, players: r.seats.length, bots: r.bots, map: r.map, status: r.game ? "playing" : "waiting", people };
@@ -137,6 +155,11 @@ async function sendState(r: Room) {
     io.to(roomName(r.code)).emit("room:state", { ...base, alley: AR.lobbyView(r) });
     return;
   }
+  if (r.kind === "village") {
+    const village = { hostId: r.hostId, map: r.map, endless: r.endless, seats: r.seats, playing: !!r.game, speed: r.speed, paused: r.paused };
+    io.to(roomName(r.code)).emit("room:state", { ...base, village });
+    return;
+  }
   // Listen Together: each person sees their own votes
   for (const s of await io.in(roomName(r.code)).fetchSockets()) {
     s.emit("room:state", { ...base, listen: L.listenView(r.listen, (s.data as SocketData).person?.id ?? null, now()) });
@@ -163,6 +186,16 @@ function leave(r: Room, socket: Socket) {
   if (!m) return;
   m.sockets.delete(socket.id);
   if (m.sockets.size === 0) {
+    if (r.kind === "village") {
+      // A tower-defense game carries on without you; before it starts, your seat is freed
+      if (!r.game) {
+        r.seats = r.seats.filter((s) => s.id !== p!.id);
+        if (r.hostId === p!.id) r.hostId = r.seats[0]?.id ?? null;
+        r.members.delete(p!.id);
+      }
+      if ([...r.members.values()].every((x) => x.sockets.size === 0)) r.emptySince = now();
+      return;
+    }
     if (r.kind === "alley") {
       const seated = r.seats.some((s) => s.id === p!.id);
       if (seated && r.game) AR.setAway(r, p!.id, true); // a bot plays for you until you're back
@@ -340,7 +373,7 @@ export function attachArena(http: HttpServer): Server {
     socket.on("time", (_raw: unknown, ack: unknown) => safeAck(ack)({ ok: true, now: now() }));
 
     socket.on("arena:rooms", (raw: unknown, ack: unknown) => {
-      const kind = z.object({ kind: z.enum(["chess", "listen", "alley"]) }).safeParse(raw);
+      const kind = z.object({ kind: z.enum(["chess", "listen", "alley", "village"]) }).safeParse(raw);
       safeAck(ack)({ ok: kind.success, rooms: kind.success ? openRooms(kind.data.kind) : [] });
     });
 
@@ -352,6 +385,10 @@ export function attachArena(http: HttpServer): Server {
       mine.add(r.code);
       if (r.kind === "chess" && data.person) seat(r, data.person);
       if (r.kind === "alley" && data.person) AR.sit(r, data.person);
+      if (r.kind === "village" && data.person && !r.game && r.seats.length < 2 && !r.seats.some((s) => s.id === data.person!.id)) {
+        r.seats.push(data.person);
+        r.hostId ??= data.person.id;
+      }
       ack({ ok: true, kind: r.kind });
       if (r.kind === "chess") await afterChessChange(r);
       else await sendState(r);
@@ -533,6 +570,88 @@ export function attachArena(http: HttpServer): Server {
       if (r?.kind === "alley" && r.game) A.drop(r.game, data.person.id, now());
     });
 
+    // Giữ Làng co-op (Stage 24)
+    socket.on("village:create", (raw: unknown, a: unknown) => {
+      const ack = safeAck(a);
+      const p = need(ack);
+      if (!p) return;
+      const input = z.object({ map: z.enum(V.MAP_IDS as [V.MapId, ...V.MapId[]]).default("riverside") }).safeParse(raw ?? {});
+      const code = newCode();
+      rooms.set(code, {
+        kind: "village",
+        code,
+        createdAt: now(),
+        members: new Map(),
+        emptySince: now(),
+        hostId: p.id,
+        map: input.success ? input.data.map : "riverside",
+        endless: false,
+        seats: [],
+        game: null,
+        speed: 1,
+        paused: false,
+        saved: false,
+        lastStep: 0,
+      });
+      ack({ ok: true, code });
+      announceRooms("village");
+    });
+    const villageAction = (event: string, schema: z.ZodType, fn: (r: VillageRoom, p: Person, input: any) => string | null | void) =>
+      socket.on(event, async (raw: unknown, a: unknown) => {
+        const ack = safeAck(a);
+        const p = need(ack);
+        if (!p) return;
+        const r = roomFor(raw, ack, "village") as VillageRoom | null;
+        if (!r) return;
+        const input = schema.safeParse(raw);
+        if (!input.success) return ack({ ok: false, error: "Invalid request" });
+        const error = fn(r, p, input.data);
+        ack(error ? { ok: false, error } : { ok: true });
+        if (event !== "village:act") {
+          await sendState(r);
+          announceRooms("village");
+        }
+        if (r.game) emitVillage(r, false);
+      });
+    const hostOnly = (r: VillageRoom, p: Person) => (p.id === r.hostId ? null : "Only the host can do this");
+    villageAction("village:settings", codeIn.extend({ map: z.enum(V.MAP_IDS as [V.MapId, ...V.MapId[]]).optional(), endless: z.boolean().optional() }), (r, p, i) => {
+      if (r.game) return "The game has started";
+      const no = hostOnly(r, p);
+      if (no) return no;
+      if (i.map) r.map = i.map;
+      if (i.endless !== undefined) r.endless = i.endless;
+    });
+    villageAction("village:start", codeIn, (r, p) => {
+      const no = hostOnly(r, p) ?? (r.game ? "The game has started" : null);
+      if (no) return no;
+      const two = r.seats.length > 1;
+      r.game = V.newVillage(r.map, r.seats.map((s, i) => ({ ...s, side: two ? (i as 0 | 1) : null })), r.endless);
+      r.saved = false;
+      r.speed = 1;
+      r.paused = false;
+      r.lastStep = now();
+    });
+    const actionIn = z.discriminatedUnion("a", [
+      z.object({ a: z.literal("build"), tx: z.number().int().min(0).max(V.COLS - 1), ty: z.number().int().min(0).max(V.ROWS - 1), kind: z.enum(V.TOWER_KINDS as [V.TowerKind, ...V.TowerKind[]]) }),
+      z.object({ a: z.literal("upgrade"), id: z.number().int().positive(), branch: z.enum(["a", "b"]).optional() }),
+      z.object({ a: z.literal("sell"), id: z.number().int().positive() }),
+      z.object({ a: z.literal("next") }),
+    ]);
+    villageAction("village:act", codeIn.extend({ action: actionIn }), (r, p, i) => (r.game ? V.act(r.game, p.id, i.action) : "The game hasn't started"));
+    villageAction("village:speed", codeIn.extend({ speed: z.union([z.literal(1), z.literal(2)]).optional(), paused: z.boolean().optional() }), (r, p, i) => {
+      const no = hostOnly(r, p);
+      if (no) return no;
+      if (i.speed) r.speed = i.speed;
+      if (i.paused !== undefined) r.paused = i.paused;
+    });
+    villageAction("village:again", codeIn, (r, p) => {
+      const no = hostOnly(r, p);
+      if (no) return no;
+      if (r.game && r.game.phase !== "won" && r.game.phase !== "lost") return "The game isn't over";
+      r.game = null;
+      r.seats = r.seats.filter((s) => r.members.get(s.id)?.sockets.size);
+    });
+
     // Nook TV screen share: the admin's browser sends video straight to each viewer (WebRTC);
     // the server only passes their connection messages along.
     socket.on("tv:status", (_raw: unknown, a: unknown) => safeAck(a)({ ok: true, live: !!tv.sharer, by: tv.sharer?.name ?? null }));
@@ -631,6 +750,7 @@ function emitAlley(r: AlleyRoom, volatile = true) {
 
 export async function alleyTick() {
   const t = now();
+  for (const r of rooms.values()) if (r.kind === "village") await villageStep(r, t);
   for (const r of rooms.values()) {
     if (r.kind !== "alley" || !r.game || r.game.phase === "matchEnd") continue;
     const dt = Math.min(t - r.lastStep, 200); // a slow moment never teleports anyone
@@ -662,4 +782,34 @@ async function saveAlley(r: AlleyRoom) {
 export function alleyGameForTests(code: string) {
   const r = rooms.get(code);
   return r?.kind === "alley" ? r.game : null;
+}
+
+// --- Giữ Làng (Stage 24) -------------------------------------------------------------------------
+
+function emitVillage(r: VillageRoom, volatile = true) {
+  if (!io || !r.game) return;
+  const view = { code: r.code, speed: r.speed, paused: r.paused, ...V.villageView(r.game) };
+  (volatile ? io.to(roomName(r.code)).volatile : io.to(roomName(r.code))).emit("village:tick", view);
+}
+
+async function villageStep(r: VillageRoom, t: number) {
+  if (!r.game || r.game.phase === "won" || r.game.phase === "lost") return;
+  const dt = Math.min(t - r.lastStep, 200);
+  r.lastStep = t;
+  if (!r.paused) V.stepVillage(r.game, dt * r.speed);
+  const phase = r.game.phase as V.VillageGame["phase"];
+  if (phase === "won" || phase === "lost") {
+    emitVillage(r, false);
+    if (!r.saved) {
+      r.saved = true;
+      const g = r.game;
+      await db
+        .insert(villageScores)
+        .values(r.seats.map((s) => ({ userId: s.id, map: g.map, mode: "coop" as const, endless: g.endless, waves: g.cleared, rice: g.rice, won: phase === "won", score: V.scoreOf(g) })))
+        .catch((e) => console.error("arena: saving Giữ Làng failed", e));
+    }
+    await sendState(r);
+    return;
+  }
+  emitVillage(r, r.game.events.length === 0);
 }

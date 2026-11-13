@@ -557,6 +557,26 @@ export const arenaRatings = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.game] }), index("arena_ratings_game_idx").on(t.game, t.rating)],
 );
 
+// Stage 24: Giữ Làng (Keep the Village) results, per map. Solo games are sent by the browser; co-op by the game server.
+export const villageScores = pgTable(
+  "village_scores",
+  {
+    id: serial("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    map: text("map").notNull(),
+    mode: text("mode", { enum: ["solo", "coop"] }).notNull(),
+    endless: boolean("endless").notNull().default(false),
+    waves: integer("waves").notNull(),
+    rice: integer("rice").notNull(),
+    won: boolean("won").notNull(),
+    score: integer("score").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("village_scores_map_idx").on(t.map, t.score), index("village_scores_user_idx").on(t.userId)],
+);
+
 // Nook TV: YouTube videos and playlists the admin chose, on shelves
 export const tvVideos = pgTable(
   "tv_videos",

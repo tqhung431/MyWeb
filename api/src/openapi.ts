@@ -9,7 +9,7 @@
 
 import { z } from "zod";
 import { boardQuery, newScore } from "./routes/arcade.js";
-import { chessListQuery, nookGameBody, passcodeBody, tvBody, tvEdits } from "./routes/arena.js";
+import { chessListQuery, nookGameBody, passcodeBody, tvBody, tvEdits, villageBoardQuery, villageScoreBody } from "./routes/arena.js";
 import { periodQuery } from "./routes/arcadeOnline.js";
 import { chatBody } from "./routes/companion.js";
 import { saveBody } from "./routes/games.js";
@@ -207,6 +207,8 @@ export const ENDPOINTS: Endpoint[] = [
   { method: "get", path: "/api/chess/leaderboard", tag: "Nook Arena", summary: "Chess ratings (Elo) from live games" },
   { method: "post", path: "/api/chess/nook", tag: "Nook Arena", summary: "Save a finished game against Nook (checked, no rating change)", who: "name", body: nookGameBody },
   { method: "get", path: "/api/alley/leaderboard", tag: "Nook Arena", summary: "Ngõ Pháo: most matches won" },
+  { method: "post", path: "/api/village/scores", tag: "Nook Arena", summary: "Giữ Làng: save a finished solo game", who: "name", body: villageScoreBody },
+  { method: "get", path: "/api/village/leaderboard", tag: "Nook Arena", summary: "Giữ Làng: best score per person on a map", query: villageBoardQuery },
 ];
 
 const WHO_TEXT: Record<Who, string> = {

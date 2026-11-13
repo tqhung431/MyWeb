@@ -18,23 +18,27 @@
 // GET    /api/chess/games/:id       one game, with its moves (PGN) for the replay
 // GET    /api/chess/leaderboard     ratings (Elo), live games only
 // GET    /api/alley/leaderboard     Stage 23: Ngõ Pháo, most matches won
+// POST   /api/village/scores  { map, waves, rice, won, endless }   Stage 24: a finished solo Giữ Làng game
+// GET    /api/village/leaderboard?map=riverside                    best score per person on a map
 // POST   /api/chess/nook  { pgn, level, color }   save a finished game against Nook (the computer)
 
 import { timingSafeEqual } from "node:crypto";
-import { asc, desc, eq, or } from "drizzle-orm";
+import { and, asc, desc, eq, max, or } from "drizzle-orm";
 import { Router, type Request } from "express";
 import { Chess } from "chess.js";
 import { z } from "zod";
 import { COOKIE_NAME, isAdminToken, setAdminToken } from "../auth/sessions.js";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
-import { arenaRatings, chessGames, tvVideos, users } from "../db/schema.js";
+import { arenaRatings, chessGames, tvVideos, users, villageScores } from "../db/schema.js";
+import { MAP_IDS as VILLAGE_MAPS, WAVES } from "../arena/village.js";
 import { requireUser } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
 import { rateLimit } from "../middleware/security.js";
 
 export const adminRouter = Router();
 export const alleyRouter = Router(); // Stage 23: Ngõ Pháo
+export const villageRouter = Router(); // Stage 24: Giữ Làng
 export const tvRouter = Router();
 export const chessRouter = Router();
 
@@ -262,6 +266,45 @@ alleyRouter.get("/leaderboard", async (req, res) => {
     .innerJoin(users, eq(users.id, arenaRatings.userId))
     .where(eq(arenaRatings.game, "alley"))
     .orderBy(desc(arenaRatings.wins), asc(arenaRatings.games))
+    .limit(20);
+  res.json(rows.map(({ userId, ...r }, i) => ({ rank: i + 1, ...r, me: userId === req.user?.id })));
+});
+
+// --- Giữ Làng (Stage 24) -----------------------------------------------------------------------
+
+const villageMap = z.enum(VILLAGE_MAPS as [string, ...string[]]);
+export const villageScoreBody = z.object({
+  map: villageMap,
+  waves: z.number().int().min(0).max(1000),
+  rice: z.number().int().min(0).max(20),
+  won: z.boolean(),
+  endless: z.boolean().default(false),
+});
+export const villageBoardQuery = z.object({ map: villageMap.default("riverside") });
+/** The same formula as the game's scoreOf() */
+export const villageScore = (waves: number, rice: number, won: boolean) => waves * 100 + rice * 25 + (won ? 500 : 0);
+
+const villageSaves = rateLimit({ name: "village-score", windowMs: 60_000, max: 10, key: (req) => `user:${req.user?.id ?? req.ip}` });
+
+// Solo games run in the browser, so the browser reports the result (like Mini Arcade scores): fine on a home network.
+villageRouter.post("/scores", requireUser, villageSaves, async (req, res) => {
+  const b = villageScoreBody.parse(req.body);
+  if (b.won && (b.endless || b.waves < WAVES)) throw new HttpError(400, "That result isn't possible");
+  if (!b.endless && b.waves > WAVES) throw new HttpError(400, "That result isn't possible");
+  const score = villageScore(b.waves, b.rice, b.won);
+  await db.insert(villageScores).values({ userId: req.user!.id, map: b.map, mode: "solo", endless: b.endless, waves: b.waves, rice: b.rice, won: b.won, score });
+  res.status(201).json({ score });
+});
+
+villageRouter.get("/leaderboard", async (req, res) => {
+  const { map } = villageBoardQuery.parse(req.query);
+  const rows = await db
+    .select({ userId: villageScores.userId, name: users.name, score: max(villageScores.score), waves: max(villageScores.waves) })
+    .from(villageScores)
+    .innerJoin(users, eq(users.id, villageScores.userId))
+    .where(and(eq(villageScores.map, map)))
+    .groupBy(villageScores.userId, users.name)
+    .orderBy(desc(max(villageScores.score)))
     .limit(20);
   res.json(rows.map(({ userId, ...r }, i) => ({ rank: i + 1, ...r, me: userId === req.user?.id })));
 });

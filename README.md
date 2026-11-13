@@ -185,7 +185,7 @@ Browsers ──► caddy ──► web (Next.js) ──► api (+ live updates) 
 | **web** | yes | The website (Next.js + React) |
 | **api** | yes | The data and the rules: names, timer history, songs, charts, Hobby Hub, live updates, the AI chat. Updates the database when it starts |
 | **worker** | yes | Background jobs: achievements, the daily clean-up of old data, preparing songs and tips for the AI |
-| **arena** | yes | Stage 22: the game server for Nook Arena (live chess, Ngõ Pháo, Listen Together) and Nook TV's screen sharing. Same code as the API, its own program, so games never slow the rest down |
+| **arena** | yes | Stage 22: the game server for Nook Arena (live chess, Ngõ Pháo, Giữ Làng co-op, Listen Together) and Nook TV's screen sharing. Same code as the API, its own program, so games never slow the rest down |
 | **db** | yes | PostgreSQL: where everything is stored; pgvector lets the AI search by meaning |
 | **valkey** | yes | Fast memory store: cache, rate limits, the job queue, live updates across services |
 | **ollama** | AI only | Runs the AI models on your PC |
@@ -377,6 +377,7 @@ https://<random-name>.trycloudflare.com
 21. Hobby Hub gets personal (private chats, pictures in chats, joining that matters, unread badges) and Nook in Vietnamese, with a Settings page ✅ · [docs](docs/stage-21.md)
 22. Nook Arena — a game server of its own: live chess (clocks, ratings, play Nook the computer), Listen Together, and Nook TV (YouTube shelves chosen by the admin, live screen sharing) ✅ · [docs](docs/stage-22.md)
 23. Ngõ Pháo (Firecracker Alley) — a real-time party maze for 2–4 with bots, run by the game server 20 times a second and drawn with PixiJS ✅ · [docs](docs/stage-23.md)
+24. Giữ Làng (Keep the Village) — tower defense: 5 defenders with two upgrade paths, 3 maps × 30 waves or endless, solo in the browser (saved between waves) or co-op for two on the game server ✅ · [docs](docs/stage-24.md)
 
 ## Licence
 

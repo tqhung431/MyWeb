@@ -346,3 +346,51 @@ describe("Ngõ Pháo over the game server", () => {
     expect((await ask(a, "alley:again", { code })).ok).toBe(true);
   });
 });
+
+describe("Giữ Làng (Stage 24)", () => {
+  it("two people play co-op on the game server, each on their own side", async () => {
+    const ann = await person("Ann");
+    const bou = await person("Bou");
+    const a = await socketFor(ann.cookie);
+    const b = await socketFor(bou.cookie);
+    const { code } = await ask(a, "village:create", { map: "terraces" });
+    await ask(a, "room:join", { code });
+    const both = stateWhere(a, (st) => st.village?.seats.length === 2);
+    await ask(b, "room:join", { code });
+    expect((await both).village).toMatchObject({ hostId: ann.id, map: "terraces", playing: false });
+    expect((await ask(b, "village:start", { code })).error).toBe("Only the host can do this");
+
+    const first = new Promise<any>((r) => a.once("village:tick", r)); // eslint-disable-line @typescript-eslint/no-explicit-any
+    expect((await ask(a, "village:start", { code })).ok).toBe(true);
+    const v = await first;
+    expect(v.players.map((p: { name: string; side: number }) => [p.name, p.side])).toEqual([
+      ["Ann", 0],
+      ["Bou", 1],
+    ]);
+    expect(v.coins).toEqual({ [ann.id]: 110, [bou.id]: 110 });
+
+    const { buildSpots } = await import("../src/arena/village.js");
+    const spots = buildSpots("terraces");
+    const bouSpot = spots.find((s) => s.side === 1)!;
+    expect((await ask(a, "village:act", { code, action: { a: "build", tx: bouSpot.tx, ty: bouSpot.ty, kind: "archer" } })).error).toBe("That's your partner's side");
+    expect((await ask(b, "village:act", { code, action: { a: "build", tx: bouSpot.tx, ty: bouSpot.ty, kind: "archer" } })).ok).toBe(true);
+    expect((await ask(a, "village:act", { code, action: { a: "next" } })).ok).toBe(true);
+    const waving = new Promise<any>((r) => a.on("village:tick", (x) => x.phase === "wave" && x.spirits.length > 0 && r(x))); // eslint-disable-line @typescript-eslint/no-explicit-any
+    clock += 600;
+    await alleyTick();
+    const w = await waving;
+    expect(w.wave).toBe(1);
+    expect(w.towers).toEqual([expect.objectContaining({ kind: "archer", owner: bou.id })]);
+  });
+
+  it("saves solo results and ranks the best per person on each map", async () => {
+    const ann = await person("Ann");
+    const post = (body: object) => request(app).post("/api/village/scores").set("Cookie", ann.cookie).set("Origin", ORIGIN).set("Host", SITE_HOST).send(body);
+    expect((await post({ map: "riverside", waves: 12, rice: 5, won: true })).status).toBe(400); // can't win before wave 30
+    expect((await post({ map: "riverside", waves: 12, rice: 5, won: false })).body).toEqual({ score: 1325 });
+    expect((await post({ map: "riverside", waves: 30, rice: 14, won: true })).body).toEqual({ score: 3850 });
+    await post({ map: "festival", waves: 3, rice: 0, won: false });
+    const board = await request(app).get("/api/village/leaderboard?map=riverside");
+    expect(board.body).toEqual([expect.objectContaining({ rank: 1, name: "Ann", score: 3850, waves: 30 })]);
+  });
+});
