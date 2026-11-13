@@ -138,7 +138,7 @@ export const APPS: AppInfo[] = [
     id: "arena",
     name: tx("Nook Arena"),
     shortName: tx("Arena"),
-    tagline: tx("Live chess and Listen Together, on Nook's own game server"),
+    tagline: tx("Live chess, Ngõ Pháo and Listen Together, on Nook's own game server"),
     href: "/arena",
     icon: Crown,
     accent: "from-indigo-500 to-violet-600",
@@ -147,6 +147,7 @@ export const APPS: AppInfo[] = [
     links: [
       { href: "/arena", label: tx("Play") },
       { href: "/arena/chess", label: tx("Chess") },
+      { href: "/arena/alley", label: tx("Ngõ Pháo") }, // Stage 23
       { href: "/arena/listen", label: tx("Listen Together") },
     ],
   },

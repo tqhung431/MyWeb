@@ -7,7 +7,7 @@ import request from "supertest";
 import type { Server } from "socket.io";
 import { io as connect, type Socket } from "socket.io-client";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { attachArena, resetArena, setArenaClock, tick } from "../src/arena/server.js";
+import { alleyGameForTests, alleyTick, attachArena, resetArena, setArenaClock, tick } from "../src/arena/server.js";
 import { createApp } from "../src/app.js";
 import { pool } from "../src/db/client.js";
 import { parseYouTube } from "../src/routes/arena.js";
@@ -284,5 +284,65 @@ describe("chess against Nook", () => {
     expect(list.body.map((g: { whiteName: string; blackName: string }) => `${g.whiteName}-${g.blackName}`).sort()).toEqual(["Ann-Nook (1)", "Nook (4)-Ann"]);
     // Games against Nook don't change ratings
     expect((await request(app).get("/api/chess/leaderboard")).body).toEqual([]);
+  });
+});
+
+describe("Ngõ Pháo over the game server", () => {
+  it("two people and a bot play; steering moves you; the match result is saved", async () => {
+    const ann = await person("Ann");
+    const bou = await person("Bou");
+    const a = await socketFor(ann.cookie);
+    const b = await socketFor(bou.cookie);
+    const { code } = await ask(a, "alley:create");
+    await ask(a, "room:join", { code });
+    await ask(b, "room:join", { code });
+    expect((await ask(b, "alley:look", { code, color: 0, hat: 1 })).error).toBe("Someone already has that colour");
+    expect((await ask(b, "alley:look", { code, color: 2, hat: 1 })).ok).toBe(true);
+    expect((await ask(b, "alley:settings", { code, bots: 1 })).error).toBe("Only the host can change this");
+    await ask(a, "alley:settings", { code, bots: 1, map: "market" });
+    expect((await ask(a, "alley:start", { code })).error).toBe("Not everyone is ready");
+    const lobby = stateWhere(a, (st) => st.alley?.seats.every((s: { ready: boolean; id: string }) => s.ready || s.id === ann.id));
+    await ask(b, "alley:ready", { code, ready: true });
+    expect((await lobby).alley).toMatchObject({ bots: 1, map: "market" });
+    expect((await ask(a, "arena:rooms", { kind: "alley" })).rooms).toEqual([expect.objectContaining({ code, players: 2, bots: 1 })]);
+
+    const firstTick = new Promise<any>((r) => a.once("alley:tick", r)); // eslint-disable-line @typescript-eslint/no-explicit-any
+    expect((await ask(a, "alley:start", { code })).ok).toBe(true);
+    const t0 = await firstTick;
+    expect(t0.players).toHaveLength(3);
+    expect(t0.players.map((p: { name: string }) => p.name)).toEqual(["Ann", "Bou", "Bé Pháo"]);
+    expect(t0.tiles).toHaveLength(13 * 11);
+
+    // Countdown, then Ann walks right from the top-left corner
+    clock += 3000;
+    await alleyTick();
+    a.emit("alley:input", { code, dir: 2 });
+    await new Promise((r) => setTimeout(r, 100));
+    const moved = new Promise<any>((r) => a.on("alley:tick", (v) => v.players[0].x > 0.6 && r(v))); // eslint-disable-line @typescript-eslint/no-explicit-any
+    clock += 200;
+    await alleyTick();
+    expect((await moved).players[0].x).toBeGreaterThan(0.6);
+
+    // Bou's browser goes away mid-match: a bot plays for Bou
+    b.disconnect();
+    await new Promise((r) => setTimeout(r, 100));
+    const g = alleyGameForTests(code)!;
+    expect(g.players[1].bot).toBe(true);
+
+    // Fast-forward: Ann has won two rounds and wins the third
+    g.players[0].score = 2;
+    for (const p of g.players.slice(1)) Object.assign(p, { alive: false, ghost: true });
+    const ended = stateWhere(a, () => true);
+    clock += 50;
+    await alleyTick(); // round over
+    clock += 4100;
+    await alleyTick(); // match over
+    await ended;
+    expect(g.phase).toBe("matchEnd");
+    await expect.poll(async () => (await request(app).get("/api/alley/leaderboard")).body.map((r: { name: string; wins: number }) => [r.name, r.wins])).toEqual([
+      ["Ann", 1],
+      ["Bou", 0],
+    ]);
+    expect((await ask(a, "alley:again", { code })).ok).toBe(true);
   });
 });

@@ -17,6 +17,7 @@
 // GET    /api/chess/games           recent games (?mine=1: only mine)
 // GET    /api/chess/games/:id       one game, with its moves (PGN) for the replay
 // GET    /api/chess/leaderboard     ratings (Elo), live games only
+// GET    /api/alley/leaderboard     Stage 23: Ngõ Pháo, most matches won
 // POST   /api/chess/nook  { pgn, level, color }   save a finished game against Nook (the computer)
 
 import { timingSafeEqual } from "node:crypto";
@@ -33,6 +34,7 @@ import { HttpError } from "../middleware/errors.js";
 import { rateLimit } from "../middleware/security.js";
 
 export const adminRouter = Router();
+export const alleyRouter = Router(); // Stage 23: Ngõ Pháo
 export const tvRouter = Router();
 export const chessRouter = Router();
 
@@ -249,4 +251,17 @@ chessRouter.post("/nook", requireUser, nookSaves, async (req, res) => {
     })
     .returning({ id: chessGames.id });
   res.status(201).json({ id: row.id, result, reason });
+});
+
+// --- Ngõ Pháo (Stage 23) -----------------------------------------------------------------------
+
+alleyRouter.get("/leaderboard", async (req, res) => {
+  const rows = await db
+    .select({ userId: arenaRatings.userId, name: users.name, games: arenaRatings.games, wins: arenaRatings.wins })
+    .from(arenaRatings)
+    .innerJoin(users, eq(users.id, arenaRatings.userId))
+    .where(eq(arenaRatings.game, "alley"))
+    .orderBy(desc(arenaRatings.wins), asc(arenaRatings.games))
+    .limit(20);
+  res.json(rows.map(({ userId, ...r }, i) => ({ rank: i + 1, ...r, me: userId === req.user?.id })));
 });

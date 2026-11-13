@@ -77,3 +77,67 @@ export const getTv = () => apiFetch<{ shelves: { name: string; videos: TvVideo[]
 export const addTv = (body: { url: string; shelf: string }) => apiFetch<TvVideo>("/api/tv", { method: "POST", body: JSON.stringify(body), timeoutMs: 10_000 });
 export const editTv = (id: number, body: Partial<Pick<TvVideo, "title" | "shelf" | "position">>) => apiFetch<TvVideo>(`/api/tv/${id}`, { method: "PATCH", body: JSON.stringify(body) });
 export const removeTv = (id: number) => apiFetch<void>(`/api/tv/${id}`, { method: "DELETE" });
+
+// --- Ngõ Pháo (Stage 23) -----------------------------------------------------------------------
+export type AlleyMap = "old-town" | "market" | "rooftops";
+export type AlleyPower = "bomb" | "fire" | "speed" | "kick" | "shield";
+export type AlleySeat = Person & { color: number; hat: number; ready: boolean };
+export type AlleyLobby = { hostId: string | null; map: AlleyMap | "random"; bots: number; seats: AlleySeat[]; playing: boolean; away: string[] };
+export type AlleyRoomState = { code: string; kind: "alley"; members: (Person & { online: boolean })[]; alley: AlleyLobby };
+export type OpenAlleyRoom = { code: string; kind: "alley"; host: string | null; players: number; bots: number; map: string; status: "waiting" | "playing"; people: number };
+export type AlleyPlayerView = {
+  id: string;
+  name: string;
+  color: number;
+  hat: number;
+  bot: boolean;
+  x: number;
+  y: number;
+  dir: 0 | 1 | 2 | 3 | 4;
+  alive: boolean;
+  ghost: boolean;
+  shield: boolean;
+  stunned: boolean;
+  blink: boolean;
+  bombs: number;
+  fire: number;
+  boots: number;
+  kick: boolean;
+  tinyIn: number;
+  score: number;
+};
+export type AlleyStats = { crates: number; outs: number; selfOuts: number; powers: number; teases: number; wins: number };
+export type AlleyEvent =
+  | { t: "pop"; tx: number; ty: number; tiny: boolean }
+  | { t: "crate"; tx: number; ty: number }
+  | { t: "out"; id: string; by: string | null }
+  | { t: "power"; id: string; power: AlleyPower; tx: number; ty: number }
+  | { t: "shield"; id: string }
+  | { t: "stun"; id: string }
+  | { t: "kick"; id: string }
+  | { t: "lion" }
+  | { t: "ring"; k: number };
+export type AlleyTick = {
+  code: string;
+  t: number;
+  phase: "countdown" | "playing" | "roundEnd" | "matchEnd";
+  phaseEndsAt: number;
+  playStartedAt: number;
+  round: number;
+  map: AlleyMap;
+  tiles: string;
+  items: [number, AlleyPower][];
+  players: AlleyPlayerView[];
+  bombs: { id: number; tx: number; ty: number; slide: number; progress: number; tiny: boolean; left: number; mine: string[] }[];
+  sparks: [number, number, number][];
+  lion: { row: number; x: number; dir: 1 | -1 } | null;
+  ringAt: number | null;
+  rings: number;
+  roundWinner: string | null;
+  matchWinner: string | null;
+  awards: { award: string; id: string; value: number }[];
+  stats: Record<string, AlleyStats> | null;
+  events: AlleyEvent[];
+};
+export type AlleyBoardRow = { rank: number; name: string; games: number; wins: number; me: boolean };
+export const getAlleyBoard = () => apiFetch<AlleyBoardRow[]>("/api/alley/leaderboard");

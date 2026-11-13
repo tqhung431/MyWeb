@@ -9,10 +9,10 @@ import { useArena } from "@/features/arena/ArenaProvider";
 import { cn } from "@/lib/cn";
 import { tx } from "@/lib/i18n/core";
 import { useT } from "@/lib/i18n/I18nProvider";
+import { LanternHead } from "./alley/LanternHead";
 import { Piece } from "./chess/pieces";
 
 const NEXT = [
-  { name: "Ngõ Pháo", en: tx("Firecracker Alley"), what: tx("Party maze: drop firecrackers, break crates, last one standing"), stage: 23, emoji: "🧨" },
   { name: "Giữ Làng", en: tx("Keep the Village"), what: tx("Tower defense: guard a rice village from mischievous spirits"), stage: 24, emoji: "🏮" },
   { name: "Chợ Đêm Brawl", en: tx("Night Market Brawl"), what: tx("Co-op action through a night market, up to 4 friends"), stage: 25, emoji: "🥢" },
   { name: "Mầm Thú", en: tx("Sproutlings"), what: tx("Befriend, raise and battle original creatures"), stage: 26, emoji: "🌱" },
@@ -23,6 +23,23 @@ export function ArenaHub() {
   const { connected } = useArena();
   return (
     <div className="flex flex-col gap-6">
+      <Link
+        href="/arena/alley"
+        className="group relative overflow-hidden rounded-3xl bg-linear-to-br from-red-900 via-rose-800 to-amber-600 p-6 text-white shadow-card transition hover:-translate-y-0.5 sm:p-8"
+      >
+        <div className="pointer-events-none absolute -right-2 -bottom-3 flex items-end gap-1" aria-hidden="true">
+          <LanternHead color={0} hat={1} size={96} />
+          <LanternHead color={2} hat={2} size={72} />
+          <LanternHead color={1} hat={4} size={84} />
+        </div>
+        <p className="text-sm font-semibold tracking-wide text-amber-200 uppercase">{t("New")} · {t("Firecracker Alley")}</p>
+        <h2 className="mt-1 text-3xl font-extrabold">Ngõ Pháo</h2>
+        <p className="mt-1 max-w-[16rem] text-sm text-white/90 sm:max-w-sm">{t("Party maze for 2–4: drop firecrackers, break crates, last one standing.")}</p>
+        <span className="mt-5 inline-flex items-center gap-1 text-sm font-bold">
+          {t("Play")} <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" aria-hidden="true" />
+        </span>
+      </Link>
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Link href="/arena/chess" className="group relative overflow-hidden rounded-3xl bg-linear-to-br from-slate-800 via-indigo-900 to-violet-800 p-6 text-white shadow-card transition hover:-translate-y-0.5">
           <div className="pointer-events-none absolute -right-3 -bottom-4 flex gap-0 opacity-90" aria-hidden="true">
@@ -69,7 +86,7 @@ export function ArenaHub() {
 
       <section>
         <h2 className="mb-3 px-1 text-lg font-bold">{t("Coming to the Arena")}</h2>
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {NEXT.map((g) => (
             <li key={g.name} className="rounded-3xl border border-dashed border-border bg-surface/60 p-4">
               <p className="text-3xl" aria-hidden="true">

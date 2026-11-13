@@ -29,6 +29,8 @@ import { isAllowedOrigin } from "../middleware/security.js";
 import { publishActivity } from "../realtime/emit.js";
 import * as C from "./chess-game.js";
 import * as L from "./listen.js";
+import * as A from "./alley.js";
+import * as AR from "./alley-room.js";
 
 type Person = { id: string; name: string };
 type Member = { person: Person; sockets: Set<string> };
@@ -44,7 +46,8 @@ type ChessRoom = Base & {
   gone: Map<string, number>; // seated player → when they disconnected
 };
 type ListenRoomState = Base & { kind: "listen"; listen: L.ListenRoom };
-type Room = ChessRoom | ListenRoomState;
+type AlleyRoom = Base & { kind: "alley" } & AR.AlleyLobby;
+type Room = ChessRoom | ListenRoomState | AlleyRoom;
 
 const rooms = new Map<string, Room>();
 let io: Server | null = null;
@@ -98,6 +101,10 @@ function roomSummary(r: Room) {
       people,
     };
   }
+  if (r.kind === "alley") {
+    const host = r.seats.find((s) => s.id === r.hostId)?.name ?? null;
+    return { code: r.code, kind: r.kind, host, players: r.seats.length, bots: r.bots, map: r.map, status: r.game ? "playing" : "waiting", people };
+  }
   return { code: r.code, kind: r.kind, name: r.listen.name, people, playing: r.listen.now?.song.title ?? null };
 }
 
@@ -126,6 +133,10 @@ async function sendState(r: Room) {
     });
     return;
   }
+  if (r.kind === "alley") {
+    io.to(roomName(r.code)).emit("room:state", { ...base, alley: AR.lobbyView(r) });
+    return;
+  }
   // Listen Together: each person sees their own votes
   for (const s of await io.in(roomName(r.code)).fetchSockets()) {
     s.emit("room:state", { ...base, listen: L.listenView(r.listen, (s.data as SocketData).person?.id ?? null, now()) });
@@ -140,6 +151,7 @@ function join(r: Room, socket: Socket) {
     m.sockets.add(socket.id);
     r.members.set(p.id, m);
     if (r.kind === "chess") r.gone.delete(p.id);
+    if (r.kind === "alley" && r.away.has(p.id)) AR.setAway(r, p.id, false);
   }
   r.emptySince = null;
 }
@@ -151,6 +163,16 @@ function leave(r: Room, socket: Socket) {
   if (!m) return;
   m.sockets.delete(socket.id);
   if (m.sockets.size === 0) {
+    if (r.kind === "alley") {
+      const seated = r.seats.some((s) => s.id === p!.id);
+      if (seated && r.game) AR.setAway(r, p!.id, true); // a bot plays for you until you're back
+      else {
+        if (seated) AR.standUp(r, p!.id);
+        r.members.delete(p!.id);
+      }
+      if ([...r.members.values()].every((x) => x.sockets.size === 0)) r.emptySince = now();
+      return;
+    }
     const seated = r.kind === "chess" && (r.seats.w?.id === p!.id || r.seats.b?.id === p!.id);
     if (r.kind === "chess" && seated && r.game && !r.game.result) r.gone.set(p!.id, now());
     else if (r.kind === "chess" && seated && !r.game) {
@@ -318,7 +340,7 @@ export function attachArena(http: HttpServer): Server {
     socket.on("time", (_raw: unknown, ack: unknown) => safeAck(ack)({ ok: true, now: now() }));
 
     socket.on("arena:rooms", (raw: unknown, ack: unknown) => {
-      const kind = z.object({ kind: z.enum(["chess", "listen"]) }).safeParse(raw);
+      const kind = z.object({ kind: z.enum(["chess", "listen", "alley"]) }).safeParse(raw);
       safeAck(ack)({ ok: kind.success, rooms: kind.success ? openRooms(kind.data.kind) : [] });
     });
 
@@ -329,6 +351,7 @@ export function attachArena(http: HttpServer): Server {
       join(r, socket);
       mine.add(r.code);
       if (r.kind === "chess" && data.person) seat(r, data.person);
+      if (r.kind === "alley" && data.person) AR.sit(r, data.person);
       ack({ ok: true, kind: r.kind });
       if (r.kind === "chess") await afterChessChange(r);
       else await sendState(r);
@@ -458,6 +481,58 @@ export function attachArena(http: HttpServer): Server {
       socket.to(roomName(input.data.code)).emit("listen:reaction", { name: data.person.name, emoji: input.data.emoji });
     });
 
+    // Ngõ Pháo (Stage 23)
+    socket.on("alley:create", (raw: unknown, a: unknown) => {
+      const ack = safeAck(a);
+      const p = need(ack);
+      if (!p) return;
+      const code = newCode();
+      rooms.set(code, { kind: "alley", code, createdAt: now(), members: new Map(), emptySince: now(), ...AR.newLobby(p) });
+      ack({ ok: true, code });
+      announceRooms("alley");
+    });
+    const alleyAction = (event: string, schema: z.ZodType, fn: (r: AlleyRoom, p: Person, input: any) => string | null | void) =>
+      socket.on(event, async (raw: unknown, a: unknown) => {
+        const ack = safeAck(a);
+        const p = need(ack);
+        if (!p) return;
+        const r = roomFor(raw, ack, "alley") as AlleyRoom | null;
+        if (!r) return;
+        const input = schema.safeParse(raw);
+        if (!input.success) return ack({ ok: false, error: "Invalid request" });
+        const error = fn(r, p, input.data);
+        ack(error ? { ok: false, error } : { ok: true });
+        await sendState(r);
+        if (r.game && event !== "alley:look") emitAlley(r, false);
+        announceRooms("alley");
+      });
+    alleyAction("alley:look", codeIn.extend({ color: z.number().int().min(0).max(AR.COLORS - 1), hat: z.number().int().min(0).max(AR.HATS - 1) }), (r, p, i) =>
+      AR.look(r, p.id, i.color, i.hat),
+    );
+    alleyAction("alley:ready", codeIn.extend({ ready: z.boolean() }), (r, p, i) => AR.setReady(r, p.id, i.ready));
+    alleyAction("alley:settings", codeIn.extend({ bots: z.number().int().min(0).max(3).optional(), map: z.enum(["random", ...A.MAP_IDS] as [string, ...string[]]).optional() }), (r, p, i) =>
+      AR.settings(r, p.id, i),
+    );
+    alleyAction("alley:start", codeIn, (r, p) => {
+      const error = AR.canStart(r, p.id);
+      if (error) return error;
+      AR.start(r, now(), Math.floor(Math.random() * 2 ** 31));
+    });
+    alleyAction("alley:again", codeIn, (r, p) => AR.again(r, p.id));
+    // Steering and dropping: many a second, so no answer and as little checking as is safe
+    socket.on("alley:input", (raw: unknown) => {
+      const input = codeIn.extend({ dir: z.number().int().min(0).max(4) }).safeParse(raw);
+      if (!input.success || !data.person) return;
+      const r = rooms.get(input.data.code);
+      if (r?.kind === "alley" && r.game && !r.away.has(data.person.id)) A.setDir(r.game, data.person.id, input.data.dir as 0 | 1 | 2 | 3 | 4);
+    });
+    socket.on("alley:drop", (raw: unknown) => {
+      const input = codeIn.safeParse(raw);
+      if (!input.success || !data.person) return;
+      const r = rooms.get(input.data.code);
+      if (r?.kind === "alley" && r.game) A.drop(r.game, data.person.id, now());
+    });
+
     // Nook TV screen share: the admin's browser sends video straight to each viewer (WebRTC);
     // the server only passes their connection messages along.
     socket.on("tv:status", (_raw: unknown, a: unknown) => safeAck(a)({ ok: true, live: !!tv.sharer, by: tv.sharer?.name ?? null }));
@@ -506,7 +581,13 @@ export function attachArena(http: HttpServer): Server {
   // Every 250 ms: clocks running out, abandoned games, songs ending, empty rooms
   const timer = setInterval(() => void tick(), 250);
   timer.unref();
-  server.on("close", () => clearInterval(timer));
+  // Stage 23: Ngõ Pháo runs its rules 20 times a second
+  const fast = setInterval(() => void alleyTick(), 50);
+  fast.unref();
+  server.on("close", () => {
+    clearInterval(timer);
+    clearInterval(fast);
+  });
   return server;
 }
 
@@ -536,4 +617,49 @@ export async function tick() {
       announceRooms(r.kind);
     }
   }
+}
+
+// --- Ngõ Pháo (Stage 23) -------------------------------------------------------------------------
+
+/** Send the match to everyone in the room. Most updates may be dropped if a phone is behind ("volatile"):
+ *  the next one, 50 ms later, has everything anyway. */
+function emitAlley(r: AlleyRoom, volatile = true) {
+  if (!io || !r.game) return;
+  const view = { code: r.code, ...A.alleyView(r.game, now()) };
+  (volatile ? io.to(roomName(r.code)).volatile : io.to(roomName(r.code))).emit("alley:tick", view);
+}
+
+export async function alleyTick() {
+  const t = now();
+  for (const r of rooms.values()) {
+    if (r.kind !== "alley" || !r.game || r.game.phase === "matchEnd") continue;
+    const dt = Math.min(t - r.lastStep, 200); // a slow moment never teleports anyone
+    r.lastStep = t;
+    const before: A.AlleyGame["phase"] = r.game.phase;
+    A.stepAlley(r.game, t, dt);
+    const after = r.game.phase as A.AlleyGame["phase"];
+    if (after === "matchEnd") {
+      emitAlley(r, false);
+      await saveAlley(r).catch((e) => console.error("arena: saving Ngõ Pháo failed", e));
+      await sendState(r);
+      announceRooms("alley");
+      continue;
+    }
+    emitAlley(r, before === after); // a change of phase always arrives
+  }
+}
+
+async function saveAlley(r: AlleyRoom) {
+  if (r.saved || !r.game) return;
+  r.saved = true;
+  const people = r.game.players.filter((p) => !p.id.startsWith("bot:"));
+  for (const p of people) await addResult(p.id, "alley", 0, p.id === r.game.matchWinner ? 1 : 0);
+  const winner = people.find((p) => p.id === r.game!.matchWinner);
+  if (winner) await publishActivity("Swords", "{name} won a Ngõ Pháo match", { name: winner.name });
+}
+
+/** Tests only: reach into a running Ngõ Pháo match */
+export function alleyGameForTests(code: string) {
+  const r = rooms.get(code);
+  return r?.kind === "alley" ? r.game : null;
 }

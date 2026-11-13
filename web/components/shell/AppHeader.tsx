@@ -34,7 +34,7 @@ export function AppHeader({ appId, className }: { appId: string; className?: str
       {app.links && (
         <nav
           aria-label={t("{app} sections", { app: t(app.name) })}
-          className="inline-flex self-start rounded-full border border-border bg-surface-muted p-1 sm:self-auto"
+          className="inline-flex max-w-full self-start overflow-x-auto rounded-full border border-border bg-surface-muted p-1 [scrollbar-width:none] sm:self-auto"
         >
           {app.links.map((link) => (
             <Link
@@ -42,7 +42,7 @@ export function AppHeader({ appId, className }: { appId: string; className?: str
               href={link.href}
               aria-current={activeHref === link.href ? "page" : undefined}
               className={cn(
-                "rounded-full px-4 py-1.5 text-sm font-semibold transition",
+                "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap transition sm:px-4", // Stage 23: never wrap; scroll sideways on a phone
                 activeHref === link.href ? "bg-surface-strong text-text shadow-sm" : "text-muted hover:text-text",
               )}
             >

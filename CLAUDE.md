@@ -60,8 +60,12 @@ Read this first in every session. It carries the context from the sessions that 
   Admin = `ADMIN_PASSCODE` in .env, flag on the session (`auth_sessions.is_admin`), Settings → Admin. Nook TV: YouTube
   (youtube-nocookie embeds, oEmbed titles) chosen by the admin; screen share = WebRTC peer-to-peer, server only relays
   signals. Owner's rule: never add links/presets to unofficial streaming sites.
-  Next: Stage 23 Ngõ Pháo (Firecracker Alley), then 24 Giữ Làng, 25 Chợ Đêm Brawl, 26–27 Mầm Thú (design doc
-  "Stage 22 design: Nook Arena games"; PixiJS, 2D anime style, 60+ fps).
+  23: Ngõ Pháo (`/arena/alley`): rules in `api/src/arena/alley.ts` (pure, seeded, `stepAlley(g, now, dt)` 20×/s from
+  `alleyTick()` in server.ts, bots with a danger map), lobby in `alley-room.ts`; `alley-move.ts` exists twice
+  (api + `web/features/arena/alley/`) and must stay byte-identical (test). Web: PixiJS 8 loaded only in `GameView`
+  (`renderer.ts`: interpolation 100 ms for others, prediction for you; `art.ts` draws textures in code; menus use the
+  SVG `LanternHead` and `colors.ts` so they don't load PixiJS). Wins in `arena_ratings` (game "alley"), `/api/alley/leaderboard`.
+  Next: Stage 24 Giữ Làng (Keep the Village), 25 Chợ Đêm Brawl, 26–27 Mầm Thú (design doc "Stage 22 design: Nook Arena games").
   Original world only: don't copy names/characters/plots from existing novels or films.
   Each stage has an explainer in `docs/stage-N.md`; write one for every new stage and update the README's stage list.
 - Apps: **Chill Corner** (focus timer, generated sounds, tips, achievements), **Music** (uploaded songs
@@ -71,7 +75,7 @@ Read this first in every session. It carries the context from the sessions that 
   **WatchList** (`api/src/watch/sources.ts`; tests use `tests/fake-watch.ts` on port 4995).
   **Habit & Reading Tracker** (`/habits`: days are `date` strings in X-Time-Zone; `web/lib/offline.ts` queue; `public/sw.js`).
   **Arcade Online** (`api/src/arcade-online/`: game.ts has no network code; tests use a fake clock).
-  **Nook Arena** (`/arena`: chess, Listen Together) and **Nook TV** (`/tv`), Stage 22.
+  **Nook Arena** (`/arena`: chess, Ngõ Pháo, Listen Together) and **Nook TV** (`/tv`), Stages 22–23.
 - Phone tab bar: Home + apps with `pinned: true` + an "Apps" grid. Don't pin more than 3–4.
 - People (Stage 11): **name only, one browser** (owner's choice): no email/password, no login page. `POST /api/me {name}`
   sets the `nook_session` cookie; names unique by lower(name). Guests (X-Client-Id) still work until they pick a name.

@@ -206,6 +206,7 @@ export const ENDPOINTS: Endpoint[] = [
   { method: "get", path: "/api/chess/games/{id}", tag: "Nook Arena", summary: "One chess game with its moves (PGN)" },
   { method: "get", path: "/api/chess/leaderboard", tag: "Nook Arena", summary: "Chess ratings (Elo) from live games" },
   { method: "post", path: "/api/chess/nook", tag: "Nook Arena", summary: "Save a finished game against Nook (checked, no rating change)", who: "name", body: nookGameBody },
+  { method: "get", path: "/api/alley/leaderboard", tag: "Nook Arena", summary: "Ngõ Pháo: most matches won" },
 ];
 
 const WHO_TEXT: Record<Who, string> = {
