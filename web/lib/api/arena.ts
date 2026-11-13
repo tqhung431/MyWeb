@@ -150,3 +150,10 @@ export type VillageBoardRow = { rank: number; name: string; score: number; waves
 export const getVillageBoard = (map: string) => apiFetch<VillageBoardRow[]>(`/api/village/leaderboard?map=${map}`);
 export const saveVillageScore = (body: { map: string; waves: number; rice: number; won: boolean; endless: boolean }) =>
   apiFetch<{ score: number }>("/api/village/scores", { method: "POST", body: JSON.stringify(body) });
+
+// --- Chợ Đêm Brawl (Stage 25) ------------------------------------------------------------------
+export type BrawlSeatState = Person & { hero: "chef" | "shipper" | "grandma" | "student" | null; ready: boolean };
+export type BrawlRoomState = { code: string; kind: "brawl"; members: (Person & { online: boolean })[]; brawl: { hostId: string | null; seats: BrawlSeatState[]; playing: boolean } };
+export type OpenBrawlRoom = { code: string; kind: "brawl"; host: string | null; players: number; status: "waiting" | "playing"; people: number };
+export type BrawlBoardRow = { rank: number; name: string; areas: number; runs: number; wins: number; best: number | null; me: boolean };
+export const getBrawlBoard = () => apiFetch<BrawlBoardRow[]>("/api/brawl/leaderboard");

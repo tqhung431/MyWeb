@@ -134,6 +134,13 @@
       "when": 1794536478491,
       "tag": "0018_village",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794612554803,
+      "tag": "0019_brawl",
+      "breakpoints": true
     }
   ]
 }

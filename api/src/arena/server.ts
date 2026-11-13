@@ -24,7 +24,7 @@ import { Server, type Socket } from "socket.io";
 import { z } from "zod";
 import { COOKIE_NAME, isAdminToken, userFromToken } from "../auth/sessions.js";
 import { db } from "../db/client.js";
-import { arenaRatings, chessGames, songs, villageScores } from "../db/schema.js";
+import { arenaRatings, brawlRuns, chessGames, songs, villageScores } from "../db/schema.js";
 import { isAllowedOrigin } from "../middleware/security.js";
 import { publishActivity } from "../realtime/emit.js";
 import * as C from "./chess-game.js";
@@ -32,6 +32,7 @@ import * as L from "./listen.js";
 import * as A from "./alley.js";
 import * as AR from "./alley-room.js";
 import * as V from "./village.js";
+import * as BR from "./brawl.js";
 
 type Person = { id: string; name: string };
 type Member = { person: Person; sockets: Set<string> };
@@ -61,7 +62,10 @@ type VillageRoom = Base & {
   saved: boolean;
   lastStep: number;
 };
-type Room = ChessRoom | ListenRoomState | AlleyRoom | VillageRoom;
+// Stage 25: Chợ Đêm Brawl (1–4 heroes, each a different one)
+type BrawlSeat = Person & { hero: BR.HeroKind | null; ready: boolean };
+type BrawlRoom = Base & { kind: "brawl"; hostId: string | null; seats: BrawlSeat[]; game: BR.BrawlGame | null; saved: boolean; lastStep: number };
+type Room = ChessRoom | ListenRoomState | AlleyRoom | VillageRoom | BrawlRoom;
 
 const rooms = new Map<string, Room>();
 let io: Server | null = null;
@@ -115,6 +119,10 @@ function roomSummary(r: Room) {
       people,
     };
   }
+  if (r.kind === "brawl") {
+    const host = r.seats.find((s) => s.id === r.hostId)?.name ?? null;
+    return { code: r.code, kind: r.kind, host, players: r.seats.length, status: r.game ? "playing" : "waiting", people };
+  }
   if (r.kind === "village") {
     const host = r.seats.find((s) => s.id === r.hostId)?.name ?? null;
     return { code: r.code, kind: r.kind, host, players: r.seats.length, map: r.map, status: r.game ? "playing" : "waiting", people };
@@ -155,6 +163,10 @@ async function sendState(r: Room) {
     io.to(roomName(r.code)).emit("room:state", { ...base, alley: AR.lobbyView(r) });
     return;
   }
+  if (r.kind === "brawl") {
+    io.to(roomName(r.code)).emit("room:state", { ...base, brawl: { hostId: r.hostId, seats: r.seats, playing: !!r.game } });
+    return;
+  }
   if (r.kind === "village") {
     const village = { hostId: r.hostId, map: r.map, endless: r.endless, seats: r.seats, playing: !!r.game, speed: r.speed, paused: r.paused };
     io.to(roomName(r.code)).emit("room:state", { ...base, village });
@@ -186,6 +198,16 @@ function leave(r: Room, socket: Socket) {
   if (!m) return;
   m.sockets.delete(socket.id);
   if (m.sockets.size === 0) {
+    if (r.kind === "brawl") {
+      // Before the run: your seat is freed. During it: your hero stands still until you're back.
+      if (!r.game) {
+        r.seats = r.seats.filter((s) => s.id !== p!.id);
+        if (r.hostId === p!.id) r.hostId = r.seats[0]?.id ?? null;
+        r.members.delete(p!.id);
+      } else BR.setStick(r.game, p!.id, 0, 0);
+      if ([...r.members.values()].every((x) => x.sockets.size === 0)) r.emptySince = now();
+      return;
+    }
     if (r.kind === "village") {
       // A tower-defense game carries on without you; before it starts, your seat is freed
       if (!r.game) {
@@ -373,7 +395,7 @@ export function attachArena(http: HttpServer): Server {
     socket.on("time", (_raw: unknown, ack: unknown) => safeAck(ack)({ ok: true, now: now() }));
 
     socket.on("arena:rooms", (raw: unknown, ack: unknown) => {
-      const kind = z.object({ kind: z.enum(["chess", "listen", "alley", "village"]) }).safeParse(raw);
+      const kind = z.object({ kind: z.enum(["chess", "listen", "alley", "village", "brawl"]) }).safeParse(raw);
       safeAck(ack)({ ok: kind.success, rooms: kind.success ? openRooms(kind.data.kind) : [] });
     });
 
@@ -385,6 +407,11 @@ export function attachArena(http: HttpServer): Server {
       mine.add(r.code);
       if (r.kind === "chess" && data.person) seat(r, data.person);
       if (r.kind === "alley" && data.person) AR.sit(r, data.person);
+      if (r.kind === "brawl" && data.person && !r.game && r.seats.length < 4 && !r.seats.some((s) => s.id === data.person!.id)) {
+        const free = BR.HERO_KINDS.find((k) => !r.seats.some((s) => s.hero === k)) ?? null;
+        r.seats.push({ ...data.person, hero: free, ready: false });
+        r.hostId ??= data.person.id;
+      }
       if (r.kind === "village" && data.person && !r.game && r.seats.length < 2 && !r.seats.some((s) => s.id === data.person!.id)) {
         r.seats.push(data.person);
         r.hostId ??= data.person.id;
@@ -392,6 +419,12 @@ export function attachArena(http: HttpServer): Server {
       ack({ ok: true, kind: r.kind });
       if (r.kind === "chess") await afterChessChange(r);
       else await sendState(r);
+      if (r.kind === "brawl" && r.game) {
+        // The picture as it is now (ticks stop when a run ends, so a late or reloaded page still gets one)
+        const events = r.game.events;
+        socket.emit("brawl:tick", { code: r.code, ...BR.brawlView(r.game), events: [] });
+        r.game.events = events;
+      }
       announceRooms(r.kind);
     });
 
@@ -652,6 +685,79 @@ export function attachArena(http: HttpServer): Server {
       r.seats = r.seats.filter((s) => r.members.get(s.id)?.sockets.size);
     });
 
+    // Chợ Đêm Brawl (Stage 25)
+    socket.on("brawl:create", (_raw: unknown, a: unknown) => {
+      const ack = safeAck(a);
+      const p = need(ack);
+      if (!p) return;
+      const code = newCode();
+      rooms.set(code, { kind: "brawl", code, createdAt: now(), members: new Map(), emptySince: now(), hostId: p.id, seats: [], game: null, saved: false, lastStep: 0 });
+      ack({ ok: true, code });
+      announceRooms("brawl");
+    });
+    const brawlAction = (event: string, schema: z.ZodType, fn: (r: BrawlRoom, p: Person, input: any) => string | null | void) =>
+      socket.on(event, async (raw: unknown, a: unknown) => {
+        const ack = safeAck(a);
+        const p = need(ack);
+        if (!p) return;
+        const r = roomFor(raw, ack, "brawl") as BrawlRoom | null;
+        if (!r) return;
+        const input = schema.safeParse(raw);
+        if (!input.success) return ack({ ok: false, error: "Invalid request" });
+        const error = fn(r, p, input.data);
+        ack(error ? { ok: false, error } : { ok: true });
+        if (event !== "brawl:act") {
+          await sendState(r);
+          announceRooms("brawl");
+        }
+      });
+    brawlAction("brawl:hero", codeIn.extend({ hero: z.enum(BR.HERO_KINDS as [BR.HeroKind, ...BR.HeroKind[]]) }), (r, p, i) => {
+      if (r.game) return "The run has started";
+      const seat = r.seats.find((s) => s.id === p.id);
+      if (!seat) return "Take a seat first";
+      if (r.seats.some((s) => s.id !== p.id && s.hero === i.hero)) return "Someone already plays that hero";
+      seat.hero = i.hero;
+    });
+    brawlAction("brawl:ready", codeIn.extend({ ready: z.boolean() }), (r, p, i) => {
+      const seat = r.seats.find((s) => s.id === p.id);
+      if (seat) seat.ready = i.ready;
+    });
+    brawlAction("brawl:start", codeIn, (r, p) => {
+      if (p.id !== r.hostId) return "Only the host can start";
+      if (r.game) return "The run has started";
+      if (r.seats.some((s) => !s.hero)) return "Everyone needs a hero";
+      if (r.seats.some((s) => s.id !== r.hostId && !s.ready)) return "Not everyone is ready";
+      r.game = BR.newBrawl(
+        r.seats.map((s) => ({ id: s.id, name: s.name, hero: s.hero! })),
+        Math.floor(Math.random() * 2 ** 31),
+        now(),
+      );
+      r.saved = false;
+      r.lastStep = now();
+    });
+    const brawlActionIn = z.discriminatedUnion("a", [
+      z.object({ a: z.literal("attack") }),
+      z.object({ a: z.literal("dodge") }),
+      z.object({ a: z.literal("special") }),
+      z.object({ a: z.literal("buy"), buff: z.enum(["banhmi", "che", "caphe", "banhxeo"]) }),
+      z.object({ a: z.literal("ready") }),
+    ]);
+    brawlAction("brawl:act", codeIn.extend({ action: brawlActionIn }), (r, p, i) => (r.game ? BR.act(r.game, p.id, i.action, now()) : "The run hasn't started"));
+    brawlAction("brawl:again", codeIn, (r, p) => {
+      if (p.id !== r.hostId) return "Only the host can do this";
+      if (r.game && r.game.phase !== "won" && r.game.phase !== "lost") return "The run isn't over";
+      r.game = null;
+      r.seats = r.seats.filter((s) => r.members.get(s.id)?.sockets.size);
+      for (const s of r.seats) s.ready = false;
+    });
+    // The stick: many times a second, no answer
+    socket.on("brawl:stick", (raw: unknown) => {
+      const input = codeIn.extend({ mx: z.number().min(-1).max(1), my: z.number().min(-1).max(1) }).safeParse(raw);
+      if (!input.success || !data.person) return;
+      const r = rooms.get(input.data.code);
+      if (r?.kind === "brawl" && r.game) BR.setStick(r.game, data.person.id, input.data.mx, input.data.my);
+    });
+
     // Nook TV screen share: the admin's browser sends video straight to each viewer (WebRTC);
     // the server only passes their connection messages along.
     socket.on("tv:status", (_raw: unknown, a: unknown) => safeAck(a)({ ok: true, live: !!tv.sharer, by: tv.sharer?.name ?? null }));
@@ -751,6 +857,7 @@ function emitAlley(r: AlleyRoom, volatile = true) {
 export async function alleyTick() {
   const t = now();
   for (const r of rooms.values()) if (r.kind === "village") await villageStep(r, t);
+  for (const r of rooms.values()) if (r.kind === "brawl") await brawlStep(r, t);
   for (const r of rooms.values()) {
     if (r.kind !== "alley" || !r.game || r.game.phase === "matchEnd") continue;
     const dt = Math.min(t - r.lastStep, 200); // a slow moment never teleports anyone
@@ -812,4 +919,37 @@ async function villageStep(r: VillageRoom, t: number) {
     return;
   }
   emitVillage(r, r.game.events.length === 0);
+}
+
+// --- Chợ Đêm Brawl (Stage 25) ---------------------------------------------------------------------
+
+async function brawlStep(r: BrawlRoom, t: number) {
+  if (!io || !r.game) return;
+  const g = r.game;
+  if (g.phase === "won" || g.phase === "lost") return;
+  const dt = Math.min(t - r.lastStep, 200);
+  r.lastStep = t;
+  const before = g.phase;
+  BR.stepBrawl(g, t, dt);
+  const view = { code: r.code, ...BR.brawlView(g) };
+  const changed = before !== g.phase || view.events.length > 0;
+  (changed ? io.to(roomName(r.code)) : io.to(roomName(r.code)).volatile).emit("brawl:tick", view);
+  const after = g.phase as BR.BrawlGame["phase"];
+  if ((after === "won" || after === "lost") && !r.saved) {
+    r.saved = true;
+    const res = BR.resultOf(g);
+    await db
+      .insert(brawlRuns)
+      .values(g.heroes.map((h) => ({ userId: h.id, hero: h.hero, players: g.heroes.length, areas: res.areas, won: res.won, timeMs: res.timeMs, bonks: h.bonks })))
+      .catch((e) => console.error("arena: saving Chợ Đêm Brawl failed", e));
+    if (res.won) await publishActivity("Swords", "{name} cleared the Night Market", { name: g.heroes.map((h) => h.name).join(", ") });
+    await sendState(r);
+    announceRooms("brawl");
+  }
+}
+
+/** Tests only */
+export function brawlGameForTests(code: string) {
+  const r = rooms.get(code);
+  return r?.kind === "brawl" ? r.game : null;
 }

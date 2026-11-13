@@ -7,7 +7,7 @@ import request from "supertest";
 import type { Server } from "socket.io";
 import { io as connect, type Socket } from "socket.io-client";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { alleyGameForTests, alleyTick, attachArena, resetArena, setArenaClock, tick } from "../src/arena/server.js";
+import { alleyGameForTests, alleyTick, attachArena, brawlGameForTests, resetArena, setArenaClock, tick } from "../src/arena/server.js";
 import { createApp } from "../src/app.js";
 import { pool } from "../src/db/client.js";
 import { parseYouTube } from "../src/routes/arena.js";
@@ -392,5 +392,54 @@ describe("Giữ Làng (Stage 24)", () => {
     await post({ map: "festival", waves: 3, rice: 0, won: false });
     const board = await request(app).get("/api/village/leaderboard?map=riverside");
     expect(board.body).toEqual([expect.objectContaining({ rank: 1, name: "Ann", score: 3850, waves: 30 })]);
+  });
+});
+
+describe("Chợ Đêm Brawl (Stage 25)", () => {
+  it("two heroes play a run on the game server; the result goes on the leaderboard", async () => {
+    const ann = await person("Ann");
+    const bou = await person("Bou");
+    const a = await socketFor(ann.cookie);
+    const b = await socketFor(bou.cookie);
+    const { code } = await ask(a, "brawl:create");
+    await ask(a, "room:join", { code });
+    const both = stateWhere(a, (st) => st.brawl?.seats.length === 2);
+    await ask(b, "room:join", { code });
+    expect((await both).brawl.seats.map((s: { hero: string }) => s.hero)).toEqual(["chef", "shipper"]); // a free hero each
+    expect((await ask(b, "brawl:hero", { code, hero: "chef" })).error).toBe("Someone already plays that hero");
+    await ask(b, "brawl:hero", { code, hero: "student" });
+    expect((await ask(a, "brawl:start", { code })).error).toBe("Not everyone is ready");
+    await ask(b, "brawl:ready", { code, ready: true });
+
+    const first = new Promise<any>((r) => a.once("brawl:tick", r)); // eslint-disable-line @typescript-eslint/no-explicit-any
+    expect((await ask(a, "brawl:start", { code })).ok).toBe(true);
+    clock += 50;
+    await alleyTick();
+    const v = await first;
+    expect(v.heroes.map((h: { name: string; hero: string }) => [h.name, h.hero])).toEqual([
+      ["Ann", "chef"],
+      ["Bou", "student"],
+    ]);
+    // walk right, and swing
+    a.emit("brawl:stick", { code, mx: 1, my: 0 });
+    await new Promise((r) => setTimeout(r, 100));
+    const x0 = brawlGameForTests(code)!.heroes[0].x;
+    clock += 500;
+    await alleyTick();
+    expect(brawlGameForTests(code)!.heroes[0].x).toBeGreaterThan(x0 + 0.5); // one step is at most 200 ms
+    expect((await ask(a, "brawl:act", { code, action: { a: "attack" } })).ok).toBe(true);
+
+    // fast-forward: the whole market cleared
+    const g = brawlGameForTests(code)!;
+    Object.assign(g, { area: 4, wave: 3, phase: "fight", enemies: [] });
+    const done = stateWhere(a, (st) => st.brawl && st.brawl.playing);
+    clock += 50;
+    await alleyTick();
+    await done;
+    expect(g.phase).toBe("won");
+    await expect.poll(async () => (await request(app).get("/api/brawl/leaderboard")).body.length).toBe(2);
+    const board = await request(app).get("/api/brawl/leaderboard");
+    expect(board.body[0]).toMatchObject({ areas: 5, runs: 1, wins: 1 });
+    expect((await ask(a, "brawl:again", { code })).ok).toBe(true);
   });
 });

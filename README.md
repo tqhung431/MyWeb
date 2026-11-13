@@ -378,6 +378,7 @@ https://<random-name>.trycloudflare.com
 22. Nook Arena — a game server of its own: live chess (clocks, ratings, play Nook the computer), Listen Together, and Nook TV (YouTube shelves chosen by the admin, live screen sharing) ✅ · [docs](docs/stage-22.md)
 23. Ngõ Pháo (Firecracker Alley) — a real-time party maze for 2–4 with bots, run by the game server 20 times a second and drawn with PixiJS ✅ · [docs](docs/stage-23.md)
 24. Giữ Làng (Keep the Village) — tower defense: 5 defenders with two upgrade paths, 3 maps × 30 waves or endless, solo in the browser (saved between waves) or co-op for two on the game server ✅ · [docs](docs/stage-24.md)
+25. Chợ Đêm Brawl (Night Market Brawl) — co-op action for 1–4: four heroes, five market areas, two bosses, a snack stall between areas; keyboard, gamepad or phone stick ✅ · [docs](docs/stage-25.md)
 
 ## Licence
 

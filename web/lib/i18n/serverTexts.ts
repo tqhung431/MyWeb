@@ -4,6 +4,12 @@
 import { tx } from "./core";
 
 export const SERVER_TEXTS = [
+  // Chợ Đêm Brawl (Stage 25): answers from the game server
+  tx("Someone already plays that hero"),
+  tx("Everyone needs a hero"),
+  tx("Not everyone is ready"),
+  tx("Not enough coins"),
+  tx("The shop is closed"),
   // Live activity (Home → Live now)
   tx("{name} unlocked “{_badge}”"),
   tx("{name} won Quiz Party against {a} ({score} pts)"),
@@ -11,6 +17,7 @@ export const SERVER_TEXTS = [
   tx("{name} won Quiz Party against {n} others ({score} pts)"),
   tx("{name} won a chess game against {other}"),
   tx("{name} won a Ngõ Pháo match"),
+  tx("{name} cleared the Night Market"),
   tx("{name} finished a {n}-min focus session"),
   tx("{name} kept “{habit}” going for {n} days in a row"),
   tx("{name} finished reading “{book}”"),

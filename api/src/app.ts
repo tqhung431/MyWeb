@@ -25,7 +25,7 @@ import { musicRouter } from "./routes/music.js";
 import { sessionsRouter } from "./routes/sessions.js";
 import { openApiDocument } from "./openapi.js";
 import { accessRouter } from "./routes/access.js";
-import { adminRouter, alleyRouter, chessRouter, tvRouter, villageRouter } from "./routes/arena.js";
+import { adminRouter, alleyRouter, brawlRouter, chessRouter, tvRouter, villageRouter } from "./routes/arena.js";
 import { tipsRouter } from "./routes/tips.js";
 import { watchRouter } from "./routes/watch.js";
 import { valkey, valkeyReady } from "./valkey/client.js";
@@ -84,6 +84,7 @@ export function createApp() {
   app.use("/api/chess", chessRouter);
   app.use("/api/alley", alleyRouter); // Stage 23
   app.use("/api/village", villageRouter); // Stage 24
+  app.use("/api/brawl", brawlRouter); // Stage 25
   app.use("/api/habits", habitsRouter);
   app.use("/api/books", booksRouter);
   app.use("/api/games", gamesRouter);
