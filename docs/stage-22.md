@@ -119,6 +119,32 @@ Events (Socket.IO, path `/api/arena`; every call answers with `{ ok, error? }`):
 | `listen:create {name}` · `listen:add {songId}` · `listen:vote {key}` · `listen:remove {key}` · `listen:skip` · `listen:pause` · `listen:resume` · `listen:seek {seconds}` · `listen:ended {key}` · `listen:everyone {on}` · `listen:react {emoji}` | Listen Together |
 | `tv:status` · `tv:share` · `tv:stop` · `tv:watch` · `tv:signal {to, data}` | screen sharing (`tv:share` is admin only; signals pass only between the sharer and a viewer) |
 
+## If Nook Arena says it can't reach the game server
+
+The game server is a separate service (`arena`) that came with Stage 22. On a server that was set up earlier:
+
+```bash
+git pull
+docker compose up -d --build        # builds and starts the new "arena" service too
+docker compose ps arena             # should say: running (healthy)
+docker compose logs arena           # if not: why it stopped
+```
+
+Then check the whole way from outside (replace the address with yours):
+
+```bash
+curl "https://nook.example.com/api/arena?EIO=4&transport=polling"
+# good: 0{"sid":"…","upgrades":["websocket"],…}
+```
+
+- **Cloudflare tunnel or Cloudflare Access:** nothing extra; `/api/arena` goes through Caddy like the rest of `/api`.
+  Behind Cloudflare Access, open Nook once in the browser first, so it has the Access pass. A `curl` without it gets the
+  "Nook is private" page (that's correct).
+- **Cloudflare proxy (orange cloud) or nginx:** WebSockets must be allowed (Cloudflare: Network → WebSockets on;
+  `deploy/nginx/nook.conf` already passes them). Without WebSockets the games still work, a little slower.
+- **A custom tunnel or proxy that sends only some paths to Nook:** send everything (`/`) to Caddy, or at least add
+  `/api/arena`.
+
 ## 8. Tests
 
 - `api/tests/arena-rules.test.ts`: chess rules with clocks (increment, flag, insufficient material), draws,

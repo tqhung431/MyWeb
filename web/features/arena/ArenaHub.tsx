@@ -19,7 +19,7 @@ const NEXT = [
 
 export function ArenaHub() {
   const t = useT();
-  const { connected } = useArena();
+  const { connected, problem } = useArena();
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -90,13 +90,30 @@ export function ArenaHub() {
 
       <Card>
         <div className="flex items-center gap-3">
-          <span className={cn("h-2.5 w-2.5 rounded-full", connected ? "bg-emerald-500" : "bg-amber-500")} aria-hidden="true" />
+          <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", connected ? "bg-emerald-500" : problem ? "bg-rose-500" : "bg-amber-500")} aria-hidden="true" />
           <p className="text-sm">
-            {connected ? t("Connected to Nook's game server.") : t("Connecting to the game server…")}{" "}
-            <span className="text-muted">{t("It runs on the same PC as Nook; games never leave your network.")}</span>
+            {connected ? t("Connected to Nook's game server.") : problem ? t("Can't reach Nook's game server.") : t("Connecting to the game server…")}{" "}
+            {!problem && <span className="text-muted">{t("It runs on the same PC as Nook; games never leave your network.")}</span>}
           </p>
           <Bot className="ml-auto hidden h-5 w-5 text-muted sm:block" aria-hidden="true" />
         </div>
+        {problem && !connected && (
+          <div className="mt-3 rounded-2xl bg-rose-500/10 p-3 text-sm">
+            <p className="font-semibold">{t("If you run Nook yourself, check on that computer:")}</p>
+            <ul className="mt-1 list-disc pl-5 text-muted">
+              <li>
+                <code>docker compose ps arena</code> {t("should say \"running (healthy)\". If it's missing: git pull, then docker compose up -d --build")}
+              </li>
+              <li>
+                <code>docker compose logs arena</code> {t("shows why it stopped")}
+              </li>
+              <li>{t("Behind Cloudflare or nginx: /api/arena must reach Caddy like the rest of /api (see docs/stage-22.md)")}</li>
+            </ul>
+            <p className="mt-1 text-xs text-muted">
+              {t("Details")}: {problem}
+            </p>
+          </div>
+        )}
       </Card>
 
       <section>

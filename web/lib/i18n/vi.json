@@ -1207,5 +1207,11 @@
  "Pick an upgrade": "Hãy chọn một hướng nâng cấp",
  "A wave is already coming": "Một đợt đang kéo đến rồi",
  "The game is over": "Trò chơi đã kết thúc",
- "You're watching this game": "Bạn đang xem trò chơi này"
+ "You're watching this game": "Bạn đang xem trò chơi này",
+ "Can't reach Nook's game server.": "Không kết nối được máy chủ trò chơi của Nook.",
+ "If you run Nook yourself, check on that computer:": "Nếu bạn tự chạy Nook, hãy kiểm tra trên máy đó:",
+ "should say \"running (healthy)\". If it's missing: git pull, then docker compose up -d --build": "phải hiện \"running (healthy)\". Nếu không có: chạy git pull, rồi docker compose up -d --build",
+ "shows why it stopped": "cho biết vì sao nó dừng",
+ "Behind Cloudflare or nginx: /api/arena must reach Caddy like the rest of /api (see docs/stage-22.md)": "Sau Cloudflare hoặc nginx: /api/arena phải tới Caddy giống phần còn lại của /api (xem docs/stage-22.md)",
+ "Details": "Chi tiết"
 }

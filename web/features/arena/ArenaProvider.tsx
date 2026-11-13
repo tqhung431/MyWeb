@@ -16,6 +16,8 @@ export type Ack = { ok: boolean; error?: string; code?: string; [k: string]: unk
 type ArenaState = {
   socket: Socket | null;
   connected: boolean;
+  /** Set when the game server can't be reached for a while (shown with tips on the Arena page) */
+  problem: string | null;
   /** Send an event and wait for the server's answer */
   ask: (event: string, payload?: unknown) => Promise<Ack>;
   /** Server time now, in ms (this device's clock corrected by the measured offset) */
@@ -28,6 +30,7 @@ export function ArenaProvider({ children }: { children: ReactNode }) {
   const { user } = useMe();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
   const offset = useRef(0);
 
   // The server reads who you are (cookie) when you connect: reconnect when you pick or change your name
@@ -56,10 +59,18 @@ export function ArenaProvider({ children }: { children: ReactNode }) {
     };
     s.on("connect", () => {
       setConnected(true);
+      setProblem(null);
       void measure();
     });
     s.on("disconnect", () => setConnected(false));
+    // Not connected after 8 s (or the server refuses): say so, instead of "Connecting…" forever
+    let lastError = "";
+    s.on("connect_error", (e: Error) => (lastError = e.message));
+    const slow = setTimeout(() => {
+      if (!s.connected) setProblem(lastError || "timeout");
+    }, 8000);
     return () => {
+      clearTimeout(slow);
       s.disconnect();
       setSocket(null);
       setConnected(false);
@@ -76,7 +87,7 @@ export function ArenaProvider({ children }: { children: ReactNode }) {
   );
   const serverNow = useCallback(() => Date.now() + offset.current, []);
 
-  const value = useMemo(() => ({ socket, connected, ask, serverNow }), [socket, connected, ask, serverNow]);
+  const value = useMemo(() => ({ socket, connected, problem, ask, serverNow }), [socket, connected, problem, ask, serverNow]);
   return <ArenaContext.Provider value={value}>{children}</ArenaContext.Provider>;
 }
 
