@@ -15,6 +15,10 @@ export const configSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   DATABASE_URL: z.string().startsWith("postgres"),
   PORT: z.coerce.number().int().default(4000),
+  // Stage 22: the game server (src/arena.ts) listens here; Caddy sends /api/arena to it
+  ARENA_PORT: z.coerce.number().int().default(4100),
+  // Stage 22: Nook TV's admin passcode. Empty = nobody can become admin.
+  ADMIN_PASSCODE: z.string().default(""),
 
   // Which network address the API listens on. 127.0.0.1 = only this computer.
   // Other PCs never talk to the API directly: they go through the website, which forwards /api/*.

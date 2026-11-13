@@ -139,3 +139,17 @@ export async function claimGuestData(userId: string, clientId: string | undefine
   await db.update(songLikes).set({ owner: `user:${userId}` }).where(eq(songLikes.owner, `client:${clientId}`));
   await db.update(songPlays).set({ owner: `user:${userId}` }).where(eq(songPlays.owner, `client:${clientId}`));
 }
+
+// Stage 22: the admin flag lives on the session (this browser), set by typing the admin passcode
+export async function isAdminToken(token: string | undefined): Promise<boolean> {
+  if (!token) return false;
+  const [row] = await db
+    .select({ isAdmin: authSessions.isAdmin })
+    .from(authSessions)
+    .where(and(eq(authSessions.id, hashToken(token)), gt(authSessions.expiresAt, new Date())));
+  return row?.isAdmin ?? false;
+}
+
+export async function setAdminToken(token: string, on: boolean): Promise<void> {
+  await db.update(authSessions).set({ isAdmin: on }).where(eq(authSessions.id, hashToken(token)));
+}

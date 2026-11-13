@@ -21,7 +21,7 @@ import { rateLimit } from "../middleware/security.js";
 export const gamesRouter = Router();
 
 export const MAX_SAVE_BYTES = 200_000;
-export const GAMES = ["van-lo"] as const;
+export const GAMES = ["van-lo", "village"] as const; // Stage 24: Giữ Làng solo saves
 
 // A save is bigger than the 10 KB the rest of the API allows, so this router reads JSON itself
 // (it's mounted before the app-wide parser in app.ts).

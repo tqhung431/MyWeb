@@ -51,7 +51,26 @@ Read this first in every session. It carries the context from the sessions that 
   `tests/i18n.test.ts` fails on a missing text: add Vietnamese for every new t("…")). Cookie `nook_lang`; API errors
   translated in errorHandler (`api/src/i18n.ts`); activity feed = template + params ("_" keys are translated).
   Vân Lộ keeps its own vi/en texts. `/settings` holds language + theme (no theme buttons in the shell).
-  Next: Stage 22 (ask the owner).
+  22: Nook Arena (`/arena`) + Nook TV (`/tv`). Game server = its own process (`api/src/arena.ts`, service `arena`, port
+  ARENA_PORT 4100, Socket.IO path `/api/arena`; Caddy `handle /api/arena*` → ARENA_UPSTREAM; Next rewrite → ARENA_URL).
+  API routes must NOT start with /api/arena (they'd go to the game server): `/api/admin`, `/api/tv`, `/api/chess/*`.
+  Rules without network code in `arena/chess-game.ts` (chess.js) and `arena/listen.ts` (server-time sync); rooms in memory,
+  results in `chess_games` / `arena_ratings` (Elo K=32). Web: `features/arena/ArenaProvider` (opened only in /arena and /tv,
+  clock offset), chess `Board.tsx` (SVG pieces in `pieces.tsx`), own fast engine `engine.ts` (0x88, perft-tested, Web Worker).
+  Admin = `ADMIN_PASSCODE` in .env, flag on the session (`auth_sessions.is_admin`), Settings → Admin. Nook TV: YouTube
+  (youtube-nocookie embeds, oEmbed titles) chosen by the admin; screen share = WebRTC peer-to-peer, server only relays
+  signals. Owner's rule: never add links/presets to unofficial streaming sites.
+  23: Ngõ Pháo (`/arena/alley`): rules in `api/src/arena/alley.ts` (pure, seeded, `stepAlley(g, now, dt)` 20×/s from
+  `alleyTick()` in server.ts, bots with a danger map), lobby in `alley-room.ts`; `alley-move.ts` exists twice
+  (api + `web/features/arena/alley/`) and must stay byte-identical (test). Web: PixiJS 8 loaded only in `GameView`
+  (`renderer.ts`: interpolation 100 ms for others, prediction for you; `art.ts` draws textures in code; menus use the
+  SVG `LanternHead` and `colors.ts` so they don't load PixiJS). Wins in `arena_ratings` (game "alley"), `/api/alley/leaderboard`.
+  24: Giữ Làng (`/arena/village`): rules in `village.ts`, no imports/no randomness, TWO byte-identical copies (api/src/arena +
+  web/features/arena/village; test). Solo runs in the browser (`VillageSolo`, saves in localStorage + cloud save game "village"),
+  co-op on the game server (`village:*`, VillageRoom in server.ts, sides 0/1). `ViewFeed` feeds both the Pixi renderer and the
+  React HUD (HUD redraws only on change). Scores in `village_scores` (`/api/village/scores`, `/api/village/leaderboard?map=`).
+  Balance with a bot before changing numbers (the "is winnable" test).
+  Next: Stage 25 Chợ Đêm Brawl, 26–27 Mầm Thú (design doc "Stage 22 design: Nook Arena games").
   Original world only: don't copy names/characters/plots from existing novels or films.
   Each stage has an explainer in `docs/stage-N.md`; write one for every new stage and update the README's stage list.
 - Apps: **Chill Corner** (focus timer, generated sounds, tips, achievements), **Music** (uploaded songs
@@ -61,6 +80,7 @@ Read this first in every session. It carries the context from the sessions that 
   **WatchList** (`api/src/watch/sources.ts`; tests use `tests/fake-watch.ts` on port 4995).
   **Habit & Reading Tracker** (`/habits`: days are `date` strings in X-Time-Zone; `web/lib/offline.ts` queue; `public/sw.js`).
   **Arcade Online** (`api/src/arcade-online/`: game.ts has no network code; tests use a fake clock).
+  **Nook Arena** (`/arena`: chess, Ngõ Pháo, Giữ Làng, Listen Together) and **Nook TV** (`/tv`), Stages 22–24.
 - Phone tab bar: Home + apps with `pinned: true` + an "Apps" grid. Don't pin more than 3–4.
 - People (Stage 11): **name only, one browser** (owner's choice): no email/password, no login page. `POST /api/me {name}`
   sets the `nook_session` cookie; names unique by lower(name). Guests (X-Client-Id) still work until they pick a name.
@@ -115,7 +135,7 @@ Phone layouts: a `grid` with only `sm:`/`lg:grid-cols-…` sizes its phone colum
   with databases `nook` and `nook_test`. The environment's setup script does this.
 - Tests use a **fake Ollama** (`api/tests/fake-ollama.ts`, ports 4996/4997). If tests hang on ports, kill
   leftovers: `fuser -k 4995/tcp 4996/tcp 4997/tcp 4998/tcp 4999/tcp`.
-- Run the app for a browser check: `npm run dev` in `api/` (with `OLLAMA_URL` set if needed), `npm run worker`,
+- Run the app for a browser check: `npm run dev` in `api/` (with `OLLAMA_URL` set if needed), `npm run worker`, `npm run arena`,
   `npm run dev` in `web/`. Dev mode keeps a long-polling connection open: in Playwright wait for `load`, not
   `networkidle`. Launch Chromium with `--no-proxy-server --proxy-bypass-list=localhost`.
 - Production-like check: build, run the Next standalone server (`cp -r .next/static .next/standalone/.next/static`),

@@ -13,7 +13,7 @@ import lighthouse from "lighthouse";
 const BASE = (process.env.BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
 const MIN = Number(process.env.MIN ?? 90);
 const MIN_PERF = Number(process.env.MIN_PERF ?? MIN);
-const PAGES = (process.env.PAGES ?? "/,/chill,/music,/arcade,/arcade/worm,/watchlist,/hobby-hub,/habits,/arcade-online,/games,/games/van-lo,/companion,/about")
+const PAGES = (process.env.PAGES ?? "/,/chill,/music,/arcade,/arcade/worm,/watchlist,/hobby-hub,/habits,/arcade-online,/arena,/tv,/games,/games/van-lo,/companion,/about")
   .split(",")
   .map((p) => p.trim());
 const CATEGORIES = ["performance", "accessibility", "best-practices", "seo"];

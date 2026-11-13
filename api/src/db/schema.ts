@@ -2,7 +2,7 @@
 // drizzle-kit reads this file and writes the SQL migrations in /drizzle.
 
 import { sql } from "drizzle-orm";
-import { check, date, index, integer, jsonb, pgTable, primaryKey, serial, text, timestamp, uniqueIndex, uuid, vector } from "drizzle-orm/pg-core";
+import { boolean, check, date, index, integer, jsonb, pgTable, primaryKey, serial, text, timestamp, uniqueIndex, uuid, vector } from "drizzle-orm/pg-core";
 
 export const tips = pgTable("tips", {
   id: serial("id").primaryKey(),
@@ -43,6 +43,8 @@ export const authSessions = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     userAgent: text("user_agent"),
+    // Stage 22: this browser typed the admin passcode (Nook TV: add videos, share a tab)
+    isAdmin: boolean("is_admin").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("auth_sessions_user_idx").on(t.userId)],
@@ -513,3 +515,80 @@ export type Song = typeof songs.$inferSelect;
 export type Tip = typeof tips.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type FocusSession = typeof focusSessions.$inferSelect;
+
+// --- Stage 22: Nook Arena -------------------------------------------------------------------
+// Live games run in the game server's memory (api/src/arena); only results are stored.
+
+// A finished chess game. A side is a person or "Nook" (the computer, with a level 1–4).
+export const chessGames = pgTable(
+  "chess_games",
+  {
+    id: serial("id").primaryKey(),
+    whiteId: uuid("white_id").references(() => users.id, { onDelete: "cascade" }),
+    blackId: uuid("black_id").references(() => users.id, { onDelete: "cascade" }),
+    whiteName: text("white_name").notNull(),
+    blackName: text("black_name").notNull(),
+    mode: text("mode", { enum: ["live", "nook"] }).notNull(),
+    nookLevel: integer("nook_level"),
+    timeControl: text("time_control").notNull(), // "none", "5+0", "10+0", "15+10"
+    pgn: text("pgn").notNull(),
+    result: text("result", { enum: ["1-0", "0-1", "1/2-1/2"] }).notNull(),
+    reason: text("reason").notNull(), // checkmate, resign, time, stalemate, draw…
+    endedAt: timestamp("ended_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("chess_games_white_idx").on(t.whiteId), index("chess_games_black_idx").on(t.blackId)],
+);
+
+// A person's rating (Elo) in one live game. Starts at 1200.
+export const arenaRatings = pgTable(
+  "arena_ratings",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    game: text("game").notNull(),
+    rating: integer("rating").notNull().default(1200),
+    games: integer("games").notNull().default(0),
+    wins: integer("wins").notNull().default(0),
+    draws: integer("draws").notNull().default(0),
+    losses: integer("losses").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.game] }), index("arena_ratings_game_idx").on(t.game, t.rating)],
+);
+
+// Stage 24: Giữ Làng (Keep the Village) results, per map. Solo games are sent by the browser; co-op by the game server.
+export const villageScores = pgTable(
+  "village_scores",
+  {
+    id: serial("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    map: text("map").notNull(),
+    mode: text("mode", { enum: ["solo", "coop"] }).notNull(),
+    endless: boolean("endless").notNull().default(false),
+    waves: integer("waves").notNull(),
+    rice: integer("rice").notNull(),
+    won: boolean("won").notNull(),
+    score: integer("score").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("village_scores_map_idx").on(t.map, t.score), index("village_scores_user_idx").on(t.userId)],
+);
+
+// Nook TV: YouTube videos and playlists the admin chose, on shelves
+export const tvVideos = pgTable(
+  "tv_videos",
+  {
+    id: serial("id").primaryKey(),
+    kind: text("kind", { enum: ["video", "playlist"] }).notNull(),
+    youtubeId: text("youtube_id").notNull(),
+    title: text("title").notNull(),
+    shelf: text("shelf").notNull(),
+    position: integer("position").notNull().default(0),
+    addedBy: uuid("added_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("tv_videos_kind_id_idx").on(t.kind, t.youtubeId), index("tv_videos_shelf_idx").on(t.shelf, t.position)],
+);

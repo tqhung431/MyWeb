@@ -168,3 +168,29 @@ nginx with this config, Caddy and the API, with requests like a browser's:
 
 **Not tested here:** Google Cloud itself (console, firewall, static IP), DNS and certbot, which need a real server and
 domain.
+
+## If Nook Arena says it can't reach the game server
+
+The game server is a separate service (`arena`) that came with Stage 22. On a server that was set up earlier:
+
+```bash
+git pull
+docker compose up -d --build        # builds and starts the new "arena" service too
+docker compose ps arena             # should say: running (healthy)
+docker compose logs arena           # if not: why it stopped
+```
+
+Then check the whole way from outside (replace the address with yours):
+
+```bash
+curl "https://nook.example.com/api/arena?EIO=4&transport=polling"
+# good: 0{"sid":"…","upgrades":["websocket"],…}
+```
+
+- **Cloudflare tunnel or Cloudflare Access:** nothing extra; `/api/arena` goes through Caddy like the rest of `/api`.
+  Behind Cloudflare Access, open Nook once in the browser first, so it has the Access pass. A `curl` without it gets the
+  "Nook is private" page (that's correct).
+- **Cloudflare proxy (orange cloud) or nginx:** WebSockets must be allowed (Cloudflare: Network → WebSockets on;
+  `deploy/nginx/nook.conf` already passes them). Without WebSockets the games still work, a little slower.
+- **A custom tunnel or proxy that sends only some paths to Nook:** send everything (`/`) to Caddy, or at least add
+  `/api/arena`.

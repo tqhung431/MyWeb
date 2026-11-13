@@ -25,6 +25,7 @@ import { musicRouter } from "./routes/music.js";
 import { sessionsRouter } from "./routes/sessions.js";
 import { openApiDocument } from "./openapi.js";
 import { accessRouter } from "./routes/access.js";
+import { adminRouter, alleyRouter, chessRouter, tvRouter, villageRouter } from "./routes/arena.js";
 import { tipsRouter } from "./routes/tips.js";
 import { watchRouter } from "./routes/watch.js";
 import { valkey, valkeyReady } from "./valkey/client.js";
@@ -78,6 +79,11 @@ export function createApp() {
   app.use("/api/hobby", hobbyRouter);
   app.use("/api/hobby", messagesRouter); // Stage 21: private chats, pictures, unread badge
   app.use("/api/watch", watchRouter);
+  app.use("/api/admin", adminRouter); // Stage 22
+  app.use("/api/tv", tvRouter);
+  app.use("/api/chess", chessRouter);
+  app.use("/api/alley", alleyRouter); // Stage 23
+  app.use("/api/village", villageRouter); // Stage 24
   app.use("/api/habits", habitsRouter);
   app.use("/api/books", booksRouter);
   app.use("/api/games", gamesRouter);
