@@ -176,15 +176,22 @@ The game server is a separate service (`arena`) that came with Stage 22. On a se
 ```bash
 git pull
 docker compose up -d --build        # builds and starts the new "arena" service too
+docker compose up -d --force-recreate caddy   # Caddy picks up the new Caddyfile (see below)
 docker compose ps arena             # should say: running (healthy)
 docker compose logs arena           # if not: why it stopped
 ```
+
+**`/api/arena` answers 404 (or the Arena page says Caddy is using old settings):** Caddy reads the `Caddyfile`
+through a file mount, and after `git pull` a Caddy that is already running keeps the old file, which doesn't know
+about the game server, so `/api/arena` goes to the API and gets "not found". `docker compose up -d --force-recreate caddy`
+fixes it (the start scripts now do this on every start).
 
 Then check the whole way from outside (replace the address with yours):
 
 ```bash
 curl "https://nook.example.com/api/arena?EIO=4&transport=polling"
 # good: 0{"sid":"…","upgrades":["websocket"],…}
+# {"error":"Caddy is still using its old settings…","code":"old-caddy"}: run the force-recreate line above
 ```
 
 - **Cloudflare tunnel or Cloudflare Access:** nothing extra; `/api/arena` goes through Caddy like the rest of `/api`.
