@@ -23,9 +23,30 @@ export type GroupDetail = Omit<Group, "members" | "posts" | "lastActivity" | "un
 export type Post = { id: number; body: string; createdAt: string; author: Person; likes: number; comments: number; liked: boolean; mine: boolean };
 export type Comment = { id: number; body: string; createdAt: string; author: Person; mine: boolean };
 export type ChatImage = { id: string; url: string; width: number; height: number };
-export type Message = { id: number; body: string; createdAt: string; author: Person; image: ChatImage | null; mine?: boolean };
-export type DirectMessage = { id: number; body: string; createdAt: string; readAt: string | null; image: ChatImage | null; mine: boolean };
-export type Conversation = { id: string; name: string; lastBody: string; lastImage: boolean; lastMine: boolean; lastAt: string; unread: number };
+// Stage 28: a deleted message stays in the list (deletedBy set, no words or picture); editedAt = "edited"
+export type DeletedBy = "author" | "admin" | null;
+export type Message = { id: number; body: string; createdAt: string; author: Person; image: ChatImage | null; mine?: boolean; deletedBy?: DeletedBy; editedAt?: string | null };
+export type DirectMessage = {
+  id: number;
+  body: string;
+  createdAt: string;
+  readAt: string | null;
+  image: ChatImage | null;
+  mine: boolean;
+  deletedBy?: DeletedBy;
+  editedAt?: string | null;
+};
+export type Conversation = {
+  id: string;
+  name: string;
+  lastBody: string;
+  lastImage: boolean;
+  lastDeleted?: boolean;
+  lastMine: boolean;
+  lastAt: string;
+  unread: number;
+};
+export type Edited = { id: number; body: string; editedAt: string };
 export type Unread = { messages: number; groups: number };
 
 const json = (method: string, body?: unknown): RequestInit => ({ method, ...(body !== undefined && { body: JSON.stringify(body) }) });
@@ -52,6 +73,7 @@ export const getMessages = (slug: string, before?: number) =>
 export const sendMessage = (slug: string, body: string, imageId?: string) =>
   apiFetch<Message>(`/api/hobby/groups/${slug}/messages`, json("POST", { body, imageId }));
 export const deleteMessage = (id: number) => apiFetch<void>(`/api/hobby/messages/${id}`, json("DELETE"));
+export const editMessage = (id: number, body: string) => apiFetch<Edited>(`/api/hobby/messages/${id}`, json("PATCH", { body }));
 export const markGroupRead = (slug: string) => apiFetch<void>(`/api/hobby/groups/${slug}/read`, json("PUT"));
 
 // --- Stage 21: private chats ---
@@ -64,6 +86,7 @@ export const sendDirectMessage = (userId: string, body: string, imageId?: string
   apiFetch<DirectMessage>(`/api/hobby/dms/${userId}`, json("POST", { body, imageId }));
 export const markDirectRead = (userId: string) => apiFetch<void>(`/api/hobby/dms/${userId}/read`, json("PUT"));
 export const deleteDirectMessage = (id: number) => apiFetch<void>(`/api/hobby/dms/messages/${id}`, json("DELETE"));
+export const editDirectMessage = (id: number, body: string) => apiFetch<Edited>(`/api/hobby/dms/messages/${id}`, json("PATCH", { body }));
 
 // A picture is a form upload (not JSON), so it skips apiFetch's JSON header
 export async function uploadChatImage(file: Blob, name: string): Promise<ChatImage> {

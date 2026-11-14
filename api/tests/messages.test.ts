@@ -70,7 +70,7 @@ describe("private chats", () => {
     expect((await linh.agent.post("/api/hobby/dms/not-a-uuid").send({ body: "?" })).status).toBe(404);
   });
 
-  it("only the sender deletes a message, and the other person can't see it", async () => {
+  it("only the sender deletes a message; the other person sees only that it was deleted (Stage 28)", async () => {
     const linh = await person("Linh");
     const mai = await person("Mai");
     const an = await person("An");
@@ -78,7 +78,8 @@ describe("private chats", () => {
     expect((await an.agent.delete(`/api/hobby/dms/messages/${m.body.id}`)).status).toBe(404); // not theirs to know about
     expect((await mai.agent.delete(`/api/hobby/dms/messages/${m.body.id}`)).status).toBe(403);
     expect((await linh.agent.delete(`/api/hobby/dms/messages/${m.body.id}`)).status).toBe(204);
-    expect((await mai.agent.get(`/api/hobby/dms/${linh.id}`)).body.messages).toEqual([]);
+    const [left] = (await mai.agent.get(`/api/hobby/dms/${linh.id}`)).body.messages;
+    expect(left).toMatchObject({ id: m.body.id, body: "", image: null, deletedBy: "author" });
   });
 
   it("finds people by name to start a chat with (not yourself)", async () => {

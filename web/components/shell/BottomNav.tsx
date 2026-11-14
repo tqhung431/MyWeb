@@ -22,8 +22,7 @@ export function BottomNav() {
   const pathname = usePathname();
   const { user } = useMe();
   const [open, setOpen] = useState(false);
-  const { total: unread } = useUnread(); // Stage 21: the Hobby Hub badge
-  const badge = (href: string) => (href === "/hobby-hub" ? unread : 0);
+  const { badge } = useUnread(); // Stage 28: Messages and Hobby Hub each have their own badge
 
   useEffect(() => setOpen(false), [pathname]); // close the grid after choosing
 

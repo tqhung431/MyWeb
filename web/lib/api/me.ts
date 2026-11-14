@@ -5,7 +5,7 @@ import { apiFetch } from "./client";
 import { clientId } from "./clientId";
 import { timeZone } from "./timezone";
 
-export type Preferences = { timer?: { focus: number; short: number; long: number } };
+export type Preferences = { timer?: { focus: number; short: number; long: number }; shareMilestones?: boolean }; // Stage 28: Settings → Privacy
 // Stage 27: hasPin = the name is protected (it can be signed into on another device); pausedUntil = paused by the admin
 export type User = { id: string; name: string; createdAt: string; preferences?: Preferences; hasPin?: boolean; pausedUntil?: string | null };
 export type Device = { id: string; userAgent: string; createdAt: string; lastUsedAt: string; current: boolean };

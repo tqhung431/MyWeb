@@ -1,7 +1,7 @@
 "use client";
 
-// Stage 21: how many private messages and group posts/messages you haven't seen, for the badge on
-// Hobby Hub's icon (tab bar, sidebar, apps grid) and the Messages tab.
+// Stage 21: how many private messages and group posts/messages you haven't seen. Stage 28: private messages
+// show on the Messages app's icon, group posts and chats on Hobby Hub's (tab bar, sidebar, apps grid).
 //
 // One request when the page loads (and after reconnecting), then again when the server says something
 // changed: "dm:message", "dm:read", "dm:deleted" and "hobby:unread" arrive in your own room only.
@@ -12,9 +12,9 @@ import { useMe } from "@/features/me/MeProvider";
 import { useRealtime, useRealtimeEvent } from "@/features/realtime/RealtimeProvider";
 import { getUnread, type Unread } from "@/lib/api/hobby";
 
-type UnreadState = Unread & { total: number; refresh: () => void };
+type UnreadState = Unread & { total: number; badge: (href: string) => number; refresh: () => void };
 const NONE: Unread = { messages: 0, groups: 0 };
-const UnreadContext = createContext<UnreadState>({ ...NONE, total: 0, refresh: () => {} });
+const UnreadContext = createContext<UnreadState>({ ...NONE, total: 0, badge: () => 0, refresh: () => {} });
 
 export function UnreadProvider({ children }: { children: ReactNode }) {
   const { user } = useMe();
@@ -46,7 +46,16 @@ export function UnreadProvider({ children }: { children: ReactNode }) {
   useRealtimeEvent("dm:deleted", refresh);
   useRealtimeEvent("hobby:unread", refresh);
 
-  const value = useMemo(() => ({ ...unread, total: unread.messages + unread.groups, refresh }), [unread, refresh]);
+  // Stage 28: two badges: private messages on Messages, group posts and chats on Hobby Hub
+  const value = useMemo(
+    () => ({
+      ...unread,
+      total: unread.messages + unread.groups,
+      badge: (href: string) => (href === "/messages" ? unread.messages : href === "/hobby-hub" ? unread.groups : 0),
+      refresh,
+    }),
+    [unread, refresh],
+  );
   return <UnreadContext.Provider value={value}>{children}</UnreadContext.Provider>;
 }
 

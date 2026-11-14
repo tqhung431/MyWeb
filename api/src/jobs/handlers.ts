@@ -5,7 +5,7 @@ import { ACHIEVEMENTS, earnedCodes } from "../achievements.js";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { achievements, focusSessions, users } from "../db/schema.js";
-import { displayName, notifyOwner, publishActivity } from "../realtime/emit.js";
+import { displayName, notifyOwner, publishMilestone } from "../realtime/emit.js";
 import { reindex } from "../ai/knowledge.js";
 import { AiUnavailable, aiEnabled } from "../ai/ollama.js";
 import { cleanup } from "./cleanup.js";
@@ -35,7 +35,7 @@ export async function checkAchievements({ userId, clientId, timeZone }: JobData[
 
   // Stage 6: tell the person right away (all their open tabs and PCs), and tell everyone in the feed.
   if (added.length) {
-    const [user] = userId ? await db.select({ name: users.name }).from(users).where(eq(users.id, userId)) : [];
+    const [user] = userId ? await db.select({ name: users.name, preferences: users.preferences }).from(users).where(eq(users.id, userId)) : [];
     for (const a of added) {
       const rule = ACHIEVEMENTS.find((r) => r.code === a.code)!;
       notifyOwner({ userId, clientId }, "achievement", {
@@ -45,7 +45,7 @@ export async function checkAchievements({ userId, clientId, timeZone }: JobData[
         icon: rule.icon,
         earnedAt: a.earnedAt,
       });
-      await publishActivity(rule.icon, "{name} unlocked “{_badge}”", { name: displayName(user?.name), _badge: rule.title });
+      await publishMilestone(user, rule.icon, "{name} unlocked “{_badge}”", { name: displayName(user?.name), _badge: rule.title }); // Stage 28: only if shared
     }
   }
   return { added: added.map((a) => a.code) };

@@ -44,6 +44,9 @@ export const setBanner = (text: string) => apiFetch<{ text: string | null }>("/a
 export const getStorage = () => apiFetch<Storage>("/api/admin/storage");
 export const runCleanup = () => apiFetch<{ queued: boolean }>("/api/admin/cleanup", json("POST"));
 export const getLog = () => apiFetch<LogLine[]>("/api/admin/log");
+// Stage 28: who came in, when, how, on what kind of device
+export type SignIn = { id: number; name: string; how: "new" | "pin" | "code" | "claim"; userAgent: string | null; at: string };
+export const getSignIns = () => apiFetch<SignIn[]>("/api/admin/sign-ins");
 export const getHealth = () => apiFetch<Health>("/api/admin/health");
 
 // For everyone

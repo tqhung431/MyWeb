@@ -10,10 +10,19 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { buttonClasses } from "@/components/ui/Button";
-import { useConfirm } from "@/components/ui/Dialog";
 import { useMe } from "@/features/me/MeProvider";
 import { useRealtime, useRealtimeEvent } from "@/features/realtime/RealtimeProvider";
-import { deleteDirectMessage, getDirectMessages, markDirectRead, sendDirectMessage, type DirectMessage, type Person } from "@/lib/api/hobby";
+import {
+  deleteDirectMessage,
+  editDirectMessage,
+  getDirectMessages,
+  markDirectRead,
+  sendDirectMessage,
+  type DeletedBy,
+  type DirectMessage,
+  type Edited,
+  type Person,
+} from "@/lib/api/hobby";
 import { ChatPanel, type ChatItem } from "./ChatPanel";
 import { useTyping } from "./useTyping";
 
@@ -21,7 +30,6 @@ import { useT } from "@/lib/i18n/I18nProvider";
 export function DirectChat({ userId }: { userId: string }) {
   const t = useT();
   const reportIt = useReport(); // Stage 27
-  const confirm = useConfirm();
   const { user, askName } = useMe();
   const { socket } = useRealtime();
   const [person, setPerson] = useState<Person | null>(null);
@@ -73,8 +81,15 @@ export function DirectChat({ userId }: { userId: string }) {
       markRead();
     }
   });
-  useRealtimeEvent<{ with: string; id: number }>("dm:deleted", (e) => {
-    if (e.with === userId) setMessages((list) => list?.filter((m) => m.id !== e.id) ?? null);
+  // Stage 28: "Message deleted" stays in its place; edits show "edited"
+  const markDeleted = (id: number, by: DeletedBy) =>
+    setMessages((list) => list?.map((m) => (m.id === id ? { ...m, body: "", image: null, deletedBy: by ?? "author", editedAt: null } : m)) ?? null);
+  const markEdited = (e: Edited) => setMessages((list) => list?.map((m) => (m.id === e.id ? { ...m, body: e.body, editedAt: e.editedAt } : m)) ?? null);
+  useRealtimeEvent<{ with: string; id: number; by?: DeletedBy }>("dm:deleted", (e) => {
+    if (e.with === userId) markDeleted(e.id, e.by ?? "author");
+  });
+  useRealtimeEvent<{ with: string } & Edited>("dm:edited", ({ with: w, ...e }) => {
+    if (w === userId) markEdited(e);
   });
   // They read your messages: show "Seen"
   useRealtimeEvent<{ with: string; by: string }>("dm:read", (e) => {
@@ -100,11 +115,14 @@ export function DirectChat({ userId }: { userId: string }) {
     setMessages((list) => (list && !list.some((x) => x.id === m.id) ? [...list, m] : list));
   }
 
+  // Stage 28: ChatPanel gives 5 seconds to Undo, then calls this
   async function remove(m: ChatItem) {
-    if (!(await confirm({ title: t("Delete this message?"), description: t("It disappears for both of you."), confirmLabel: t("Delete"), danger: true })))
-      return;
-    await deleteDirectMessage(m.id).catch(() => {});
-    setMessages((list) => list?.filter((x) => x.id !== m.id) ?? null);
+    await deleteDirectMessage(m.id);
+    markDeleted(m.id, "author");
+  }
+
+  async function edit(m: ChatItem, body: string) {
+    markEdited(await editDirectMessage(m.id, body));
   }
 
   function onTyping() {
@@ -128,7 +146,7 @@ export function DirectChat({ userId }: { userId: string }) {
     return (
       <div className="flex flex-col items-start gap-3 p-2">
         <p className="font-semibold">{t("This person isn't on Nook any more.")}</p>
-        <Link href="/hobby-hub/messages" className={buttonClasses("secondary", "sm")}>
+        <Link href="/messages" className={buttonClasses("secondary", "sm")}>
           {t("All messages")}
         </Link>
       </div>
@@ -138,7 +156,7 @@ export function DirectChat({ userId }: { userId: string }) {
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       <div className="flex items-center gap-3">
-        <Link href="/hobby-hub/messages" className={buttonClasses("ghost", "icon", "lg:hidden")} aria-label={t("All messages")}>
+        <Link href="/messages" className={buttonClasses("ghost", "icon", "lg:hidden")} aria-label={t("All messages")}>
           <ArrowLeft className="h-5 w-5" aria-hidden="true" />
         </Link>
         {person && <Avatar name={person.name} size="md" />}
@@ -155,6 +173,7 @@ export function DirectChat({ userId }: { userId: string }) {
         onLoadOlder={loadOlder}
         onSend={send}
         onDelete={remove}
+        onEdit={edit}
         onReport={(m) => void reportIt("dm", m.id)}
         onTyping={onTyping}
         typingNames={typing.names}

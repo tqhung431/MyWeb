@@ -148,6 +148,13 @@
       "when": 1794620290979,
       "tag": "0020_people_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794624669631,
+      "tag": "0021_chat_privacy",
+      "breakpoints": true
     }
   ]
 }

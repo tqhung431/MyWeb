@@ -4,10 +4,10 @@ import { pickName, visit } from "./helpers";
 
 const LONG = "Extraordinarily-long-group-name-without-any-spaces-at-all";
 
-test("phone: tab bar to Music, arcade game fits", async ({ page }) => {
+test("phone: tab bar to Messages, arcade game fits", async ({ page }) => {
   await visit(page, "/");
-  await page.getByRole("navigation").getByRole("link", { name: "Music" }).last().click();
-  await expect(page).toHaveURL(/\/music/);
+  await page.getByRole("navigation").getByRole("link", { name: "Messages" }).last().click(); // Stage 28: Messages took Music's place
+  await expect(page).toHaveURL(/\/messages/);
   await visit(page, "/arcade/pancakes");
   await page.getByRole("button", { name: "Play" }).click();
   const width = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -22,7 +22,7 @@ test("phone: no sideways scrolling with long names in the live feed", async ({ p
     data: { name: `${LONG.slice(0, 33)}-${Math.random().toString(36).slice(2, 7)}`, emoji: "📏", description: "x" },
   });
   expect(res.ok()).toBe(true);
-  for (const path of ["/", "/hobby-hub", "/arcade", "/habits", "/music", "/watchlist", "/games"]) {
+  for (const path of ["/", "/hobby-hub", "/messages", "/arcade", "/habits", "/music", "/watchlist", "/games"]) {
     await visit(page, path);
     await page.waitForTimeout(400);
     const extra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

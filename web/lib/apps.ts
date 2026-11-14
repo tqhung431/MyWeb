@@ -5,7 +5,7 @@
 // (tests/apps.test.ts fails if a "live" app has no page.)
 
 import type { LucideIcon } from "lucide-react";
-import { Clapperboard, Crown, Disc3, Gamepad2, ListChecks, Moon, Mountain, Sparkles, Swords, Tv, Users } from "lucide-react";
+import { Clapperboard, Crown, Disc3, Gamepad2, ListChecks, MessageCircle, Moon, Mountain, Sparkles, Swords, Tv, Users } from "lucide-react";
 
 import { tx } from "@/lib/i18n/core";
 // Stage 21: names and labels are wrapped in tx() so the translation test finds them; shown with t(app.name).
@@ -43,7 +43,6 @@ export const APPS: AppInfo[] = [
   },
   {
     id: "music",
-    pinned: true,
     name: tx("Music"),
     tagline: tx("Songs with vocals, played by Nook itself: community charts"),
     href: "/music",
@@ -88,6 +87,17 @@ export const APPS: AppInfo[] = [
     ],
   },
   {
+    id: "messages",
+    pinned: true, // Stage 28: on the phone tab bar instead of Music (Music is under "Apps")
+    name: tx("Messages"),
+    tagline: tx("Private chats, just the two of you"),
+    href: "/messages",
+    icon: MessageCircle,
+    accent: "from-sky-400 to-indigo-500",
+    status: "live",
+    phase: "Stages 21, 28",
+  },
+  {
     id: "hobby-hub",
     pinned: true,
     name: tx("Hobby Hub"),
@@ -98,10 +108,7 @@ export const APPS: AppInfo[] = [
     accent: "from-emerald-400 to-teal-500",
     status: "live",
     phase: "Stage 11",
-    links: [
-      { href: "/hobby-hub", label: tx("Groups") },
-      { href: "/hobby-hub/messages", label: tx("Messages") }, // Stage 21: private chats
-    ],
+    // Stage 28: private chats moved to their own app (Messages)
   },
   {
     id: "habits",

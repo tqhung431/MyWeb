@@ -378,6 +378,9 @@ export const chatMessages = pgTable(
     body: text("body").notNull(), // "" when the message is just a picture
     imageId: uuid("image_id").references(() => chatImages.id, { onDelete: "set null" }), // Stage 21
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    // Stage 28: "Message deleted" stays in its place (words and picture gone); edited within 10 minutes
+    deletedBy: text("deleted_by", { enum: ["author", "admin"] }),
+    editedAt: timestamp("edited_at", { withTimezone: true }),
   },
   (t) => [index("chat_messages_group_time_idx").on(t.groupId, t.createdAt), index("chat_messages_time_idx").on(t.createdAt)],
 );
@@ -398,6 +401,9 @@ export const directMessages = pgTable(
     imageId: uuid("image_id").references(() => chatImages.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     readAt: timestamp("read_at", { withTimezone: true }), // null = the recipient hasn't seen it yet
+    // Stage 28: as in group chat (the admin never deletes private messages except reported ones)
+    deletedBy: text("deleted_by", { enum: ["author", "admin"] }),
+    editedAt: timestamp("edited_at", { withTimezone: true }),
   },
   (t) => [
     index("direct_messages_pair_idx").on(t.senderId, t.recipientId, t.id),
@@ -585,7 +591,8 @@ export const gameSaves = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.game] }), index("game_saves_board_idx").on(t.game, t.level)],
 );
 
-export type Preferences = { timer?: { focus: number; short: number; long: number } };
+// Stage 28: shareMilestones = badges, habit streaks and finished books appear in the Live now feed (off unless chosen)
+export type Preferences = { timer?: { focus: number; short: number; long: number }; shareMilestones?: boolean };
 export type Song = typeof songs.$inferSelect;
 export type Tip = typeof tips.$inferSelect;
 export type User = typeof users.$inferSelect;
@@ -685,4 +692,22 @@ export const tvVideos = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("tv_videos_kind_id_idx").on(t.kind, t.youtubeId), index("tv_videos_shelf_idx").on(t.shelf, t.position)],
+);
+
+// --- Stage 28: the admin's sign-in log -------------------------------------------------------
+// Who came in, when, and on what kind of device. No pages, no content. Kept 90 days (jobs/cleanup.ts).
+export const signIns = pgTable(
+  "sign_ins",
+  {
+    id: serial("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(), // the name at that time (people can be renamed)
+    // new = picked a name; pin = name + PIN; code = a code from their other device; claim = the admin's claim code
+    how: text("how", { enum: ["new", "pin", "code", "claim"] }).notNull(),
+    userAgent: text("user_agent"),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("sign_ins_at_idx").on(t.at), index("sign_ins_user_idx").on(t.userId)],
 );

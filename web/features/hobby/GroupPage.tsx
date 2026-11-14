@@ -182,7 +182,7 @@ export function GroupPage({ slug }: { slug: string }) {
                         </span>
                         {user && m.id !== user.id && (
                           <Link
-                            href={`/hobby-hub/messages/${m.id}`}
+                            href={`/messages/${m.id}`}
                             className={buttonClasses("ghost", "sm")}
                             aria-label={t("Message {name}", { name: m.name })}
                           >

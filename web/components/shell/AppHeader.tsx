@@ -5,6 +5,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { UnreadDot, useUnread } from "@/features/hobby/UnreadProvider";
 import { getApp } from "@/lib/apps";
@@ -15,14 +16,23 @@ export function AppHeader({ appId, className }: { appId: string; className?: str
   const t = useT();
   const app = getApp(appId);
   const pathname = usePathname();
-  const unread = useUnread();
-  const badge = (href: string) => (href === "/hobby-hub/messages" ? unread.messages : 0); // Stage 21
+  const { badge } = useUnread();
 
   // The longest matching link wins, so /chill/tips/x highlights "Tips", not "Focus".
   const activeHref = app.links?.filter((l) => pathname === l.href || pathname.startsWith(`${l.href}/`)).sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
+  // Stage 28: many tabs (Arena has 7) go on their own line under the title and wrap (phone too), instead of hiding off the edge
+  const many = (app.links?.length ?? 0) > 4;
+  const navRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    // on a phone the tabs scroll sideways: bring the current one into view
+    const el = navRef.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    const nav = navRef.current;
+    if (el && nav && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = el.offsetLeft - nav.clientWidth / 2 + el.offsetWidth / 2;
+  }, [activeHref]);
+
   return (
-    <header className={cn("mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between", className)}>
+    <header className={cn("mb-6 flex flex-col gap-4", !many && "sm:flex-row sm:items-center sm:justify-between", className)}>
       <div className="flex items-center gap-4">
         <AppIcon icon={app.icon} accent={app.accent} size="lg" />
         <div>
@@ -33,8 +43,12 @@ export function AppHeader({ appId, className }: { appId: string; className?: str
 
       {app.links && (
         <nav
+          ref={navRef}
           aria-label={t("{app} sections", { app: t(app.name) })}
-          className="inline-flex max-w-full self-start overflow-x-auto rounded-full border border-border bg-surface-muted p-1 [scrollbar-width:none] sm:self-auto"
+          className={cn(
+            "inline-flex max-w-full self-start overflow-x-auto rounded-full border border-border bg-surface-muted p-1 [scrollbar-width:thin]",
+            many ? "flex-wrap rounded-2xl" : "sm:self-auto",
+          )}
         >
           {app.links.map((link) => (
             <Link

@@ -22,7 +22,9 @@ import { ApiError } from "@/lib/api/client";
 import { getGroups, type Group } from "@/lib/api/hobby";
 import { getCharts, type ChartSong } from "@/lib/api/music";
 import { cn } from "@/lib/cn";
+import { tx } from "@/lib/i18n/core";
 import { useT } from "@/lib/i18n/I18nProvider";
+import { describeDevice } from "@/features/me/DevicesCard";
 import { timeAgo } from "@/lib/time";
 
 type Tab = "people" | "reports" | "content" | "nook" | "health";
@@ -425,11 +427,14 @@ function ContentTab() {
 
 // --- Nook --------------------------------------------------------------------------------------------
 
+const SIGN_IN_HOW = { new: tx("New name"), pin: tx("Name and PIN"), code: tx("Device code"), claim: tx("Admin's claim code") } as const;
+
 function NookTab() {
   const t = useT();
   const banner = useAsync(A.getBanner);
   const storage = useAsync(A.getStorage);
   const log = useAsync(A.getLog);
+  const signIns = useAsync(A.getSignIns);
   const [text, setText] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const value = text ?? banner.data?.text ?? "";
@@ -494,6 +499,28 @@ function NookTab() {
           {t("Run the cleanup now")}
         </Button>
         <p className="mt-1 text-xs text-muted">{t("It runs every day anyway: people not seen for 90 days, chat older than 30 days, unused pictures.")}</p>
+      </Card>
+      <Card className="lg:col-span-2">
+        <CardHeader title={t("Sign-in log")} subtitle={t("Who came in, when, and on what kind of device. No pages, no messages. Kept for 90 days.")} />
+        <ul className="flex max-h-[22rem] flex-col gap-1 overflow-y-auto text-sm">
+          {signIns.data?.length === 0 && <li className="text-muted">{t("Nobody has signed in yet.")}</li>}
+          {signIns.data?.map((s) => {
+            const device = s.userAgent ? describeDevice(s.userAgent) : null;
+            return (
+              <li key={s.id} className="flex flex-wrap items-center gap-x-2 border-b border-border/60 py-1">
+                <span className="w-28 shrink-0 text-xs text-muted tabular-nums">{new Date(s.at).toLocaleString()}</span>
+                <span className="font-semibold">{s.name}</span>
+                <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs font-semibold">{t(SIGN_IN_HOW[s.how])}</span>
+                {device && (
+                  <span className="text-muted">
+                    · {t(device.kind === "phone" ? "Phone" : device.kind === "tablet" ? "Tablet" : "Computer")}
+                    {device.label && `, ${device.label}`}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       </Card>
       <Card className="lg:col-span-2">
         <CardHeader title={t("Admin log")} subtitle={t("Kept for 90 days.")} />

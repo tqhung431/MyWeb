@@ -319,7 +319,7 @@ musicRouter.post("/:id/play", async (req, res) => {
   }
   await db.insert(songPlays).values({ songId: song.id, owner: who });
   songPlaysMetric.add(1, { genre: song.genre });
-  await publishActivity("Headphones", "{name} is listening to “{title}”", { name: displayName(req.user?.name), title: song.title });
+  // Stage 28: what you listen to is private (no more "… is listening to" in the live feed); the charts still count it
   broadcast("music:changed");
   res.status(201).json({ counted: true });
 });

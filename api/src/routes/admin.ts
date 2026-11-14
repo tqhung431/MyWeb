@@ -16,6 +16,7 @@
 // GET    /api/admin/storage                       space used by songs and chat pictures
 // POST   /api/admin/cleanup                       run the daily cleanup now
 // GET    /api/admin/log                           the admin log
+// GET    /api/admin/sign-ins                      Stage 28: the sign-in log (who, when, what kind of device)
 // GET    /api/admin/health                        database, Valkey, game server, AI, disk
 //
 // For everyone:
@@ -43,10 +44,12 @@ import {
   postComments,
   posts,
   reports,
+  signIns,
   siteSettings,
   songs,
   users,
 } from "../db/schema.js";
+import { eraseChatMessage, eraseDirectMessage } from "../hobby/erase.js";
 import { dropImageIfUnused } from "../hobby/images.js";
 import { enqueue } from "../jobs/queue.js";
 import { requireUser } from "../middleware/auth.js";
@@ -279,19 +282,9 @@ async function removeReported(kind: string, id: number) {
       if (g) toRoom(groupRoom(g.slug), "hobby:board", { slug: g.slug, postId: c.postId });
     }
   } else if (kind === "message") {
-    const [m] = await db.delete(chatMessages).where(eq(chatMessages.id, id)).returning();
-    if (m) {
-      await dropImageIfUnused(m.imageId);
-      const [g] = await db.select({ slug: hobbyGroups.slug }).from(hobbyGroups).where(eq(hobbyGroups.id, m.groupId));
-      if (g) toRoom(groupRoom(g.slug), "hobby:message-deleted", { slug: g.slug, id });
-    }
+    await eraseChatMessage(id, "admin"); // Stage 28: "Removed by the admin" stays in its place
   } else if (kind === "dm") {
-    const [m] = await db.delete(directMessages).where(eq(directMessages.id, id)).returning();
-    if (m) {
-      await dropImageIfUnused(m.imageId);
-      notifyOwner({ userId: m.senderId, clientId: null }, "dm:deleted", { with: m.recipientId, id });
-      notifyOwner({ userId: m.recipientId, clientId: null }, "dm:deleted", { with: m.senderId, id });
-    }
+    await eraseDirectMessage(id, "admin");
   }
 }
 
@@ -395,6 +388,17 @@ adminToolsRouter.post("/cleanup", async (req, res) => {
 
 adminToolsRouter.get("/log", async (_req, res) => {
   res.json(await db.select().from(adminLog).orderBy(desc(adminLog.id)).limit(200));
+});
+
+// Stage 28: who came in (new name, PIN, code, claim code), when, on what kind of device. Nothing else.
+adminToolsRouter.get("/sign-ins", async (_req, res) => {
+  res.json(
+    await db
+      .select({ id: signIns.id, name: signIns.name, how: signIns.how, userAgent: signIns.userAgent, at: signIns.at })
+      .from(signIns)
+      .orderBy(desc(signIns.id))
+      .limit(200),
+  );
 });
 
 // --- health ---------------------------------------------------------------------------------------

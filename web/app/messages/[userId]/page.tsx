@@ -5,7 +5,7 @@ import { getT } from "@/lib/i18n/server";
 type Props = { params: Promise<{ userId: string }> };
 
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: (await getT())("Messages · Hobby Hub") };
+  return { title: (await getT())("Messages") };
 }
 
 export default async function DirectChatPage({ params }: Props) {

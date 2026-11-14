@@ -361,6 +361,7 @@ The second line prints your address: `https://<random-name>.trycloudflare.com`.
 25. Chợ Đêm Brawl (Night Market Brawl) — co-op action for 1–4: four heroes, five market areas, two bosses, a snack stall between areas; keyboard, gamepad or phone stick ✅ · [docs](docs/stage-25.md)
 26. Mầm Thú (Sproutlings), part 1 — a creature adventure on the island of Thanh Khê: 12 sproutlings + 5 grown forms, the Five Elements, befriending mini-games, turn-based battles against six shrine keepers ✅ · [docs](docs/stage-26.md)
 27. People and admin — names protected by a PIN (sign in on another device by PIN or a one-time code), your devices, and an Admin page: people, reports, Hobby Hub moderation, banner, health, an admin log ✅ · [docs](docs/stage-27.md)
+28. Chat and privacy — Messages as its own app, a message menu (copy, edit for 10 minutes, delete with Undo, report), "Message deleted" in place, a live feed with only what people do together, "Share my milestones", the admin's sign-in log ✅ · [docs](docs/stage-28.md)
 
 ## Licence
 

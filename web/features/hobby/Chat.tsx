@@ -10,17 +10,15 @@ import { useReport } from "@/features/admin/useReport";
 import { UserPlus } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { useConfirm } from "@/components/ui/Dialog";
 import { useMe } from "@/features/me/MeProvider";
 import { useRealtime, useRealtimeEvent } from "@/features/realtime/RealtimeProvider";
-import { deleteMessage, getMessages, sendMessage, type Message } from "@/lib/api/hobby";
+import { deleteMessage, editMessage, getMessages, sendMessage, type DeletedBy, type Edited, type Message } from "@/lib/api/hobby";
 import { ChatPanel, type ChatItem } from "./ChatPanel";
 import { useTyping } from "./useTyping";
 
 import { useT } from "@/lib/i18n/I18nProvider";
 export function Chat({ slug, joined, onJoin, className }: { slug: string; joined: boolean; onJoin: () => void; className?: string }) {
   const t = useT();
-  const confirm = useConfirm();
   const { user, askName } = useMe();
   const { socket } = useRealtime();
   const [messages, setMessages] = useState<Message[] | null>(null);
@@ -56,8 +54,15 @@ export function Chat({ slug, joined, onJoin, className }: { slug: string; joined
     setMessages((list) => (list && !list.some((m) => m.id === message.id) ? [...list, message] : list));
     typing.stopped(message.author.name);
   });
-  useRealtimeEvent<{ slug: string; id: number }>("hobby:message-deleted", ({ slug: s, id }) => {
-    if (s === slug) setMessages((list) => list?.filter((m) => m.id !== id) ?? null);
+  // Stage 28: deleted messages stay in place as "Message deleted"; edits show "edited"
+  const markDeleted = (id: number, by: DeletedBy) =>
+    setMessages((list) => list?.map((m) => (m.id === id ? { ...m, body: "", image: null, deletedBy: by ?? "author", editedAt: null } : m)) ?? null);
+  const markEdited = (e: Edited) => setMessages((list) => list?.map((m) => (m.id === e.id ? { ...m, body: e.body, editedAt: e.editedAt } : m)) ?? null);
+  useRealtimeEvent<{ slug: string; id: number; by?: DeletedBy }>("hobby:message-deleted", ({ slug: s, id, by }) => {
+    if (s === slug) markDeleted(id, by ?? "author");
+  });
+  useRealtimeEvent<{ slug: string } & Edited>("hobby:message-edited", ({ slug: s, ...e }) => {
+    if (s === slug) markEdited(e);
   });
   useRealtimeEvent<{ slug: string; name: string }>("hobby:typing", ({ slug: s, name }) => {
     if (s === slug) typing.started(name);
@@ -77,10 +82,14 @@ export function Chat({ slug, joined, onJoin, className }: { slug: string; joined
     setMessages((list) => (list && !list.some((x) => x.id === m.id) ? [...list, m] : list));
   }
 
+  // Stage 28: no "Are you sure?": ChatPanel gives 5 seconds to Undo, then calls this
   async function remove(m: ChatItem) {
-    if (!(await confirm({ title: t("Delete this message?"), confirmLabel: t("Delete"), danger: true }))) return;
-    await deleteMessage(m.id).catch(() => {});
-    setMessages((list) => list?.filter((x) => x.id !== m.id) ?? null);
+    await deleteMessage(m.id);
+    markDeleted(m.id, m.mine ? "author" : "admin");
+  }
+
+  async function edit(m: ChatItem, body: string) {
+    markEdited(await editMessage(m.id, body));
   }
 
   function onTyping() {
@@ -103,12 +112,13 @@ export function Chat({ slug, joined, onJoin, className }: { slug: string; joined
       onLoadOlder={loadOlder}
       onSend={send}
       onDelete={remove}
+      onEdit={edit}
       canModerate={admin}
       onReport={user ? (m) => void reportIt("message", m.id) : undefined}
       onTyping={onTyping}
       typingNames={typing.names}
       placeholder={user ? t("Message as {name}", { name: user.name }) : ""}
-      authorHref={(id) => (user ? `/hobby-hub/messages/${id}` : null)}
+      authorHref={(id) => (user ? `/messages/${id}` : null)}
       empty={
         <>
           <p className="text-4xl" aria-hidden="true">

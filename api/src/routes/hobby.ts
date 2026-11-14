@@ -17,7 +17,8 @@
 // DELETE /api/hobby/comments/:id                   delete your comment
 // GET    /api/hobby/groups/:slug/messages?before=id   chat history, 50 at a time
 // POST   /api/hobby/groups/:slug/messages { body, imageId? }  send a chat message (everyone in the room sees it at once)
-// DELETE /api/hobby/messages/:id                       delete your message
+// DELETE /api/hobby/messages/:id                       delete your message ("Message deleted" stays, Stage 28)
+// PATCH  /api/hobby/messages/:id  { body }              edit your message within 10 minutes (Stage 28)
 //
 // Live (Socket.IO, see realtime/server.ts): browsers on a group's page join the room "group:<slug>"
 // and get hobby:message, hobby:message-deleted, hobby:board and hobby:typing there.
@@ -31,6 +32,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { db } from "../db/client.js";
 import { chatImages, chatMessages, groupMembers, hobbyGroups, postComments, postLikes, posts, users, type User } from "../db/schema.js";
+import { canStillEdit, eraseChatMessage } from "../hobby/erase.js";
 import { dropImageIfUnused, imageJson } from "../hobby/images.js";
 import { requireUser } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
@@ -386,6 +388,8 @@ hobbyRouter.get("/groups/:slug/messages", async (req, res) => {
       id: chatMessages.id,
       body: chatMessages.body,
       createdAt: chatMessages.createdAt,
+      deletedBy: chatMessages.deletedBy,
+      editedAt: chatMessages.editedAt,
       author: { id: users.id, name: users.name },
       image: { id: chatImages.id, width: chatImages.width, height: chatImages.height },
     })
@@ -437,7 +441,7 @@ hobbyRouter.post("/groups/:slug/messages", requireUser, perUser("chat", 30_000, 
     .insert(chatMessages)
     .values({ groupId: group.id, authorId: req.user!.id, body, imageId: img?.id ?? null })
     .returning();
-  const message = { id: m.id, body: m.body, createdAt: m.createdAt, author: author(req.user!), image: imageJson(img) };
+  const message = { id: m.id, body: m.body, createdAt: m.createdAt, deletedBy: null, editedAt: null, author: author(req.user!), image: imageJson(img) };
   res.status(201).json({ ...message, mine: true });
   // Everyone with this group open gets it at once ("mine" is worked out by each browser)
   toRoom(groupRoom(group.slug), "hobby:message", { slug: group.slug, message });
@@ -454,9 +458,33 @@ hobbyRouter.delete("/messages/:id", requireUser, async (req, res) => {
   if (!row) throw new HttpError(404, "Message not found");
   const admin = row.message.authorId !== req.user!.id && (await isAdmin(req));
   if (row.message.authorId !== req.user!.id && !admin) throw new HttpError(403, "You can only delete your own messages");
-  await db.delete(chatMessages).where(eq(chatMessages.id, id));
+  // Stage 28: "Message deleted" stays in its place; the words and the picture are gone for good
+  await eraseChatMessage(id, admin ? "admin" : "author");
   if (admin) await logAdmin(req, "deleted a chat message", `${row.slug}: ${row.message.body.slice(0, 80) || "(a picture)"}`);
-  await dropImageIfUnused(row.message.imageId);
   res.status(204).end();
-  toRoom(groupRoom(row.slug), "hobby:message-deleted", { slug: row.slug, id });
+});
+
+// Stage 28: change your own message within 10 minutes; everyone sees "edited"
+export const editBody = z.object({
+  body: z
+    .string()
+    .transform((s) => s.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim())
+    .pipe(z.string().min(1, "Write a message").max(1000, "Keep it under 1000 characters")),
+});
+
+hobbyRouter.patch("/messages/:id", requireUser, async (req, res) => {
+  const id = idParam.parse(req.params.id);
+  const { body } = editBody.parse(req.body);
+  const [row] = await db
+    .select({ message: chatMessages, slug: hobbyGroups.slug, locked: hobbyGroups.locked })
+    .from(chatMessages)
+    .innerJoin(hobbyGroups, eq(hobbyGroups.id, chatMessages.groupId))
+    .where(eq(chatMessages.id, id));
+  if (!row || row.message.deletedBy) throw new HttpError(404, "Message not found");
+  if (row.message.authorId !== req.user!.id) throw new HttpError(403, "You can only edit your own messages");
+  if (!canStillEdit(row.message.createdAt)) throw new HttpError(409, "Messages can only be edited for 10 minutes");
+  if (row.locked) throw new HttpError(403, "The admin locked this group: you can read it, but not post or chat");
+  const [m] = await db.update(chatMessages).set({ body, editedAt: new Date() }).where(eq(chatMessages.id, id)).returning();
+  res.json({ id: m.id, body: m.body, editedAt: m.editedAt });
+  toRoom(groupRoom(row.slug), "hobby:message-edited", { slug: row.slug, id: m.id, body: m.body, editedAt: m.editedAt });
 });
