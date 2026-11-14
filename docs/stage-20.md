@@ -130,6 +130,13 @@ password and handles HTTPS; Nook listens only on the VM itself (`BIND_IP=127.0.0
 `127.0.0.1:8081`, a Caddy entrance that trusts the visitor IP and "https" nginx passes on. That entrance is only
 opened with `COMPOSE_FILE=docker-compose.yml:deploy/nginx/compose.proxy.yml`.
 
+### Quick tunnel, without a Cloudflare account (temporary)
+
+`cloudflared tunnel --url …` gives a random `https://<name>.trycloudflare.com` address with no account and no domain.
+There is **no Cloudflare Access gate**: anyone with the link can open Nook, and the link changes when the tunnel
+restarts. Point it at Caddy's `127.0.0.1:8081` entrance (`COMPOSE_FILE=docker-compose.yml:deploy/nginx/compose.proxy.yml`),
+not at port 80 or 443, so Nook sees each visitor's real IP and "https". Steps: the README, "Quick tunnel".
+
 ## 4. Your router
 
 - **No port forwarding.** In the router's settings (often http://192.168.1.1) → Port forwarding / Virtual server /

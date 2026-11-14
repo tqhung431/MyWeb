@@ -119,6 +119,8 @@ Nook has no passwords (just names), so **never forward ports on your router to i
   PC and each device, then run `tailscale serve --bg 80` here. Nook gets a private HTTPS address only your devices can open.
 - **Cloudflare Tunnel + Access** (needs a domain): a normal web address where Cloudflare emails a code to the people you
   listed before letting them in, and Nook checks Cloudflare's signed pass on every request. Add `tunnel` to `COMPOSE_PROFILES`.
+- **Quick tunnel** (no account, temporary): a random `trycloudflare.com` address anyone with the link can open.
+  See [Quick tunnel](#quick-tunnel-a-temporary-web-address-no-cloudflare-account) below.
 
 Step by step, plus firewall rules for Windows, macOS and Linux: **[docs/stage-20.md](docs/stage-20.md)**.
 
@@ -277,79 +279,57 @@ music-import/          drop song files here to import many at once
 stage-1-static/        Stage 1: the plain HTML/CSS/JS version
 ```
 
-### Expose web application using Cloudflare Tunnel
+### Quick tunnel: a temporary web address, no Cloudflare account
 
-1/ Install cloudflared
+Good for trying Nook from outside or sharing it for a while. **Anyone with the link can open Nook**, so only share it
+with people you trust (names are safe: since Stage 27 nobody can use your name without its PIN). The link changes
+every time the tunnel restarts. For something permanent, use Tailscale or Cloudflare Tunnel + Access (docs/stage-20.md).
 
-```Bash
+**1. Install cloudflared** (Ubuntu/Debian; other systems: Cloudflare's "cloudflared downloads" page)
+
+```bash
 sudo mkdir -p --mode=0755 /usr/share/keyrings
-
-curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
-  | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
-
+curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
 echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main" \
   | sudo tee /etc/apt/sources.list.d/cloudflared.list
-
-sudo apt update
-sudo apt install cloudflared
-```
-
-Verify:
-```Bash
+sudo apt update && sudo apt install cloudflared
 cloudflared --version
 ```
 
-2/ Configure Docker Caddy
-In your project `.env` file:
+**2. Open Caddy's tunnel entrance.** In `.env`:
 
 ```
 BIND_IP=127.0.0.1
+COMPOSE_FILE=docker-compose.yml:deploy/nginx/compose.proxy.yml
+PROXY_PORT=8081
 ```
 
-Recreate Caddy:
-```Bash
-docker compose up -d --force-recreate <caddy-id>
+(Windows: use `;` instead of `:` in `COMPOSE_FILE`.) Then `docker compose up -d`. `docker ps` should show Caddy with
+`127.0.0.1:80->80`, `127.0.0.1:443->443` and `127.0.0.1:8081->8081`.
+
+Why 8081 and not 80: the 8081 entrance trusts what the tunnel passes on, so Nook knows each visitor's real address
+(the sign-in and new-name limits are per person, not shared by everyone) and that they came over **https** (needed to
+become admin). Not 443 either: Caddy's 443 only answers for "localhost", with its own certificate. Visitors still
+get https: Cloudflare provides it.
+
+**3. Check Nook answers there**
+
+```bash
+curl -I http://127.0.0.1:8081
 ```
 
-Or
-```Bash
-docker compose up -d
+Expect `HTTP/1.1 200 OK` with `Via: 1.1 Caddy`.
+
+**4. Start the tunnel** (it keeps running after you log out)
+
+```bash
+nohup cloudflared tunnel --loglevel info --protocol http2 --url http://127.0.0.1:8081 > ~/cloudflared.log 2>&1 < /dev/null &
+grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' ~/cloudflared.log
 ```
 
-Expect with `docker ps`
-```
-127.0.0.1:80->80/tcp
-127.0.0.1:443->443/tcp
-```
+The second line prints your address: `https://<random-name>.trycloudflare.com`.
 
-3/ Verify local application
-Before starting Cloudflare:
-```Bash
-curl -I http://127.0.0.1:80
-```
-
-Expected result:
-```
-HTTP/1.1 200 OK
-Via: 1.1 Caddy
-X-Powered-By: Next.js
-```
-
-This confirms the local application is reachable through Caddy.
-
-4/ Start Cloudflare Quick Tunnel
-
-```Bash
-cloudflared tunnel \
-  --loglevel info \
-  --protocol http2 \
-  --url http://127.0.0.1:80
-```
-
-Cloudflare generates a temporary public URL:
-```
-https://<random-name>.trycloudflare.com
-```
+**Stop it:** `pkill cloudflared`. **After a reboot:** run step 4 again and share the new address.
 
 ## Stages
 
