@@ -1,4 +1,4 @@
-// The Companion's knowledge: embeddings of every tip and song (Stage 9).
+// The Companion's knowledge: embeddings of every tip and song (Stage 9), and a guide to every app (Stage 31).
 //
 // Indexing (the worker does this, in the background):
 //   tip / song → a short text → Ollama embed → 768 numbers → saved in "knowledge"
@@ -13,6 +13,7 @@ import { and, asc, cosineDistance, eq, notInArray, sql } from "drizzle-orm";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { knowledge, songs, tips } from "../db/schema.js";
+import { GUIDE } from "./guide.js";
 import { embed } from "./ollama.js";
 
 const GENRE_WORDS: Record<string, string> = {
@@ -22,7 +23,8 @@ const GENRE_WORDS: Record<string, string> = {
   lofi: "lofi, chill, calm, relaxing, good for studying and focus",
 };
 
-type Item = { kind: "tip" | "song"; refId: string; content: string };
+export type Kind = "tip" | "song" | "guide";
+type Item = { kind: Kind; refId: string; content: string };
 
 async function allItems(): Promise<Item[]> {
   const tipRows = await db.select().from(tips).orderBy(asc(tips.id));
@@ -38,6 +40,8 @@ async function allItems(): Promise<Item[]> {
       refId: String(s.id),
       content: `Song with vocals: "${s.title}" by ${s.artist}. Genre: ${GENRE_WORDS[s.genre] ?? s.genre}.${s.credit ? ` ${s.credit}.` : ""}`,
     })),
+    // Stage 31: how Nook works, so the Companion can help with every app
+    ...GUIDE.map((g) => ({ kind: "guide" as const, refId: g.id, content: `Nook guide — ${g.title} (${g.href}): ${g.text}` })),
   ];
 }
 
@@ -72,7 +76,7 @@ export async function reindex(): Promise<{ embedded: number; removed: number; to
 
   // Remove knowledge about deleted songs / tips
   let removed = 0;
-  for (const kind of ["tip", "song"] as const) {
+  for (const kind of ["tip", "song", "guide"] as const) {
     const ids = items.filter((i) => i.kind === kind).map((i) => i.refId);
     const gone = await db
       .delete(knowledge)
@@ -83,7 +87,7 @@ export async function reindex(): Promise<{ embedded: number; removed: number; to
   return { embedded: changed.length, removed, total: items.length };
 }
 
-export type Found = { kind: "tip" | "song"; refId: string; content: string; similarity: number };
+export type Found = { kind: Kind; refId: string; content: string; similarity: number };
 
 // The k items closest in meaning to the question (cosine similarity 1 = same meaning, 0 = unrelated).
 // minSimilarity 0.2: multilingual models score lower than English-only ones; below this it's noise.

@@ -15,7 +15,8 @@ export type CompanionStatus = {
 
 export type Source =
   | { kind: "song"; id: number; title: string; artist: string; genre: "drill" | "remix" | "pop" | "lofi"; audioUrl: string; artworkUrl: string | null }
-  | { kind: "tip"; slug: string; title: string; summary: string };
+  | { kind: "tip"; slug: string; title: string; summary: string }
+  | { kind: "guide"; id: string; title: string; href: string }; // Stage 31: an app the answer talked about
 
 export type ChatTurn = { role: "user" | "assistant"; content: string };
 

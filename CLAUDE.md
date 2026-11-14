@@ -106,7 +106,10 @@ Read this first in every session. It carries the context from the sessions that 
   ("Firecracker Alley" → "Ngõ Pháo"); sproutlings' English names in `sprout/names.ts` SPECIES_NAMES (rules file
   unchanged); island = "Clearwater Isle"; alley bots Bobo/Kiki/Momo/Lulu. Cloud Path (Vân Lộ) follows Nook's language
   (no own switch). e2e/stage30.spec.ts fails on Vietnamese letters on English game pages (dishes allowed).
-  Next (plan): Stage 31 Companion = Nook helper (knows every app; songs only when asked about music). Stage 32 Mầm Thú part 2.
+  31: Companion = Nook's helper. `api/src/ai/guide.ts` (one entry per app; keep it true when apps change) indexed as
+  knowledge kind "guide"; `isAboutMusic()` drops songs for other questions; `pickSources()` sends cards AFTER the
+  answer (songs/tips it names, the app it's about). Fake Ollama answers from guide entries too.
+  Next (plan): Stage 32 Mầm Thú part 2 (battles and swaps between people, 18 more sproutlings, the garden).
   Older plan notes: tidy menus +
   English-first games (Vân Lộ = "Cloud Path" in English, "Vân Lộ" in Vietnamese, never "Đường Mây"), then Mầm Thú part 2.
   Original world only: don't copy names/characters/plots from existing novels or films.

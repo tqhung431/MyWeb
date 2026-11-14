@@ -155,7 +155,7 @@ export const APPS: AppInfo[] = [
   {
     id: "companion",
     name: tx("Free-time Companion"),
-    tagline: tx("A local AI buddy that knows Nook's songs and tips"),
+    tagline: tx("Ask anything about Nook: apps, games, songs and tips"),
     href: "/companion",
     icon: Sparkles,
     accent: "from-fuchsia-400 to-purple-600",

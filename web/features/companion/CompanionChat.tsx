@@ -1,7 +1,8 @@
 "use client";
 
-// The Free-time Companion (Stage 9): chat with a local AI (Ollama) that knows Nook's songs and tips.
-// The answer streams in word by word; the songs and tips it used appear as cards under it.
+// The Free-time Companion (Stage 9): chat with a local AI (Ollama). Stage 31: it helps with every app (a guide to
+// Nook is in its knowledge). The answer streams in word by word; the apps, songs and tips it talked about appear
+// as cards under it, after the answer.
 
 import { ArrowUp, Loader2, RotateCcw, Sparkles, Square } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -15,11 +16,12 @@ import { useT } from "@/lib/i18n/I18nProvider";
 import { tx } from "@/lib/i18n/core";
 type Message = ChatTurn & { sources?: Source[]; error?: string };
 
+// Stage 31: the Companion helps with all of Nook, not only songs
 const SUGGESTIONS = [
-  tx("I need to focus for an hour. What should I play?"),
+  tx("What can I play with three friends?"),
+  tx("How do I use my name on another phone?"),
   tx("Give me a tip for taking better breaks"),
-  tx("Suggest a lively remix for tonight"),
-  tx("I'm a bit tired, what should I listen to relax?"),
+  tx("Suggest a calm song for studying"),
 ];
 
 // Stage 19 (speed): the page asks the API on the server first (initialStatus), so the right card is in the
@@ -98,7 +100,7 @@ export function CompanionChat({ initialStatus = null }: { initialStatus?: Compan
             </span>
             <h2 className="mt-3 text-lg font-bold">{t("What do you feel like doing?")}</h2>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-              {t("Ask in English or Vietnamese. I suggest songs and tips that are really in Nook, and I run on this computer, so your chat stays here.")}
+              {t("Ask me anything about Nook: how an app works, what to play, a focus tip or a song. English or Vietnamese. I run on this computer, so your chat stays here.")}
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
               {SUGGESTIONS.map((s) => (
@@ -149,7 +151,7 @@ export function CompanionChat({ initialStatus = null }: { initialStatus?: Compan
               void send(input);
             }
           }}
-          placeholder={t("Ask for a song or a tip…")}
+          placeholder={t("Ask about Nook…")}
           className="max-h-40 min-h-11 flex-1 resize-none rounded-3xl border border-border bg-surface-strong/70 px-4 py-2.5 focus:ring-2 focus:ring-primary focus:outline-none"
         />
         {busy ? (
