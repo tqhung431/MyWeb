@@ -9,7 +9,7 @@ export async function visit(page: Page, path: string) {
 // Pick a name through the API (sets the nook_session cookie for this browser)
 export async function pickName(page: Page, prefix = "E2E") {
   const name = `${prefix} ${Math.random().toString(36).slice(2, 8)}`;
-  const res = await page.request.post("/api/me", { data: { name } });
+  const res = await page.request.post("/api/me", { data: { name, pin: "2468" } });
   expect(res.ok()).toBe(true);
   return name;
 }

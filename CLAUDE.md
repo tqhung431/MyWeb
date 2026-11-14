@@ -1,6 +1,6 @@
 # Nook: notes for Claude
 
-Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–26).
+Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–27).
 
 ## The project
 
@@ -79,7 +79,16 @@ Read this first in every session. It carries the context from the sessions that 
   battles. Island = `island.ts` (6 areas of 20×12 chars, keepers, villagers; its texts need vi.json entries, checked by
   web/tests/sprout-texts.test.ts). Canvas 2D island, SVG creatures (`Creature.tsx`), saves = localStorage + cloud game "sprout"
   (board: level = shrines, kills = kinds befriended). Balance: the island bot in api/tests/sprout.test.ts.
-  Next: Stage 27 Mầm Thú part 2 (battles/swaps between people on the game server, 18 more sproutlings, the garden).
+  27: People and admin (plan doc: https://claude.ai/artifact/PHVwfsrDBnQfo9FZSamKMZ). Names have a PIN (scrypt hash
+  `users.pin_hash`, never cached/sent); `/api/me/sign-in` (10 wrong = 15 min lock), device codes (5 min) and admin claim
+  codes (24 h, clear the PIN) in `sign_in_codes` (hash only); devices = `auth_sessions` (+`last_used_at`); deleted names
+  reserved 30 days (`reserved_names`). Admin = passcode holder on a browser, NEVER a role on a name (owner's rule);
+  passcode ≥ 16 chars, only over https/localhost (`ADMIN_REQUIRE_HTTPS`), 12 h (`admin_until`), everything in `admin_log`
+  (`logAdmin`). `/admin` page (People, Reports, Content, Nook banner/storage/log, Health). Admin can't read private chats,
+  only reported messages. Paused users: `blockPaused`. Locked groups: `hobby_groups.locked`. No server commands in pages
+  (owner's rule): point to docs / Admin → Health. Owner's rule: Nook stores no emails.
+  Next (plan): Stage 28 chat and privacy (Messages app, message menu, feed shows joins only), Stage 29 tidy menus +
+  English-first games (Vân Lộ = "Cloud Path" in English, "Vân Lộ" in Vietnamese, never "Đường Mây"), then Mầm Thú part 2.
   Original world only: don't copy names/characters/plots from existing novels or films.
   Each stage has an explainer in `docs/stage-N.md`; write one for every new stage and update the README's stage list.
 - Apps: **Chill Corner** (focus timer, generated sounds, tips, achievements), **Music** (uploaded songs
@@ -91,7 +100,7 @@ Read this first in every session. It carries the context from the sessions that 
   **Arcade Online** (`api/src/arcade-online/`: game.ts has no network code; tests use a fake clock).
   **Nook Arena** (`/arena`: chess, Ngõ Pháo, Giữ Làng, Chợ Đêm Brawl, Mầm Thú, Listen Together) and **Nook TV** (`/tv`), Stages 22–26.
 - Phone tab bar: Home + apps with `pinned: true` + an "Apps" grid. Don't pin more than 3–4.
-- People (Stage 11): **name only, one browser** (owner's choice): no email/password, no login page. `POST /api/me {name}`
+- People (Stage 11): **name only** (owner's choice): no email/password. Stage 27 added a PIN per name to sign in on other devices. `POST /api/me {name}`
   sets the `nook_session` cookie; names unique by lower(name). Guests (X-Client-Id) still work until they pick a name.
   Data retention (owner's choice: "store data but not for too long"): worker job `cleanup` daily deletes people unseen for
   `DATA_RETENTION_DAYS` (90) with cascade, chat after `CHAT_RETENTION_DAYS` (30). New user-linked tables need `onDelete: cascade`.

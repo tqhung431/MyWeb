@@ -7,6 +7,8 @@ test("pick a name on the account page", async ({ page }) => {
   const name = `Tester ${Math.random().toString(36).slice(2, 7)}`;
   const main = page.locator("main");
   await main.getByRole("textbox", { name: "Your name" }).fill(name);
+  await main.getByLabel("PIN", { exact: true }).fill("2468");
+  await main.getByLabel("PIN again").fill("2468");
   await main.getByRole("button", { name: "Let's go" }).click();
   await expect(page.getByText(name).first()).toBeVisible();
 });

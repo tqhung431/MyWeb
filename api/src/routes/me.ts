@@ -7,12 +7,37 @@
 // GET    /api/me/data          what Nook keeps about me (counts), and for how long
 // PUT    /api/me/preferences   save personal settings (e.g. timer lengths)
 //
+// Stage 27: a PIN protects your name, so you can get it back on another device.
+// PUT    /api/me/pin                 { pin }         set or change your PIN (4–6 digits)
+// POST   /api/me/sign-in             { name, pin }   this browser becomes you (10 wrong PINs: locked 15 minutes)
+// POST   /api/me/codes                               a 6-letter code (5 minutes) to sign in another device
+// POST   /api/me/sign-in/code        { code }        sign in with that code, or with a claim code from the admin
+// POST   /api/me/sign-out                            this browser forgets you
+// GET    /api/me/devices                             the browsers signed in as you
+// DELETE /api/me/devices/:id                         sign one out ("others": every one but this)
+//
 // Names are unique (ignoring upper/lower case), so everyone on this Nook knows who's who.
 
-import { count, eq, sql } from "drizzle-orm";
+import { and, count, eq, gt, sql } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
-import { claimGuestData, COOKIE_NAME, endSession, publicUser, refreshCachedSession, startSession } from "../auth/sessions.js";
+import {
+  checkPin,
+  claimGuestData,
+  COOKIE_NAME,
+  currentSessionId,
+  devicesOf,
+  endSession,
+  endSessionsOf,
+  forgetAllOf,
+  hashPin,
+  makeSignInCode,
+  PIN_RE,
+  publicUser,
+  refreshCachedSession,
+  startSession,
+  useSignInCode,
+} from "../auth/sessions.js";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import {
@@ -26,6 +51,7 @@ import {
   posts,
   songLikes,
   songs,
+  reservedNames,
   users,
   watchEntries,
   habits,
@@ -55,6 +81,8 @@ export const nameSchema = z
       .refine((n) => n.toLowerCase() !== "guest" && n.toLowerCase() !== "a guest", "Pick a name other than Guest"),
   );
 export const nameBody = z.object({ name: nameSchema });
+export const pinSchema = z.string().regex(PIN_RE, "A PIN is 4 to 6 digits");
+export const newMeBody = z.object({ name: nameSchema, pin: pinSchema.optional() });
 
 // The database refuses a second "Linh" (unique index on lower(name)): turn that into a friendly 409.
 function isNameTaken(err: unknown): boolean {
@@ -74,12 +102,22 @@ meRouter.get("/", (req, res) => {
   res.json({ user: req.user ? publicUser(req.user) : null });
 });
 
+// Stage 27: a deleted person's name stays theirs for a while (people.ts), so nobody can take it and pretend
+async function notReserved(name: string) {
+  const [r] = await db
+    .select()
+    .from(reservedNames)
+    .where(and(eq(reservedNames.name, name.toLowerCase()), gt(reservedNames.until, new Date())));
+  if (r) throw new HttpError(409, "That name was used here recently. Pick another one for now.");
+}
+
 meRouter.post("/", ...newNameLimits, async (req, res) => {
   if (req.user) throw new HttpError(409, "You already have a name. Use PATCH /api/me to change it.");
-  const { name } = nameBody.parse(req.body);
+  const { name, pin } = newMeBody.parse(req.body);
+  await notReserved(name);
   const user = await db
     .insert(users)
-    .values({ name })
+    .values({ name, pinHash: pin ? await hashPin(pin) : null })
     .returning()
     .then((rows) => rows[0])
     .catch((err) => {
@@ -96,6 +134,7 @@ meRouter.post("/", ...newNameLimits, async (req, res) => {
 
 meRouter.patch("/", requireUser, async (req, res) => {
   const { name } = nameBody.parse(req.body);
+  if (name.toLowerCase() !== req.user!.name.toLowerCase()) await notReserved(name);
   const [user] = await db
     .update(users)
     .set({ name })
@@ -167,4 +206,87 @@ meRouter.put("/preferences", requireUser, async (req, res) => {
     .returning();
   await refreshCachedSession(req.cookies?.[COOKIE_NAME]);
   res.json({ user: publicUser(user) });
+});
+
+
+// --- Stage 27: PIN, signing in on another device, devices ------------------------------------------
+
+meRouter.put("/pin", requireUser, async (req, res) => {
+  const { pin } = pinBody.parse(req.body);
+  const [user] = await db
+    .update(users)
+    .set({ pinHash: await hashPin(pin), pinFailures: 0, pinLockedUntil: null })
+    .where(eq(users.id, req.user!.id))
+    .returning();
+  await forgetAllOf(user.id);
+  res.json({ user: publicUser(user) });
+});
+
+const MAX_PIN_TRIES = 10;
+const LOCK_MINUTES = 15;
+// Wrong PINs are also limited per visitor, so nobody can try many names one after another
+export const signInBody = z.object({ name: nameSchema, pin: z.string().max(12) });
+export const codeBody = z.object({ code: z.string().min(4).max(20) });
+export const pinBody = z.object({ pin: pinSchema });
+const signInLimit = rateLimit({ name: "sign-in", windowMs: 15 * 60_000, max: 30, key: (req) => `ip:${req.ip}` });
+const wrongPin = () => new HttpError(401, "That name and PIN don't match");
+
+meRouter.post("/sign-in", signInLimit, async (req, res) => {
+  const { name, pin } = signInBody.parse(req.body);
+  const [user] = await db.select().from(users).where(sql`lower(${users.name}) = lower(${name})`);
+  if (!user) throw wrongPin();
+  if (!user.pinHash) throw new HttpError(403, "That name has no PIN yet, so it can only be used on its own device. Ask the admin for a sign-in code.");
+  if (user.pinLockedUntil && user.pinLockedUntil.getTime() > Date.now()) throw new HttpError(429, "Too many wrong PINs for this name. Try again in 15 minutes.");
+  if (!(await checkPin(pin, user.pinHash))) {
+    const failures = user.pinFailures + 1;
+    await db
+      .update(users)
+      .set(failures >= MAX_PIN_TRIES ? { pinFailures: 0, pinLockedUntil: new Date(Date.now() + LOCK_MINUTES * 60_000) } : { pinFailures: failures })
+      .where(eq(users.id, user.id));
+    throw failures >= MAX_PIN_TRIES ? new HttpError(429, "Too many wrong PINs for this name. Try again in 15 minutes.") : wrongPin();
+  }
+  await db.update(users).set({ pinFailures: 0, pinLockedUntil: null }).where(eq(users.id, user.id));
+  if (req.user) await endSession(res, req.cookies?.[COOKIE_NAME]); // signed in as someone else on this browser: not any more
+  await startSession(res, user.id, req.get("user-agent"));
+  res.json({ user: publicUser(user) });
+});
+
+meRouter.post("/codes", requireUser, async (req, res) => {
+  res.status(201).json(await makeSignInCode(req.user!.id, "device"));
+});
+
+meRouter.post("/sign-in/code", signInLimit, async (req, res) => {
+  const { code } = codeBody.parse(req.body);
+  const used = await useSignInCode(code);
+  if (!used) throw new HttpError(401, "That code doesn't work. Codes work once, and only for a short time.");
+  // A claim code (from the admin) means the old PIN is forgotten: you choose a new one now
+  const [user] =
+    used.kind === "claim"
+      ? await db.update(users).set({ pinHash: null, pinFailures: 0, pinLockedUntil: null }).where(eq(users.id, used.userId)).returning()
+      : await db.select().from(users).where(eq(users.id, used.userId));
+  if (!user) throw new HttpError(401, "That code doesn't work. Codes work once, and only for a short time.");
+  if (req.user) await endSession(res, req.cookies?.[COOKIE_NAME]);
+  await startSession(res, user.id, req.get("user-agent"));
+  res.json({ user: publicUser(user) });
+});
+
+meRouter.post("/sign-out", requireUser, async (req, res) => {
+  await endSession(res, req.cookies?.[COOKIE_NAME]);
+  res.status(204).end();
+});
+
+meRouter.get("/devices", requireUser, async (req, res) => {
+  res.json(await devicesOf(req.user!.id, req.cookies?.[COOKIE_NAME]));
+});
+
+meRouter.delete("/devices/:id", requireUser, async (req, res) => {
+  const id = z.string().regex(/^([0-9a-f]{12}|others)$/).parse(req.params.id);
+  const current = currentSessionId(req.cookies?.[COOKIE_NAME]);
+  const n =
+    id === "others"
+      ? await endSessionsOf(req.user!.id, { except: current })
+      : current?.startsWith(id)
+        ? 0 // this browser: use "Sign out" instead
+        : await endSessionsOf(req.user!.id, { deviceId: id });
+  res.json({ signedOut: n });
 });

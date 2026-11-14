@@ -17,6 +17,7 @@ export type Group = {
   joined: boolean;
   mine: boolean;
   unread: number; // posts and messages since you last looked (members only)
+  locked?: boolean; // Stage 27: the admin made it read only
 };
 export type GroupDetail = Omit<Group, "members" | "posts" | "lastActivity" | "unread"> & { members: Person[] };
 export type Post = { id: number; body: string; createdAt: string; author: Person; likes: number; comments: number; liked: boolean; mine: boolean };

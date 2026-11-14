@@ -198,7 +198,7 @@ describe("Nook TV", () => {
   it("only the admin (passcode) adds videos; everyone sees the shelves", async () => {
     const ann = await person("Ann");
     const bou = await person("Bou");
-    expect((await request(app).get("/api/admin").set("Cookie", ann.cookie)).body).toEqual({ enabled: true, isAdmin: false });
+    expect((await request(app).get("/api/admin").set("Cookie", ann.cookie)).body).toEqual({ enabled: true, problem: null, isAdmin: false });
     const wrong = await request(app).post("/api/admin").set("Cookie", ann.cookie).set("Origin", ORIGIN).set("Host", SITE_HOST).send({ passcode: "nope" });
     expect(wrong.status).toBe(403);
     const add = { url: "https://youtu.be/dQw4w9WgXcQ", shelf: "Music", title: "A song" };

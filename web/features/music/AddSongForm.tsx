@@ -301,7 +301,7 @@ export function AddSongForm() {
           ))}
         </ul>
         <p className="mt-3 text-xs text-muted">
-          {t("Running Nook yourself? Put the downloads in a folder and run this in api/:")} <code>npm run music:import -- folder</code>
+          {t("Running Nook yourself? Many songs at once can be added from a folder on the Nook PC: see docs/stage-8.md.")}
         </p>
         <Link href="/music" className={buttonClasses("ghost", "sm", "mt-3 -ml-3")}>
           ← Back to the charts

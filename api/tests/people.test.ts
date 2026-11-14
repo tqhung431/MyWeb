@@ -23,7 +23,7 @@ describe("picking a name", () => {
     const res = await browser.post("/api/me").set("Origin", ORIGIN).set("X-Forwarded-Host", SITE_HOST).send({ name: "  Linh   Tran " });
     expect(res.status).toBe(201);
     expect(res.body.user).toMatchObject({ name: "Linh Tran" });
-    expect(Object.keys(res.body.user).sort()).toEqual(["createdAt", "id", "name", "preferences"]); // nothing else about you
+    expect(Object.keys(res.body.user).sort()).toEqual(["createdAt", "hasPin", "id", "name", "pausedUntil", "preferences"]); // nothing else about you (Stage 27: never the PIN)
     expect(sessionCookie(res)).toMatch(/HttpOnly/i);
     expect(sessionCookie(res)).toMatch(/SameSite=Lax/i);
     expect((await browser.get("/api/me")).body.user.name).toBe("Linh Tran");
@@ -103,7 +103,9 @@ describe("what Nook keeps about you", () => {
       const { rows } = await pool.query(`select count(*)::int as n from ${table}`);
       expect(rows[0].n, table).toBe(0);
     }
-    // the name is free again
+    // Stage 27: the name stays reserved for 30 days, then it's free again
+    expect((await request(app).post("/api/me").send({ name: "Linh" })).status).toBe(409);
+    await pool.query("update reserved_names set until = now() - interval '1 minute'");
     expect((await request(app).post("/api/me").send({ name: "Linh" })).status).toBe(201);
   });
 });

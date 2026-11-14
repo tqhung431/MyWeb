@@ -55,7 +55,7 @@ export function YouPage() {
       <div className="flex max-w-xl flex-col gap-6">
         <h1 className="text-3xl font-bold tracking-tight">{t("Hi there 👋")}</h1>
         <Card>
-          <CardHeader title={t("What should we call you?")} subtitle={t("Just a name, so everyone here knows who's who. No email, no password.")} />
+          <CardHeader title={t("What should we call you?")} subtitle={t("A name and a short PIN, so everyone here knows who's who. No email, no password.")} />
           <NameForm mode="pick" onDone={setUser} />
         </Card>
       </div>

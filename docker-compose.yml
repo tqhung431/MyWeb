@@ -78,6 +78,7 @@ services:
       # cloudflared behind it), so a visitor through the Cloudflare tunnel is counted by their own IP, not as one.
       # Caddy replaces X-Forwarded-For for everyone it doesn't trust, so a browser can't fake its IP.
       TRUST_PROXY: "loopback, linklocal, uniquelocal"
+      ARENA_URL: http://arena:4100 # Stage 27: Admin → Health checks the game server
       # Stage 11: how long Nook keeps data (days). See .env.example.
       DATA_RETENTION_DAYS: ${DATA_RETENTION_DAYS:-90}
       CHAT_RETENTION_DAYS: ${CHAT_RETENTION_DAYS:-30}

@@ -34,6 +34,7 @@ import { chatImages, chatMessages, groupMembers, hobbyGroups, postComments, post
 import { dropImageIfUnused, imageJson } from "../hobby/images.js";
 import { requireUser } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
+import { isAdmin, logAdmin } from "../admin.js";
 import { rateLimit } from "../middleware/security.js";
 import { broadcast, groupRoom, ownerRoom, publishActivity, toRoom } from "../realtime/emit.js";
 
@@ -93,6 +94,9 @@ async function isMember(groupId: number, userId: string): Promise<boolean> {
 // Stage 21: writing needs membership. The page shows a "Join" button instead of the box, so this is
 // only reached by an old page or a script.
 async function requireMember(groupId: number, userId: string, what: string) {
+  // Stage 27: a group the admin locked can be read, not written in
+  const [g] = await db.select({ locked: hobbyGroups.locked }).from(hobbyGroups).where(eq(hobbyGroups.id, groupId));
+  if (g?.locked) throw new HttpError(403, "The admin locked this group: you can read it, but not post or chat");
   if (!(await isMember(groupId, userId))) throw new HttpError(403, `Join this group to ${what}`);
 }
 
@@ -121,8 +125,9 @@ hobbyRouter.get("/groups", async (req, res) => {
     joined: boolean;
     mine: boolean;
     unread: number;
+    locked: boolean;
   }>(sql`
-    select g.id, g.slug, g.name, g.emoji, g.description, g.created_at as "createdAt",
+    select g.id, g.slug, g.name, g.emoji, g.description, g.created_at as "createdAt", g.locked,
       (select count(*)::int from group_members gm where gm.group_id = g.id) as members,
       (select count(*)::int from posts p where p.group_id = g.id) as posts,
       greatest(
@@ -202,8 +207,10 @@ hobbyRouter.get("/groups/:slug", async (req, res) => {
 
 hobbyRouter.delete("/groups/:slug", requireUser, async (req, res) => {
   const group = await groupBySlug(String(req.params.slug));
-  if (group.createdBy !== req.user!.id) throw new HttpError(403, "Only the person who started this group can delete it");
+  const admin = group.createdBy !== req.user!.id && (await isAdmin(req)); // Stage 27: the admin can delete any group
+  if (group.createdBy !== req.user!.id && !admin) throw new HttpError(403, "Only the person who started this group can delete it");
   await db.delete(hobbyGroups).where(eq(hobbyGroups.id, group.id));
+  if (admin) await logAdmin(req, "deleted a group", group.name);
   res.status(204).end();
   broadcast("hobby:groups");
   toRoom(groupRoom(group.slug), "hobby:board", { slug: group.slug, deleted: true });
@@ -294,8 +301,10 @@ async function postWithGroup(id: number) {
 
 hobbyRouter.delete("/posts/:id", requireUser, async (req, res) => {
   const { post, slug } = await postWithGroup(idParam.parse(req.params.id));
-  if (post.authorId !== req.user!.id) throw new HttpError(403, "You can only delete your own posts");
+  const admin = post.authorId !== req.user!.id && (await isAdmin(req));
+  if (post.authorId !== req.user!.id && !admin) throw new HttpError(403, "You can only delete your own posts");
   await db.delete(posts).where(eq(posts.id, post.id));
+  if (admin) await logAdmin(req, "deleted a post", `${slug}: ${post.body.slice(0, 80)}`);
   res.status(204).end();
   toRoom(groupRoom(slug), "hobby:board", { slug });
   broadcast("hobby:groups");
@@ -357,8 +366,10 @@ hobbyRouter.delete("/comments/:id", requireUser, async (req, res) => {
     .innerJoin(hobbyGroups, eq(hobbyGroups.id, posts.groupId))
     .where(eq(postComments.id, id));
   if (!row) throw new HttpError(404, "Comment not found");
-  if (row.comment.authorId !== req.user!.id) throw new HttpError(403, "You can only delete your own comments");
+  const admin = row.comment.authorId !== req.user!.id && (await isAdmin(req));
+  if (row.comment.authorId !== req.user!.id && !admin) throw new HttpError(403, "You can only delete your own comments");
   await db.delete(postComments).where(eq(postComments.id, id));
+  if (admin) await logAdmin(req, "deleted a comment", `${row.slug}: ${row.comment.body.slice(0, 80)}`);
   res.status(204).end();
   toRoom(groupRoom(row.slug), "hobby:board", { slug: row.slug, postId: row.comment.postId });
 });
@@ -441,8 +452,10 @@ hobbyRouter.delete("/messages/:id", requireUser, async (req, res) => {
     .innerJoin(hobbyGroups, eq(hobbyGroups.id, chatMessages.groupId))
     .where(eq(chatMessages.id, id));
   if (!row) throw new HttpError(404, "Message not found");
-  if (row.message.authorId !== req.user!.id) throw new HttpError(403, "You can only delete your own messages");
+  const admin = row.message.authorId !== req.user!.id && (await isAdmin(req));
+  if (row.message.authorId !== req.user!.id && !admin) throw new HttpError(403, "You can only delete your own messages");
   await db.delete(chatMessages).where(eq(chatMessages.id, id));
+  if (admin) await logAdmin(req, "deleted a chat message", `${row.slug}: ${row.message.body.slice(0, 80) || "(a picture)"}`);
   await dropImageIfUnused(row.message.imageId);
   res.status(204).end();
   toRoom(groupRoom(row.slug), "hobby:message-deleted", { slug: row.slug, id });

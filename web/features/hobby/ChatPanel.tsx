@@ -9,7 +9,7 @@
 // pick one with the picture button. It's shrunk in the browser first (shrinkImage.ts), then uploaded,
 // then sent with the message.
 
-import { ArrowUp, ImagePlus, Loader2, Trash2, X } from "lucide-react";
+import { ArrowUp, ImagePlus, Loader2, Flag, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
@@ -38,6 +38,9 @@ type Props = {
   onLoadOlder: () => void;
   onSend: (body: string, imageId?: string) => Promise<void>;
   onDelete: (m: ChatItem) => void;
+  // Stage 27: the admin can delete anyone's message; others can report it
+  canModerate?: boolean;
+  onReport?: (m: ChatItem) => void;
   onTyping: () => void;
   typingNames: string[];
   placeholder: string;
@@ -252,7 +255,7 @@ export function ChatPanel(props: Props) {
                   )}
                 </div>
                 <span className="shrink-0 pb-1 text-[10px] text-muted tabular-nums">{clockTime(m.createdAt)}</span>
-                {m.mine && (
+                {(m.mine || props.canModerate) && (
                   <button
                     type="button"
                     onClick={() => props.onDelete(m)}
@@ -260,6 +263,16 @@ export function ChatPanel(props: Props) {
                     className="inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted opacity-60 hover:bg-surface-muted hover:text-rose-600 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                   >
                     <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                )}
+                {!m.mine && props.onReport && (
+                  <button
+                    type="button"
+                    onClick={() => props.onReport!(m)}
+                    aria-label={t("Report this message")}
+                    className="inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted opacity-50 hover:bg-surface-muted hover:text-amber-600 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                  >
+                    <Flag className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
                 )}
               </div>

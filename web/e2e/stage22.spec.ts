@@ -13,7 +13,7 @@ test("two people play a live chess game to checkmate", async ({ browser, baseURL
     ["Wen", "Bao"].map(async (n) => {
       const ctx = await browser.newContext({ baseURL, ignoreHTTPSErrors: true });
       await ctx.addInitScript(() => sessionStorage.setItem("nook.namePrompt.later", "1"));
-      await ctx.request.post("/api/me", { data: { name: `${n} ${unique()}` } });
+      await ctx.request.post("/api/me", { data: { name: `${n} ${unique()}`, pin: "2468" } });
       return { ctx, page: await ctx.newPage() };
     }),
   );

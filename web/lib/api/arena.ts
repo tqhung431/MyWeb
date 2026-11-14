@@ -67,7 +67,7 @@ export const saveNookGame = (body: { pgn: string; level: number; color: "w" | "b
   apiFetch<{ id: number; result: string; reason: string }>("/api/chess/nook", { method: "POST", body: JSON.stringify(body) });
 
 // Admin and Nook TV
-export type AdminStatus = { enabled: boolean; isAdmin: boolean };
+export type AdminStatus = { enabled: boolean; isAdmin: boolean; problem?: "off" | "short" | "https" | null };
 export type TvVideo = { id: number; kind: "video" | "playlist"; youtubeId: string; title: string; shelf: string; position: number };
 
 export const getAdmin = () => apiFetch<AdminStatus>("/api/admin");

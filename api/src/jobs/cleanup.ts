@@ -5,13 +5,14 @@
 //   Hobby Hub chat older than CHAT_RETENTION_DAYS (30) → deleted, private chats too (Stage 21)
 //   chat pictures no message shows any more       → deleted, with their files
 //   expired sessions                              → deleted
+//   Stage 27: used-up sign-in codes, ended name reservations, admin log and settled reports older than 90 days
 //
 // Posts and comments stay as long as their author is active.
 
-import { and, isNull, like, lt, notExists, sql } from "drizzle-orm";
+import { and, isNull, like, lt, ne, notExists, sql } from "drizzle-orm";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
-import { achievements, authSessions, chatMessages, directMessages, focusSessions, gameScores, songLikes, songPlays, users, watchEntries, watchTitles, onlineGames, onlineGamePlayers } from "../db/schema.js";
+import { adminLog, reports, reservedNames, signInCodes, achievements, authSessions, chatMessages, directMessages, focusSessions, gameScores, songLikes, songPlays, users, watchEntries, watchTitles, onlineGames, onlineGamePlayers } from "../db/schema.js";
 import { sweepImages } from "../hobby/images.js";
 import { deletePerson } from "../people.js";
 import { broadcast } from "../realtime/emit.js";
@@ -61,6 +62,12 @@ export async function cleanup(now = new Date()) {
     .where(notExists(db.select({ one: sql`1` }).from(onlineGamePlayers).where(sql`online_game_players.game_id = online_games.id`)));
 
   const images = await sweepImages(now); // after the messages above, so their pictures go too
+
+  // Stage 27
+  await db.delete(signInCodes).where(lt(signInCodes.expiresAt, now));
+  await db.delete(reservedNames).where(lt(reservedNames.until, now));
+  await db.delete(adminLog).where(lt(adminLog.at, cutoff));
+  await db.delete(reports).where(and(ne(reports.status, "open"), lt(reports.createdAt, cutoff)));
 
   if (inactive.length) broadcast("people:changed");
   return {

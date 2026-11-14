@@ -8,7 +8,7 @@ import express from "express";
 import helmet from "helmet";
 import { config } from "./config.js";
 import { pool } from "./db/client.js";
-import { loadUser } from "./middleware/auth.js";
+import { blockPaused, loadUser } from "./middleware/auth.js";
 import { errorHandler, notFound } from "./middleware/errors.js";
 import { sameOrigin } from "./middleware/security.js";
 import { achievementsRouter } from "./routes/achievements.js";
@@ -25,6 +25,7 @@ import { musicRouter } from "./routes/music.js";
 import { sessionsRouter } from "./routes/sessions.js";
 import { openApiDocument } from "./openapi.js";
 import { accessRouter } from "./routes/access.js";
+import { adminToolsRouter, bannerRouter, reportsRouter } from "./routes/admin.js";
 import { adminRouter, alleyRouter, brawlRouter, chessRouter, tvRouter, villageRouter } from "./routes/arena.js";
 import { tipsRouter } from "./routes/tips.js";
 import { watchRouter } from "./routes/watch.js";
@@ -45,6 +46,7 @@ export function createApp() {
   app.use("/api/games", gamesJson); // Stage 16: game saves may be up to 200 KB (before the 10 KB parser below)
   app.use(express.json({ limit: "10kb" })); // parse JSON bodies, refuse huge ones
   app.use(loadUser); // req.user from the login cookie
+  app.use(blockPaused); // Stage 27: paused by the admin = read only
 
   // Is everything up? PostgreSQL is required; Valkey is optional (Nook falls back without it).
   app.get("/health", async (_req, res) => {
@@ -80,6 +82,9 @@ export function createApp() {
   app.use("/api/hobby", messagesRouter); // Stage 21: private chats, pictures, unread badge
   app.use("/api/watch", watchRouter);
   app.use("/api/admin", adminRouter); // Stage 22
+  app.use("/api/admin", adminToolsRouter); // Stage 27: the Admin page
+  app.use("/api/reports", reportsRouter); // Stage 27
+  app.use("/api/banner", bannerRouter); // Stage 27
   app.use("/api/tv", tvRouter);
   app.use("/api/chess", chessRouter);
   app.use("/api/alley", alleyRouter); // Stage 23

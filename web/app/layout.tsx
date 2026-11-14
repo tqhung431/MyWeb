@@ -7,6 +7,7 @@
 // Stage 4: it asks the API "who is this?" (with the visitor's cookie) on every request,
 // so pages are rendered per visitor, and the first HTML already shows your name.
 
+import { Banner } from "@/components/shell/Banner";
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { AppProviders } from "@/components/shell/AppProviders";
@@ -19,7 +20,7 @@ import { Sidebar } from "@/components/shell/Sidebar";
 import { UserMenu } from "@/features/me/UserMenu";
 import { themeScript } from "@/features/theme/theme";
 import { SettingsLink } from "@/features/settings/SettingsLink";
-import { getMe } from "@/lib/api/server";
+import { getMe, getServerBanner } from "@/lib/api/server";
 import { makeT } from "@/lib/i18n/core";
 import { I18nProvider } from "@/lib/i18n/I18nProvider";
 import { dictFor, getLang } from "@/lib/i18n/server";
@@ -44,7 +45,7 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [{ user }, lang] = await Promise.all([getMe(), getLang()]);
+  const [{ user }, lang, banner] = await Promise.all([getMe(), getLang(), getServerBanner()]);
   const t = makeT(dictFor(lang));
 
   return (
@@ -76,6 +77,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </header>
 
                 <main id="main" className="mx-auto max-w-6xl px-4 pt-6 pb-44 sm:px-6 lg:px-10 lg:pt-10 lg:pb-32">
+                  <Banner initialText={banner} />
                   {children}
                 </main>
               </div>
