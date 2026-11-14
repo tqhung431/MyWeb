@@ -150,12 +150,15 @@ describe("live events", () => {
     const reg = await browser.post("/api/me").send({ name: "Linh Pham" });
     const cookie = ([] as string[]).concat(reg.headers["set-cookie"])[0].split(";")[0];
 
+    // Stage 29: a group's live room is for members, checked by who the cookie says you are
+    await browser.put("/api/hobby/groups/gaming/membership");
     const phone = tab({ cookie });
-    const other = tab();
     await next(phone, "presence");
-    const feed = next<Activity>(other, "activity", (a) => filled(a).startsWith("Linh"));
-    await browser.post("/api/hobby/groups").send({ name: "Night owls", emoji: "🦉" });
-    expect(filled(await feed)).toBe("Linh Pham started the group 🦉 Night owls");
+    phone.emit("hobby:join", { slug: "gaming" });
+    await new Promise((r) => setTimeout(r, 150));
+    const got = next<{ message: { author: { name: string } } }>(phone, "hobby:message");
+    await browser.post("/api/hobby/groups/gaming/messages").send({ body: "hi" });
+    expect((await got).message.author.name).toBe("Linh Pham");
   });
 
   it("sends the recent feed to a page that connects later", async () => {
@@ -206,16 +209,21 @@ describe("Hobby Hub rooms (Stage 11)", () => {
     return { agent, cookie: ([] as string[]).concat(res.headers["set-cookie"])[0].split(";")[0] };
   }
 
-  it("delivers a chat message to everyone with the group open, and only them", async () => {
+  it("delivers a chat message to the members with the group open, and only them (Stage 29)", async () => {
     const linh = await personWithCookie("Linh");
-    const reader = tab(); // a guest reading the group
+    const mai = await personWithCookie("Mai");
+    const an = await personWithCookie("An"); // not a member
+    await mai.agent.put("/api/hobby/groups/gaming/membership");
+    const reader = tab({ cookie: mai.cookie }); // a member with the group open
+    const outsider = tab({ cookie: an.cookie }); // tries to listen in
+    const guest = tab(); // a guest, also tries
     const elsewhere = tab(); // someone on another page
-    await Promise.all([next(reader, "presence"), next(elsewhere, "presence")]);
-    reader.emit("hobby:join", { slug: "gaming" });
-    await new Promise((r) => setTimeout(r, 100));
+    await Promise.all([reader, outsider, guest, elsewhere].map((t) => next(t, "presence")));
+    for (const t of [reader, outsider, guest]) t.emit("hobby:join", { slug: "gaming" });
+    await new Promise((r) => setTimeout(r, 150));
 
     let leaked = false;
-    elsewhere.on("hobby:message", () => (leaked = true));
+    for (const t of [elsewhere, outsider, guest]) t.on("hobby:message", () => (leaked = true));
     const got = next<{ slug: string; message: { body: string; author: { name: string } } }>(reader, "hobby:message");
     await linh.agent.put("/api/hobby/groups/gaming/membership");
     await linh.agent.post("/api/hobby/groups/gaming/messages").send({ body: "gg!" });
@@ -226,9 +234,11 @@ describe("Hobby Hub rooms (Stage 11)", () => {
 
   it("passes on 'typing…' from people with a name, never from guests or outside the room", async () => {
     const mai = await personWithCookie("Mai");
+    const lan = await personWithCookie("Lan");
+    for (const p of [mai, lan]) await p.agent.put("/api/hobby/groups/books/membership");
     const maiTab = tab({ cookie: mai.cookie });
     const guestTab = tab();
-    const reader = tab();
+    const reader = tab({ cookie: lan.cookie });
     await Promise.all([next(maiTab, "presence"), next(guestTab, "presence"), next(reader, "presence")]);
     for (const t of [maiTab, guestTab, reader]) t.emit("hobby:join", { slug: "books" });
     await new Promise((r) => setTimeout(r, 100));

@@ -82,7 +82,8 @@ describe("posts", () => {
     expect(cooking).toMatchObject({ posts: 2, members: 2, joined: true });
     expect(cooking.lastActivity).not.toBeNull();
     expect(groups.find((g: { slug: string }) => g.slug === "gaming")).toMatchObject({ posts: 0, members: 0, joined: false, lastActivity: null });
-    const comments = await request(app).get(`/api/hobby/posts/${first.body.id}/comments`);
+    expect((await request(app).get(`/api/hobby/posts/${first.body.id}/comments`)).status).toBe(403); // Stage 29: members only
+    const comments = await linh.get(`/api/hobby/posts/${first.body.id}/comments`);
     expect(comments.body[0]).toMatchObject({ body: "Star anise is the secret", author: { name: "Mai" } });
   });
 
@@ -98,14 +99,14 @@ describe("posts", () => {
   });
 
   it("pages the board 20 at a time", async () => {
-    await person("Linh");
+    const linh = await person("Linh", "books");
     // straight into the database: the API allows only 10 posts per 10 minutes per person
     await pool.query(`insert into posts (group_id, author_id, body)
       select g.id, u.id, 'Book ' || i from hobby_groups g, users u, generate_series(1, 22) i where g.slug = 'books' order by i`);
-    const page1 = await request(app).get("/api/hobby/groups/books/posts");
+    const page1 = await linh.get("/api/hobby/groups/books/posts");
     expect(page1.body.posts).toHaveLength(20);
     expect(page1.body.more).toBe(true);
-    const page2 = await request(app).get(`/api/hobby/groups/books/posts?before=${page1.body.posts[19].id}`);
+    const page2 = await linh.get(`/api/hobby/groups/books/posts?before=${page1.body.posts[19].id}`);
     expect(page2.body.posts.map((p: { body: string }) => p.body)).toEqual(["Book 2", "Book 1"]);
     expect(page2.body.more).toBe(false);
   });

@@ -3,7 +3,7 @@
 **A cozy corner of the web for your free time**, which you run yourself on your own PC and share with
 everyone on your network (family, roommates, classmates).
 
-- 🌙 **Chill Corner**: a focus timer with your own focus and break lengths, 11 relaxing sounds you can mix,
+- 🌙 **Focus Room** (Chill Corner until Stage 29): a focus timer with your own focus and break lengths, 11 relaxing sounds you can mix,
   your weekly focus chart, achievements, and focus tips.
 - 🎵 **Music**: songs with vocals that Nook stores and plays itself, so they play on any network (no YouTube or
   SoundCloud to be blocked). Drag in your songs: the title, artist, cover and genre are read for you.
@@ -362,6 +362,7 @@ The second line prints your address: `https://<random-name>.trycloudflare.com`.
 26. Mầm Thú (Sproutlings), part 1 — a creature adventure on the island of Thanh Khê: 12 sproutlings + 5 grown forms, the Five Elements, befriending mini-games, turn-based battles against six shrine keepers ✅ · [docs](docs/stage-26.md)
 27. People and admin — names protected by a PIN (sign in on another device by PIN or a one-time code), your devices, and an Admin page: people, reports, Hobby Hub moderation, banner, health, an admin log ✅ · [docs](docs/stage-27.md)
 28. Chat and privacy — Messages as its own app, a message menu (copy, edit for 10 minutes, delete with Undo, report), "Message deleted" in place, a live feed with only what people do together, "Share my milestones", the admin's sign-in log ✅ · [docs](docs/stage-28.md)
+29. Privacy and small fixes — Hobby Hub groups are for members (anyone can join), the live feed shows only Nook-wide things, Settings only says whether admin is on, Chill Corner is now Focus Room ✅ · [docs](docs/stage-29.md)
 
 ## Licence
 

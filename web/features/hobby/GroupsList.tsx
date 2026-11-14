@@ -1,7 +1,7 @@
 "use client";
 
 // Hobby Hub's front page: every group, with members, posts and when it was last busy.
-// Anyone can read; starting a group needs a name.
+// Stage 29: anyone can join a group; its posts and chat are for members. Starting a group needs a name.
 
 import { CloudOff, Loader2, MessageCircle, Plus, Users } from "lucide-react";
 import Link from "next/link";
@@ -50,7 +50,7 @@ export function GroupsList() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-xl text-sm text-muted">
-          {t("Groups for what you love. Join one to post, comment and chat; your groups come first and show what's new.")}
+          {t("Groups for what you love. Anyone can join; posts and chat are for members. Your groups come first and show what's new.")}
         </p>
         <Button variant="primary" onClick={() => (user ? setCreating(true) : askName())}>
           <Plus className="h-4 w-4" aria-hidden="true" /> {t("Start a group")}

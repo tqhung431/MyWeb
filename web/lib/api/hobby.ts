@@ -19,7 +19,8 @@ export type Group = {
   unread: number; // posts and messages since you last looked (members only)
   locked?: boolean; // Stage 27: the admin made it read only
 };
-export type GroupDetail = Omit<Group, "members" | "posts" | "lastActivity" | "unread"> & { members: Person[] };
+// Stage 29: members (and the admin) can read; others get memberCount and an empty members list
+export type GroupDetail = Omit<Group, "members" | "posts" | "lastActivity" | "unread"> & { members: Person[]; memberCount: number; canRead: boolean };
 export type Post = { id: number; body: string; createdAt: string; author: Person; likes: number; comments: number; liked: boolean; mine: boolean };
 export type Comment = { id: number; body: string; createdAt: string; author: Person; mine: boolean };
 export type ChatImage = { id: string; url: string; width: number; height: number };

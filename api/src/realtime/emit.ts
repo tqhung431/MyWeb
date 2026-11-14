@@ -72,6 +72,12 @@ export function toRoom(room: string, event: string, payload: unknown): void {
   target()?.to(room).emit(event, payload);
 }
 
+// Stage 29: take all of someone's tabs out of a room (they left a group: no more live posts or chat)
+export function leaveRoom(owner: string, room: string): void {
+  const t = target() as unknown as { in(room: string): { socketsLeave(room: string): void } } | null;
+  t?.in(owner).socketsLeave(room);
+}
+
 export function notifyOwner(owner: Owner, event: string, payload: unknown): void {
   target()?.to(ownerRoom(owner)).emit(event, payload);
 }
@@ -79,7 +85,7 @@ export function notifyOwner(owner: Owner, event: string, payload: unknown): void
 // Something happened that everyone may see ("Linh joined Board games").
 // Kept in a short list in Valkey too, so a page opened later can show recent activity.
 //
-// Stage 28: the feed shows what people do TOGETHER (joins, groups, posts, game wins, new songs). What people do on
+// Stage 28: the feed shows what people do TOGETHER (Stage 29: joining Nook, game wins, new songs). What people do on
 // their own (focus sessions, watching, listening) is never published. Milestones (badges, habit streaks, finished
 // books) only appear for people who chose Settings → Privacy → "Share my milestones": use publishMilestone().
 export async function publishActivity(icon: string, text: string, params?: Activity["params"], opts?: { milestone?: boolean }): Promise<void> {
@@ -107,7 +113,8 @@ export async function publishMilestone(
 }
 
 // Lines from before Stage 28 that are private now: they leave the feed too
-const PRIVATE_ICONS = new Set(["Timer", "Clapperboard", "Headphones"]); // focus sessions, WatchList, "is listening to"
+// focus sessions, WatchList, "is listening to"; Stage 29: Hobby Hub groups (started, joined, posted) are members-only
+const PRIVATE_ICONS = new Set(["Timer", "Clapperboard", "Headphones", "Users", "MessagesSquare"]);
 const MILESTONE = [/unlocked/, /going for \{n\} days/, /finished reading/];
 export const isShareable = (a: Activity) => !PRIVATE_ICONS.has(a.icon) && (a.milestone || !MILESTONE.some((r) => r.test(a.text)));
 

@@ -1,4 +1,4 @@
-// "/chill/tips" — Server Component: asks the API on every request, sends finished HTML.
+// "/focus/tips" — Server Component: asks the API on every request, sends finished HTML.
 
 import type { Metadata } from "next";
 import { TipCard } from "@/features/tips/TipCard";

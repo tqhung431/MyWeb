@@ -1,6 +1,6 @@
 // The one button style for every app. Pick a variant and a size instead of writing classes.
 //   <Button variant="primary" size="lg">Start</Button>
-//   <Link className={buttonClasses("secondary")} href="/chill">Open</Link>
+//   <Link className={buttonClasses("secondary")} href="/focus">Open</Link>
 
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";

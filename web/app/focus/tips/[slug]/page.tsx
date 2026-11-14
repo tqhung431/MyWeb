@@ -1,4 +1,4 @@
-// "/chill/tips/[slug]" — one tip, rendered per request from the database.
+// "/focus/tips/[slug]" — one tip, rendered per request from the database.
 
 import { ArrowLeft, Clock } from "lucide-react";
 import type { Metadata } from "next";
@@ -23,7 +23,7 @@ export default async function TipPage({ params }: Props) {
 
   return (
     <div className="max-w-2xl">
-      <Link href="/chill/tips" className={buttonClasses("ghost", "sm", "-ml-3 mb-4")}>
+      <Link href="/focus/tips" className={buttonClasses("ghost", "sm", "-ml-3 mb-4")}>
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         {t("All tips")}
       </Link>

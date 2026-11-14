@@ -1,6 +1,6 @@
 "use client";
 
-// A small floating bar that shows the sound and timer on every page except Chill Corner itself.
+// A small floating bar that shows the sound and timer on every page except Focus Room itself.
 // It reads the SAME providers as the Chill page, which is why it stays in sync.
 
 import { Pause, Play, Square } from "lucide-react";
@@ -27,7 +27,7 @@ export function MiniPlayer() {
 
   const tracks = ambient.playing.map((n) => getTrack(n)).filter((t) => t !== undefined);
   const track = tracks[0]; // the first one sets the icon
-  const visible = (track || focus.active) && pathname !== "/chill";
+  const visible = (track || focus.active) && pathname !== "/focus";
   if (!visible) return null;
 
   const chill = getApp("chill");
@@ -42,7 +42,7 @@ export function MiniPlayer() {
       )}
     >
       <Link
-        href="/chill"
+        href="/focus"
         className="flex min-w-0 flex-1 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         <AppIcon icon={track?.icon ?? chill.icon} accent={track?.accent ?? chill.accent} size="md" />

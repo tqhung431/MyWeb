@@ -52,11 +52,14 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // Stage 3.5 moved Tips inside Chill Corner. Old links keep working with a permanent (308) redirect.
+  // Stage 3.5 moved Tips inside Chill Corner; Stage 29 renamed Chill Corner to Focus Room (/focus).
+  // Old links keep working with a permanent (308) redirect.
   async redirects() {
     return [
-      { source: "/tips", destination: "/chill/tips", permanent: true },
-      { source: "/tips/:slug", destination: "/chill/tips/:slug", permanent: true },
+      { source: "/tips", destination: "/focus/tips", permanent: true },
+      { source: "/tips/:slug", destination: "/focus/tips/:slug", permanent: true },
+      { source: "/chill", destination: "/focus", permanent: true },
+      { source: "/chill/:path*", destination: "/focus/:path*", permanent: true },
       // Stage 28: private chats became their own app
       { source: "/hobby-hub/messages", destination: "/messages", permanent: true },
       { source: "/hobby-hub/messages/:userId", destination: "/messages/:userId", permanent: true },

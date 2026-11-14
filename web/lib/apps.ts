@@ -29,16 +29,16 @@ export const APPS: AppInfo[] = [
   {
     id: "chill",
     pinned: true,
-    name: tx("Chill Corner"),
+    name: tx("Focus Room"), // Stage 29: was Chill Corner (/chill redirects)
     tagline: tx("Ambient sounds, a focus timer and tips"),
-    href: "/chill",
+    href: "/focus",
     icon: Moon,
     accent: "from-violet-500 to-fuchsia-500",
     status: "live",
     phase: "Stages 1–3",
     links: [
-      { href: "/chill", label: tx("Focus") },
-      { href: "/chill/tips", label: tx("Tips") },
+      { href: "/focus", label: tx("Focus") },
+      { href: "/focus/tips", label: tx("Tips") },
     ],
   },
   {
@@ -207,7 +207,7 @@ export function getApp(id: string): AppInfo {
   return app;
 }
 
-// "/chill/tips/x" is inside "/chill"; "/" only matches itself.
+// "/focus/tips/x" is inside "/focus"; "/" only matches itself.
 export function isActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);

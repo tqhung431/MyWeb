@@ -28,7 +28,7 @@
 // when something new arrives. Private chats and pictures: routes/messages.ts.
 
 import { and, desc, eq, lt, sql } from "drizzle-orm";
-import { Router } from "express";
+import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../db/client.js";
 import { chatImages, chatMessages, groupMembers, hobbyGroups, postComments, postLikes, posts, users, type User } from "../db/schema.js";
@@ -38,7 +38,7 @@ import { requireUser } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
 import { isAdmin, logAdmin } from "../admin.js";
 import { rateLimit } from "../middleware/security.js";
-import { broadcast, groupRoom, ownerRoom, publishActivity, toRoom } from "../realtime/emit.js";
+import { broadcast, groupRoom, leaveRoom, ownerRoom, toRoom } from "../realtime/emit.js";
 
 export const hobbyRouter = Router();
 
@@ -100,6 +100,16 @@ async function requireMember(groupId: number, userId: string, what: string) {
   const [g] = await db.select({ locked: hobbyGroups.locked }).from(hobbyGroups).where(eq(hobbyGroups.id, groupId));
   if (g?.locked) throw new HttpError(403, "The admin locked this group: you can read it, but not post or chat");
   if (!(await isMember(groupId, userId))) throw new HttpError(403, `Join this group to ${what}`);
+}
+
+// Stage 29: a group is for its members. Others see its name, emoji, description and member count, and a Join
+// button; its posts, comments, chat and pictures need membership (anyone can join). The admin can read every group.
+async function canRead(req: Request, groupId: number): Promise<boolean> {
+  if (req.user && (await isMember(groupId, req.user.id))) return true;
+  return isAdmin(req);
+}
+async function requireReader(req: Request, groupId: number) {
+  if (!(await canRead(req, groupId))) throw new HttpError(403, "Join this group to see its posts and chat");
 }
 
 // "Something new in this group": each member (except the author) re-counts their unread badge.
@@ -187,22 +197,25 @@ hobbyRouter.post("/groups", requireUser, perUser("group-new", 60 * 60 * 1000, 5)
   await db.insert(groupMembers).values({ groupId: group.id, userId: req.user!.id }).onConflictDoNothing();
   res.status(201).json(group);
 
-  broadcast("hobby:groups");
-  await publishActivity("Users", "{name} started the group {group}", { name: req.user!.name, group: `${group.emoji} ${group.name}` });
+  broadcast("hobby:groups"); // Stage 29: groups are members-only, so nothing about them goes in the public feed
 });
 
 hobbyRouter.get("/groups/:slug", async (req, res) => {
   const group = await groupBySlug(String(req.params.slug));
-  const members = await db
+  const all = await db
     .select({ id: users.id, name: users.name })
     .from(groupMembers)
     .innerJoin(users, eq(users.id, groupMembers.userId))
     .where(eq(groupMembers.groupId, group.id))
     .orderBy(groupMembers.joinedAt);
+  const joined = req.user ? all.some((m) => m.id === req.user!.id) : false;
+  const reader = joined || (await isAdmin(req));
   res.json({
     ...group,
-    members,
-    joined: req.user ? members.some((m) => m.id === req.user!.id) : false,
+    members: reader ? all : [], // Stage 29: who's in it is for its members too
+    memberCount: all.length,
+    joined,
+    canRead: reader,
     mine: req.user !== null && group.createdBy === req.user.id,
   });
 });
@@ -224,7 +237,7 @@ hobbyRouter.put("/groups/:slug/membership", requireUser, async (req, res) => {
   res.json({ joined: true });
   broadcast("hobby:groups");
   toRoom(groupRoom(group.slug), "hobby:board", { slug: group.slug, members: true });
-  if (added.length) await publishActivity("Users", "{name} joined {group}", { name: req.user!.name, group: `${group.emoji} ${group.name}` });
+  if (added.length) toRoom(ownerRoom({ userId: req.user!.id, clientId: null }), "hobby:unread", { slug: group.slug });
 });
 
 hobbyRouter.delete("/groups/:slug/membership", requireUser, async (req, res) => {
@@ -234,6 +247,7 @@ hobbyRouter.delete("/groups/:slug/membership", requireUser, async (req, res) => 
   broadcast("hobby:groups");
   toRoom(groupRoom(group.slug), "hobby:board", { slug: group.slug, members: true });
   toRoom(ownerRoom({ userId: req.user!.id, clientId: null }), "hobby:unread", { slug: group.slug });
+  leaveRoom(ownerRoom({ userId: req.user!.id, clientId: null }), groupRoom(group.slug)); // Stage 29: no more live posts or chat
 });
 
 // Stage 21: the group's page is open → everything in it counts as read
@@ -265,6 +279,7 @@ function postColumns(me: string | null) {
 
 hobbyRouter.get("/groups/:slug/posts", async (req, res) => {
   const group = await groupBySlug(String(req.params.slug));
+  await requireReader(req, group.id);
   const { before } = beforeQuery.parse(req.query);
   const rows = await db
     .select(postColumns(req.user?.id ?? null))
@@ -288,7 +303,6 @@ hobbyRouter.post("/groups/:slug/posts", requireUser, perUser("post-new", 10 * 60
   toRoom(groupRoom(group.slug), "hobby:board", { slug: group.slug });
   broadcast("hobby:groups");
   await tellMembers(group.id, group.slug, req.user!.id);
-  await publishActivity("MessagesSquare", "{name} posted in {group}", { name: req.user!.name, group: `${group.emoji} ${group.name}` });
 });
 
 async function postWithGroup(id: number) {
@@ -322,6 +336,7 @@ async function likeCount(postId: number) {
 
 hobbyRouter.put("/posts/:id/like", requireUser, async (req, res) => {
   const { post, slug } = await postWithGroup(idParam.parse(req.params.id));
+  await requireReader(req, post.groupId);
   await db.insert(postLikes).values({ postId: post.id, userId: req.user!.id }).onConflictDoNothing();
   res.json({ liked: true, likes: await likeCount(post.id) });
   toRoom(groupRoom(slug), "hobby:board", { slug, postId: post.id });
@@ -338,6 +353,7 @@ hobbyRouter.delete("/posts/:id/like", requireUser, async (req, res) => {
 
 hobbyRouter.get("/posts/:id/comments", async (req, res) => {
   const { post } = await postWithGroup(idParam.parse(req.params.id));
+  await requireReader(req, post.groupId);
   const rows = await db
     .select({ id: postComments.id, body: postComments.body, createdAt: postComments.createdAt, author: { id: users.id, name: users.name } })
     .from(postComments)
@@ -382,6 +398,7 @@ const CHAT_PAGE = 50;
 
 hobbyRouter.get("/groups/:slug/messages", async (req, res) => {
   const group = await groupBySlug(String(req.params.slug));
+  await requireReader(req, group.id);
   const { before } = beforeQuery.parse(req.query);
   const rows = await db
     .select({

@@ -107,14 +107,14 @@ describe("private chat: delete and edit", () => {
 });
 
 describe("the live feed", () => {
-  it("shows joins and groups; focus sessions, watching and listening stay private", async () => {
+  it("shows joining Nook; groups (Stage 29), focus sessions, watching and listening stay private", async () => {
     const ann = await person("Ann");
     await ann.agent.post("/api/sessions").send({ mode: "focus", minutes: 25 });
     await ann.agent.post("/api/hobby/groups").send({ name: "Pottery club", emoji: "🏺" });
-    const lines = await feed((l) => l.some((x) => x.includes("Pottery")));
-    expect(lines).toContain("Ann started the group 🏺 Pottery club");
-    expect(lines).toContain("Ann joined Nook");
-    expect(lines.join("\n")).not.toMatch(/focus session/);
+    await ann.agent.post("/api/hobby/groups/pottery-club/posts").send({ body: "first pot!" });
+    await new Promise((r) => setTimeout(r, 200));
+    const lines = await feed();
+    expect(lines).toEqual(["Ann joined Nook"]); // no "started the group", no "posted in", no focus session
   });
 
   it("lines that are private now leave the feed, even ones written before Stage 28", async () => {

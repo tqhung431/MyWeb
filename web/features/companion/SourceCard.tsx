@@ -37,7 +37,7 @@ export function SourceCards({ sources }: { sources: Source[] }) {
         ) : (
           <li key={`tip-${s.slug}`}>
             <Link
-              href={`/chill/tips/${s.slug}`}
+              href={`/focus/tips/${s.slug}`}
               title={s.summary}
               className="flex max-w-64 items-center gap-2 rounded-2xl border border-border bg-surface-strong/70 py-1.5 pr-3 pl-1.5 text-sm hover:bg-surface-muted"
             >

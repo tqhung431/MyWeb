@@ -8,7 +8,7 @@ type Props = { tip: TipSummary; eyebrow?: string };
 export function TipCard({ tip, eyebrow }: Props) {
   return (
     <Link
-      href={`/chill/tips/${tip.slug}`}
+      href={`/focus/tips/${tip.slug}`}
       className="group flex items-start gap-4 rounded-3xl border border-border bg-surface p-5 shadow-card backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
     >
       <span className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-600 dark:text-amber-300">

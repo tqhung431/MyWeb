@@ -1,4 +1,4 @@
-// Nested layout: wraps every page under /chill (Focus and Tips) with the app's header and tabs.
+// Nested layout: wraps every page under /focus (Focus and Tips) with the app's header and tabs.
 // Each future app gets the same: app/<app>/layout.tsx with <AppHeader appId="..." />.
 
 import { AppHeader } from "@/components/shell/AppHeader";

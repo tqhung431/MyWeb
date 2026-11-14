@@ -24,11 +24,11 @@ export default async function HomePage() {
           <p className="mt-2 max-w-xl text-muted">{t("A calm corner of the web for your free time. Pick up where you left off, or try something new.")}</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Link href="/chill" className={buttonClasses("primary", "lg")}>
+          <Link href="/focus" className={buttonClasses("primary", "lg")}>
             {t("Start focusing")}
             <ArrowRight className="h-5 w-5" aria-hidden="true" />
           </Link>
-          <Link href="/chill/tips" className={buttonClasses("secondary", "lg")}>
+          <Link href="/focus/tips" className={buttonClasses("secondary", "lg")}>
             {t("Read a tip")}
           </Link>
         </div>

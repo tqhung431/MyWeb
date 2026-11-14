@@ -122,6 +122,11 @@ const VI: Record<string, string> = {
   "Too many wrong PINs for this name. Try again in 15 minutes.": "Nhập sai mã PIN quá nhiều lần. Thử lại sau 15 phút.",
   "That code doesn't work. Codes work once, and only for a short time.": "Mã này không dùng được. Mỗi mã chỉ dùng một lần, trong thời gian ngắn.",
   "The admin passcode is too short (it needs 16 characters or more), so admin is switched off": "Mã quản trị quá ngắn (cần từ 16 ký tự), nên chức năng quản trị đang tắt",
+  // Stage 29
+  "Admin isn't enabled on this Nook": "Chức năng quản trị chưa được bật trên Nook này",
+  "Admin isn't available on this connection": "Không thể dùng chức năng quản trị qua kết nối này",
+  "Wrong passcode": "Sai mã",
+  "Join this group to see its posts and chat": "Hãy tham gia nhóm để xem bài đăng và trò chuyện",
   "Become admin over https: open Nook at https://localhost, through Tailscale or through the tunnel": "Hãy trở thành quản trị viên qua https: mở Nook ở https://localhost, qua Tailscale hoặc qua đường hầm",
   "The admin paused you for now. You can still read everything.": "Quản trị viên đang tạm khóa bạn. Bạn vẫn đọc được mọi thứ.",
   "The admin locked this group: you can read it, but not post or chat": "Quản trị viên đã khóa nhóm này: bạn đọc được nhưng không đăng bài hay trò chuyện được",

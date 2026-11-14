@@ -2,7 +2,7 @@
 import { expect, test } from "@playwright/test";
 import { visit } from "./helpers";
 
-const PAGES = ["/", "/chill", "/music", "/arcade", "/watchlist", "/hobby-hub", "/habits", "/arcade-online", "/games", "/games/van-lo", "/about", "/design"];
+const PAGES = ["/", "/focus", "/music", "/arcade", "/watchlist", "/hobby-hub", "/habits", "/arcade-online", "/games", "/games/van-lo", "/about", "/design"];
 
 for (const path of PAGES) {
   test(`${path} opens`, async ({ page }) => {
