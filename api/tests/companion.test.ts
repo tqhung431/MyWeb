@@ -1,6 +1,8 @@
 // The Companion (Stage 9): embeddings in pgvector, retrieval, and a streamed answer,
 // against a FAKE Ollama (tests/fake-ollama.ts) so no real model is needed.
 
+import { GUIDE } from "../src/ai/guide.js";
+import { isAboutMusic } from "../src/ai/companion.js";
 import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
 import request from "supertest";
@@ -54,8 +56,9 @@ describe("status", () => {
 describe("knowledge (embeddings in pgvector)", () => {
   it("indexes every tip and song, and only re-embeds what changed", async () => {
     await upload("title-remix.mp3");
-    expect(await reindex()).toEqual({ embedded: 5, removed: 0, total: 5 }); // 4 tips + 1 song
-    expect(await reindex()).toEqual({ embedded: 0, removed: 0, total: 5 }); // nothing changed
+    const total = 5 + GUIDE.length; // 4 tips + 1 song + the guide to every app (Stage 31)
+    expect(await reindex()).toEqual({ embedded: total, removed: 0, total });
+    expect(await reindex()).toEqual({ embedded: 0, removed: 0, total }); // nothing changed
 
     await pool.query("update tips set summary = 'Changed!' where slug = 'real-breaks'");
     expect((await reindex()).embedded).toBe(1);
@@ -74,7 +77,7 @@ describe("knowledge (embeddings in pgvector)", () => {
   });
 
   it("is done by the worker's reindex job", async () => {
-    expect(await processJob("reindex", {})).toMatchObject({ total: 4 });
+    expect(await processJob("reindex", {})).toMatchObject({ total: 4 + GUIDE.length });
   });
 
   it("is skipped, not failed, while Ollama isn't running", async () => {
@@ -89,20 +92,41 @@ describe("knowledge (embeddings in pgvector)", () => {
 });
 
 describe("chat", () => {
-  it("streams sources first, then the answer piece by piece, using Nook's own items", async () => {
+  it("streams the answer piece by piece, then the songs it named (asked for music)", async () => {
     await upload("title-remix.mp3");
     await reindex();
-    const res = await chat("Gợi ý một bài remix dance cho party"); // Vietnamese works too
+    const res = await chat("Gợi ý một bài nhạc remix dance cho party"); // Vietnamese works too
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toMatch(/text\/event-stream/);
 
     const list = events(res.text);
-    expect(list[0].event).toBe("sources");
-    expect(list[0].data[0]).toMatchObject({ kind: "song", title: "Đêm Nay (Vinahouse Remix)", audioUrl: expect.stringMatching(/\/audio$/) });
     const tokens = list.filter((e) => e.event === "token");
     expect(tokens.length).toBeGreaterThan(3); // really streamed, not one big block
     expect(tokens.map((t) => t.data.t).join("")).toBe("You could try “Đêm Nay (Vinahouse Remix)”. Enjoy!");
+    // Stage 31: the cards come after the answer, and only what it talked about
+    const sources = list.find((e) => e.event === "sources")!;
+    expect(list.indexOf(sources)).toBeGreaterThan(list.indexOf(tokens[tokens.length - 1]));
+    expect(sources.data[0]).toMatchObject({ kind: "song", title: "Đêm Nay (Vinahouse Remix)", audioUrl: expect.stringMatching(/\/audio$/) });
     expect(list[list.length - 1].event).toBe("done");
+  });
+
+  it("helps with Nook itself: no songs when the question isn't about music (Stage 31)", async () => {
+    await upload("title-remix.mp3");
+    await reindex();
+    const res = await chat("How do I sign in on another phone with my name and PIN?");
+    const list = events(res.text);
+    const answer = list.filter((e) => e.event === "token").map((t) => t.data.t).join("");
+    expect(answer).toBe("Open Your name and PIN in Nook: it's all there.");
+    const sources = list.find((e) => e.event === "sources")!.data as { kind: string; title: string; href?: string }[];
+    expect(sources.some((s) => s.kind === "song")).toBe(false);
+    expect(sources[0]).toMatchObject({ kind: "guide", title: "Your name and PIN", href: "/account" });
+  });
+
+  it("knows when a question is about music, in English and Vietnamese", () => {
+    expect(isAboutMusic("Play me a lofi song")).toBe(true);
+    expect(isAboutMusic("Gợi ý nhạc để học")).toBe(true);
+    expect(isAboutMusic("How do I leave a group?")).toBe(false);
+    expect(isAboutMusic("Làm sao đổi mã PIN?")).toBe(false);
   });
 
   it("checks the conversation it's sent", async () => {

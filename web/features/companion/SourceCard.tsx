@@ -1,7 +1,7 @@
 "use client";
 
-// What the Companion's answer is based on: real Nook songs (play them here) and tips (open them).
-import { Lightbulb, Play } from "lucide-react";
+// What the Companion's answer talked about: real Nook songs (play them here), tips and apps (Stage 31) to open.
+import { ArrowRight, Lightbulb, Play } from "lucide-react";
 import Link from "next/link";
 import type { Source } from "@/lib/api/companion";
 import { genreOf } from "@/features/music/genres";
@@ -33,6 +33,21 @@ export function SourceCards({ sources }: { sources: Source[] }) {
                 <span className="block truncate text-xs text-muted">{s.artist}</span>
               </span>
             </button>
+          </li>
+        ) : s.kind === "guide" ? (
+          <li key={`guide-${s.id}`}>
+            <Link
+              href={s.href}
+              className="flex max-w-64 items-center gap-2 rounded-2xl border border-border bg-surface-strong/70 py-1.5 pr-3 pl-1.5 text-sm hover:bg-surface-muted"
+            >
+              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-sky-400 to-indigo-500 text-white">
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate font-semibold">{t(s.title)}</span>
+                <span className="block truncate text-xs text-muted">{t("Open in Nook")}</span>
+              </span>
+            </Link>
           </li>
         ) : (
           <li key={`tip-${s.slug}`}>

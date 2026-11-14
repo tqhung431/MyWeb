@@ -231,8 +231,8 @@ export const knowledge = pgTable(
   "knowledge",
   {
     id: serial("id").primaryKey(),
-    kind: text("kind", { enum: ["tip", "song"] }).notNull(),
-    refId: text("ref_id").notNull(), // tip slug or song id
+    kind: text("kind", { enum: ["tip", "song", "guide"] }).notNull(), // Stage 31: "guide" = ai/guide.ts (no DB change: text)
+    refId: text("ref_id").notNull(), // tip slug, song id or guide id
     content: text("content").notNull(), // the text that was embedded
     contentHash: text("content_hash").notNull(), // unchanged text → no need to embed again
     model: text("model").notNull(),

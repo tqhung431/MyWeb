@@ -3,8 +3,9 @@
 // GET  /api/companion/status   is the AI on, reachable, are the models downloaded, how much is indexed
 // POST /api/companion/chat     { messages: [{ role, content }, …] }  → a STREAM (Server-Sent Events):
 //
-//   event: sources   data: [ {kind:"song", title, audioUrl, …}, {kind:"tip", …} ]   (sent first)
 //   event: token     data: {"t":"Try "}                                             (many, as it's written)
+//   event: sources   data: [ {kind:"guide", title, href}, {kind:"song", …}, {kind:"tip", …} ]
+//                    (Stage 31: sent after the answer, only the items it talks about)
 //   event: done      data: {}
 //   event: error     data: {"message":"…"}
 //
@@ -13,7 +14,7 @@
 
 import { Router } from "express";
 import { z } from "zod";
-import { buildMessages, toSources } from "../ai/companion.js";
+import { buildMessages, isAboutMusic, pickSources, toSources } from "../ai/companion.js";
 import { knowledgeCount, search } from "../ai/knowledge.js";
 import { AiUnavailable, aiEnabled, aiStatus, chatStream } from "../ai/ollama.js";
 import { config } from "../config.js";
@@ -52,13 +53,16 @@ companionRouter.post("/chat", chatLimit, async (req, res) => {
 
   // 1. Find the Nook items closest in meaning to the question (before streaming starts,
   //    so problems like "model not downloaded" can still be a normal 503 answer).
+  const question = messages[messages.length - 1].content;
   let found;
   try {
-    found = await search(messages[messages.length - 1].content);
+    found = await search(question, 8);
   } catch (error) {
     if (error instanceof AiUnavailable) throw new HttpError(503, error.message);
     throw error;
   }
+  // Stage 31: songs only when they asked about music; at most 4 items besides the guide
+  if (!isAboutMusic(question)) found = found.filter((f) => f.kind !== "song");
   const sources = await toSources(found);
   const prompt = await buildMessages({ history: messages, found, owner: o, user: req.user });
 
@@ -70,14 +74,19 @@ companionRouter.post("/chat", chatLimit, async (req, res) => {
     "X-Accel-Buffering": "no",
   });
   const send = (event: string, data: unknown) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-  send("sources", sources);
 
   // Closing the tab or pressing Stop ends the request: stop the model too, so it doesn't work for nobody.
   const stop = new AbortController();
   res.on("close", () => stop.abort());
 
   try {
-    for await (const piece of chatStream(prompt, stop.signal)) send("token", { t: piece });
+    let answer = "";
+    for await (const piece of chatStream(prompt, stop.signal)) {
+      answer += piece;
+      send("token", { t: piece });
+    }
+    // Stage 31: the cards come after the answer: only what it talks about (no songs under every chat)
+    send("sources", pickSources(sources, answer));
     send("done", {});
   } catch (error) {
     if (!stop.signal.aborted) send("error", { message: error instanceof AiUnavailable ? error.message : "The Companion stopped unexpectedly" });

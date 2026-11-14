@@ -29,8 +29,13 @@ export function startFakeOllama(port = 4997, models = ["qwen2.5:1.5b", "paraphra
       }
       if (req.url === "/api/chat") {
         const system: string = data.messages[0].content;
-        const first = system.match(/\[1\] (?:Song with vocals: "([^"]+)"|Focus tip: ([^.]+))/);
-        const answer = first ? `You could try “${first[1] ?? first[2]}”. Enjoy!` : "I couldn't find anything in Nook for that.";
+        // Stage 31: guide entries too ("Nook guide — Settings (/settings): …")
+        const first = system.match(/\[1\] (?:Song with vocals: "([^"]+)"|Focus tip: ([^.]+)|Nook guide — ([^(]+) \()/);
+        const answer = !first
+          ? "I couldn't find anything in Nook for that."
+          : first[3]
+            ? `Open ${first[3]} in Nook: it's all there.`
+            : `You could try “${first[1] ?? first[2]}”. Enjoy!`;
         res.writeHead(200, { "Content-Type": "application/x-ndjson" });
         for (let i = 0; i < answer.length; i += 6) {
           res.write(JSON.stringify({ message: { role: "assistant", content: answer.slice(i, i + 6) }, done: false }) + "\n");
