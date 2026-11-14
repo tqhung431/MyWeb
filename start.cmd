@@ -30,6 +30,9 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+rem Caddy reads the Caddyfile through a file mount: after a git pull a running Caddy still has the old one.
+rem Recreate it (a second or two) so new routes, like /api/arena for the game server, always take effect.
+docker compose up -d --no-deps --force-recreate caddy
 
 echo.
 echo Nook is running: https://localhost  (other PCs: http://^<this PC's IP^>)

@@ -1210,8 +1210,11 @@
  "You're watching this game": "Bạn đang xem trò chơi này",
  "Can't reach Nook's game server.": "Không kết nối được máy chủ trò chơi của Nook.",
  "If you run Nook yourself, check on that computer:": "Nếu bạn tự chạy Nook, hãy kiểm tra trên máy đó:",
- "should say \"running (healthy)\". If it's missing: git pull, then docker compose up -d --build": "phải hiện \"running (healthy)\". Nếu không có: chạy git pull, rồi docker compose up -d --build",
  "shows why it stopped": "cho biết vì sao nó dừng",
  "Behind Cloudflare or nginx: /api/arena must reach Caddy like the rest of /api (see docs/stage-22.md)": "Sau Cloudflare hoặc nginx: /api/arena phải tới Caddy giống phần còn lại của /api (xem docs/stage-22.md)",
- "Details": "Chi tiết"
+ "Details": "Chi tiết",
+ "should say \"running (healthy)\". If it's missing: git pull, then docker compose up -d --build, then docker compose up -d --force-recreate caddy": "phải hiện \"running (healthy)\". Nếu không có: git pull, rồi docker compose up -d --build, rồi docker compose up -d --force-recreate caddy",
+ "Nook's front door (Caddy) is still using its settings from before the game server existed.": "Cổng vào của Nook (Caddy) vẫn đang dùng cài đặt cũ, từ trước khi có máy chủ game.",
+ "On the computer that runs Nook, in the Nook folder, run:": "Trên máy chạy Nook, trong thư mục Nook, hãy chạy:",
+ "Then reload this page.": "Rồi tải lại trang này."
 }
