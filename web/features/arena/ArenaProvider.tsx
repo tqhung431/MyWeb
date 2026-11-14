@@ -66,8 +66,13 @@ export function ArenaProvider({ children }: { children: ReactNode }) {
     // Not connected after 8 s (or the server refuses): say so, instead of "Connecting…" forever
     let lastError = "";
     s.on("connect_error", (e: Error) => (lastError = e.message));
-    const slow = setTimeout(() => {
-      if (!s.connected) setProblem(lastError || "timeout");
+    const slow = setTimeout(async () => {
+      if (s.connected) return;
+      // Ask the same address directly: the API answers "old-caddy" when Caddy still has its settings from before Stage 22
+      const why = await fetch("/api/arena/?EIO=4&transport=polling", { cache: "no-store" })
+        .then(async (r) => (r.status === 503 ? ((await r.json()) as { code?: string }).code : undefined))
+        .catch(() => undefined);
+      if (!s.connected) setProblem(why === "old-caddy" ? "old-caddy" : lastError || "timeout");
     }, 8000);
     return () => {
       clearTimeout(slow);

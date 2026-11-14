@@ -89,6 +89,11 @@ export function createApp() {
   app.use("/api/books", booksRouter);
   app.use("/api/games", gamesRouter);
 
+  // Stage 22: /api/arena belongs to the game server, and Caddy sends it there. If it reaches the API instead, Caddy is
+  // still running settings from before Stage 22 (git pull updates the Caddyfile, but a running Caddy keeps the old one).
+  app.use("/api/arena", (_req, res) => {
+    res.status(503).json({ error: "Caddy is still using its old settings: run docker compose up -d --force-recreate caddy", code: "old-caddy" });
+  });
   app.use(notFound);
   app.use(errorHandler); // must be last
   return app;

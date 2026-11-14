@@ -110,12 +110,22 @@ export function ArenaHub() {
           </p>
           <Bot className="ml-auto hidden h-5 w-5 text-muted sm:block" aria-hidden="true" />
         </div>
-        {problem && !connected && (
+        {problem === "old-caddy" && !connected && (
+          <div className="mt-3 rounded-2xl bg-rose-500/10 p-3 text-sm">
+            <p className="font-semibold">{t("Nook's front door (Caddy) is still using its settings from before the game server existed.")}</p>
+            <p className="mt-1 text-muted">{t("On the computer that runs Nook, in the Nook folder, run:")}</p>
+            <p className="mt-1">
+              <code className="rounded bg-black/10 px-1.5 py-0.5 dark:bg-white/10">docker compose up -d --force-recreate caddy</code>
+            </p>
+            <p className="mt-1 text-xs text-muted">{t("Then reload this page.")}</p>
+          </div>
+        )}
+        {problem && problem !== "old-caddy" && !connected && (
           <div className="mt-3 rounded-2xl bg-rose-500/10 p-3 text-sm">
             <p className="font-semibold">{t("If you run Nook yourself, check on that computer:")}</p>
             <ul className="mt-1 list-disc pl-5 text-muted">
               <li>
-                <code>docker compose ps arena</code> {t("should say \"running (healthy)\". If it's missing: git pull, then docker compose up -d --build")}
+                <code>docker compose ps arena</code> {t("should say \"running (healthy)\". If it's missing: git pull, then docker compose up -d --build, then docker compose up -d --force-recreate caddy")}
               </li>
               <li>
                 <code>docker compose logs arena</code> {t("shows why it stopped")}

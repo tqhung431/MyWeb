@@ -27,6 +27,9 @@ if ! docker compose up -d --build; then
   echo "Something went wrong. See the messages above, or run: docker compose logs api"
   exit 1
 fi
+# Caddy reads the Caddyfile through a file mount: after a git pull a running Caddy still has the old one.
+# Recreate it (a second or two) so new routes, like /api/arena for the game server, always take effect.
+docker compose up -d --no-deps --force-recreate caddy
 
 echo
 echo "Nook is running: https://localhost  (other PCs: http://<this PC's IP>)"
