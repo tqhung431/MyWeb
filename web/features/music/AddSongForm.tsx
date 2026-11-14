@@ -18,6 +18,7 @@ import { useMusic } from "./MusicProvider";
 import { STARTER_PACK } from "./starter-pack";
 
 import { useT } from "@/lib/i18n/I18nProvider";
+import { useIsAdmin } from "@/features/admin/useIsAdmin";
 type Rights = "own" | "cc" | "permission";
 // skip: an error that trying again won't fix (too big, not audio, already in Nook)
 type Item = {
@@ -37,6 +38,7 @@ const AUDIO = /\.(mp3|m4a|aac|ogg|opus|flac|wav)$/i;
 
 export function AddSongForm() {
   const t = useT();
+  const admin = useIsAdmin();
   const [items, setItems] = useState<Item[]>([]);
   const [rights, setRights] = useState<Rights>("cc");
   const [license, setLicense] = useState("CC BY 4.0");
@@ -300,9 +302,11 @@ export function AddSongForm() {
             </li>
           ))}
         </ul>
-        <p className="mt-3 text-xs text-muted">
-          {t("Running Nook yourself? Many songs at once can be added from a folder on the Nook PC: see docs/stage-8.md.")}
-        </p>
+        {admin && ( // Stage 29: instructions for running Nook only for the admin
+          <p className="mt-3 text-xs text-muted">
+            {t("Running Nook yourself? Many songs at once can be added from a folder on the Nook PC: see docs/stage-8.md.")}
+          </p>
+        )}
         <Link href="/music" className={buttonClasses("ghost", "sm", "mt-3 -ml-3")}>
           ← Back to the charts
         </Link>

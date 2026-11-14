@@ -23,6 +23,7 @@ import { z } from "zod";
 import { db } from "../db/client.js";
 import { chatImages, directMessages, users } from "../db/schema.js";
 import { imageJson, imagePath, inspectImage, MAX_IMAGE_MB, saveImage } from "../hobby/images.js";
+import { isAdmin } from "../admin.js";
 import { requireUser } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
 import { rateLimit } from "../middleware/security.js";
@@ -227,14 +228,16 @@ messagesRouter.get("/images/:id", async (req, res) => {
   const id = z.uuid().safeParse(req.params.id);
   if (!id.success) throw new HttpError(404, "Picture not found");
   const me = req.user?.id ?? null;
-  // Who may see it: anyone if it's in a group chat (those are open to read), the two people if it's in a
-  // private chat, and always the person who uploaded it.
+  const admin = await isAdmin(req);
+  // Who may see it: the group's members (Stage 29; and the admin) if it's in a group chat, the two people if it's
+  // in a private chat, and always the person who uploaded it.
   const [img] = (
     await db.execute<{ id: string; type: string; bytes: number }>(sql`
       select i.id, i.type, i.bytes from chat_images i
       where i.id = ${id.data} and (
         i.uploader_id = ${me}
-        or exists (select 1 from chat_messages c where c.image_id = i.id)
+        or exists (select 1 from chat_messages c join group_members gm on gm.group_id = c.group_id where c.image_id = i.id and gm.user_id = ${me})
+        or (${admin} and exists (select 1 from chat_messages c where c.image_id = i.id))
         or exists (select 1 from direct_messages d where d.image_id = i.id and (d.sender_id = ${me} or d.recipient_id = ${me}))
       )`)
   ).rows;

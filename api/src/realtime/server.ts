@@ -14,7 +14,9 @@ import type { Server as HttpServer, IncomingMessage } from "node:http";
 import { createAdapter } from "@socket.io/redis-adapter";
 import { Redis } from "ioredis";
 import { Server, type Socket } from "socket.io";
+import { sql } from "drizzle-orm";
 import { z } from "zod";
+import { db } from "../db/client.js";
 import { COOKIE_NAME, userFromToken } from "../auth/sessions.js";
 import { config } from "../config.js";
 import { liveConnections } from "../metrics.js";
@@ -93,10 +95,17 @@ export async function attachRealtime(http: HttpServer): Promise<Server> {
       schedulePresence();
     });
 
-    // Stage 11: a group's page is open → get its chat and board updates. Reading is open to everyone.
-    socket.on("hobby:join", (raw: unknown) => {
+    // Stage 11: a group's page is open → get its chat and board updates. Stage 29: members only (the admin's
+    // page reloads instead).
+    socket.on("hobby:join", async (raw: unknown) => {
       const parsed = groupSlug.safeParse(raw);
-      if (parsed.success) void socket.join(groupRoom(parsed.data.slug));
+      if (!parsed.success || !data.userId) return;
+      const [member] = (
+        await db.execute(
+          sql`select 1 from group_members gm join hobby_groups g on g.id = gm.group_id where g.slug = ${parsed.data.slug} and gm.user_id = ${data.userId}`,
+        )
+      ).rows;
+      if (member) void socket.join(groupRoom(parsed.data.slug));
     });
     socket.on("hobby:leave", (raw: unknown) => {
       const parsed = groupSlug.safeParse(raw);

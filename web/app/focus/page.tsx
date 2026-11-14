@@ -1,4 +1,4 @@
-// "/chill" — Chill Corner. A Server Component that arranges client feature panels,
+// "/focus" — Focus Room (Chill Corner until Stage 29). A Server Component that arranges client feature panels,
 // plus one tip fetched on the server. If the API is down, the tip is simply left out.
 
 import type { Metadata } from "next";
@@ -11,7 +11,7 @@ import { getTips, type TipSummary } from "@/lib/api/tips";
 
 import { getT } from "@/lib/i18n/server";
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: (await getT())("Chill Corner") };
+  return { title: (await getT())("Focus Room") };
 }
 
 async function randomTip(): Promise<TipSummary | null> {

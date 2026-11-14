@@ -76,12 +76,12 @@ export const ENDPOINTS: Endpoint[] = [
   { method: "get", path: "/api/admin/sign-ins", tag: "Admin", summary: "Who signed in, when, on what kind of device (90 days)", who: "name" },
   { method: "get", path: "/api/admin/health", tag: "Admin", summary: "Database, Valkey, game server, AI and disk: working or not", who: "name" },
 
-  // Chill Corner
-  { method: "get", path: "/api/tips", tag: "Chill Corner", summary: "All focus tips" },
-  { method: "get", path: "/api/tips/{slug}", tag: "Chill Corner", summary: "One tip" },
-  { method: "post", path: "/api/sessions", tag: "Chill Corner", summary: "Save a finished focus session", who: "guest", body: newSession },
-  { method: "get", path: "/api/sessions/summary", tag: "Chill Corner", summary: "Your focus minutes per day", who: "guest", query: summaryQuery },
-  { method: "get", path: "/api/achievements", tag: "Chill Corner", summary: "Your achievements", who: "guest" },
+  // Focus Room
+  { method: "get", path: "/api/tips", tag: "Focus Room", summary: "All focus tips" },
+  { method: "get", path: "/api/tips/{slug}", tag: "Focus Room", summary: "One tip" },
+  { method: "post", path: "/api/sessions", tag: "Focus Room", summary: "Save a finished focus session", who: "guest", body: newSession },
+  { method: "get", path: "/api/sessions/summary", tag: "Focus Room", summary: "Your focus minutes per day", who: "guest", query: summaryQuery },
+  { method: "get", path: "/api/achievements", tag: "Focus Room", summary: "Your achievements", who: "guest" },
   { method: "get", path: "/api/activity", tag: "Nook", summary: "What people did lately (the live feed's history)" },
 
   // Music

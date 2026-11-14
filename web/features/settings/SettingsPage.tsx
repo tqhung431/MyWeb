@@ -141,14 +141,14 @@ function AdminCard() {
     getAdmin().then(setStatus, () => {});
   }, [user?.id]);
   if (!status) return null;
-  if (!status.enabled) {
-    // Stage 27: say why there's no admin (no commands here: the docs explain the fix)
-    return status.problem === "short" ? (
+  if (!status.enabled || status.problem === "https") {
+    // Stage 29: just that it's off, no hints (the person who runs Nook finds the reason in the docs and the API's log)
+    return (
       <Card id="admin">
         <CardHeader title={t("Admin")} />
-        <p className="text-sm text-muted">{t("Admin is switched off: the admin passcode is too short. It needs 16 characters or more (see docs/stage-27.md).")}</p>
+        <p className="text-sm text-muted">{status.enabled ? t("Admin isn't available on this connection.") : t("Admin isn't enabled on this Nook.")}</p>
       </Card>
-    ) : null;
+    );
   }
 
   const submit = async (e: FormEvent) => {
@@ -167,7 +167,7 @@ function AdminCard() {
 
   return (
     <Card id="admin">
-      <CardHeader title={t("Admin")} subtitle={t("The admin looks after Nook: people, Hobby Hub, reports, Nook TV and the banner.")} />
+      <CardHeader title={t("Admin")} />
       {status.isAdmin ? (
         <div className="flex flex-wrap items-center gap-3">
           <p className="flex flex-1 items-center gap-2 text-sm font-semibold">
@@ -180,10 +180,8 @@ function AdminCard() {
             {t("Stop being admin")}
           </Button>
         </div>
-      ) : status.problem === "https" ? (
-        <p className="text-sm text-muted">{t("To keep the passcode safe, become admin over https: on the Nook PC (https://localhost), through Tailscale or through the tunnel.")}</p>
       ) : !user ? (
-        <p className="text-sm text-muted">{t("Pick a name first (top right), then enter the passcode.")}</p>
+        <p className="text-sm text-muted">{t("Pick a name first.")}</p>
       ) : (
         <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row">
           <input

@@ -129,15 +129,22 @@ describe("pictures", () => {
     expect(existsSync(imagePath(up.body.id, "image/png"))).toBe(false);
   });
 
-  it("group chat pictures are open to read, like the chat", async () => {
+  it("group chat pictures are for the group's members, like the chat (Stage 29)", async () => {
     const linh = await person("Linh");
+    const mai = await person("Mai");
     await linh.agent.put("/api/hobby/groups/cooking/membership");
     const up = await upload(linh.agent, PNG);
     const sent = await linh.agent.post("/api/hobby/groups/cooking/messages").send({ body: "my pho", imageId: up.body.id });
     expect(sent.status).toBe(201);
-    const history = await request(app).get("/api/hobby/groups/cooking/messages");
+    expect((await request(app).get("/api/hobby/groups/cooking/messages")).status).toBe(403);
+    expect((await mai.agent.get(up.body.url)).status).toBe(404); // not a member
+    await mai.agent.put("/api/hobby/groups/cooking/membership");
+    const history = await mai.agent.get("/api/hobby/groups/cooking/messages");
     expect(history.body.messages[0]).toMatchObject({ body: "my pho", image: { id: up.body.id, width: 2, height: 1 } });
-    expect((await request(app).get(up.body.url)).status).toBe(200);
+    expect((await mai.agent.get(up.body.url)).status).toBe(200);
+    // leaving: the pictures go too
+    await mai.agent.delete("/api/hobby/groups/cooking/membership");
+    expect((await mai.agent.get(up.body.url)).status).toBe(404);
   });
 
   it("refuses files that aren't pictures, and uploads from other sites", async () => {
@@ -174,7 +181,7 @@ describe("pictures", () => {
 });
 
 describe("joining a group (Stage 21)", () => {
-  it("only members post, comment and chat; anyone can read", async () => {
+  it("only members read, post, comment, like and chat; leaving hides it all (Stage 29)", async () => {
     const linh = await person("Linh");
     const mai = await person("Mai");
     expect((await linh.agent.post("/api/hobby/groups/books/posts").send({ body: "hi" })).status).toBe(403);
@@ -183,8 +190,20 @@ describe("joining a group (Stage 21)", () => {
     const post = await linh.agent.post("/api/hobby/groups/books/posts").send({ body: "Reading Dune" });
     expect(post.status).toBe(201);
     expect((await mai.agent.post(`/api/hobby/posts/${post.body.id}/comments`).send({ body: "nice" })).status).toBe(403);
-    expect((await mai.agent.put(`/api/hobby/posts/${post.body.id}/like`)).status).toBe(200); // likes are open
-    expect((await request(app).get("/api/hobby/groups/books/posts")).body.posts).toHaveLength(1);
+    expect((await mai.agent.put(`/api/hobby/posts/${post.body.id}/like`)).status).toBe(403);
+    expect((await mai.agent.get("/api/hobby/groups/books/posts")).status).toBe(403);
+    expect((await request(app).get("/api/hobby/groups/books/posts")).status).toBe(403);
+    // what a non-member sees of the group: its name and how many are in it, not who
+    const outside = (await mai.agent.get("/api/hobby/groups/books")).body;
+    expect(outside).toMatchObject({ slug: "books", joined: false, canRead: false, memberCount: 1, members: [] });
+    // joining opens it; leaving closes it again
+    await mai.agent.put("/api/hobby/groups/books/membership");
+    expect((await mai.agent.get("/api/hobby/groups/books/posts")).body.posts).toHaveLength(1);
+    expect((await mai.agent.get("/api/hobby/groups/books")).body).toMatchObject({ canRead: true, memberCount: 2 });
+    await mai.agent.delete("/api/hobby/groups/books/membership");
+    expect((await mai.agent.get("/api/hobby/groups/books/posts")).status).toBe(403);
+    expect((await mai.agent.get(`/api/hobby/posts/${post.body.id}/comments`)).status).toBe(403);
+    expect((await mai.agent.get("/api/hobby/groups/books/messages")).status).toBe(403);
   });
 
   it("counts what's new since you last looked, for members only", async () => {

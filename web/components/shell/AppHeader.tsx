@@ -1,7 +1,7 @@
 "use client";
 
 // The header inside an app: its icon, name and sub-page tabs (from lib/apps.ts).
-// Used by app/chill/layout.tsx, and by every future app's layout.
+// Used by app/focus/layout.tsx, and by every future app's layout.
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -18,7 +18,7 @@ export function AppHeader({ appId, className }: { appId: string; className?: str
   const pathname = usePathname();
   const { badge } = useUnread();
 
-  // The longest matching link wins, so /chill/tips/x highlights "Tips", not "Focus".
+  // The longest matching link wins, so /focus/tips/x highlights "Tips", not "Focus".
   const activeHref = app.links?.filter((l) => pathname === l.href || pathname.startsWith(`${l.href}/`)).sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   // Stage 28: many tabs (Arena has 7) go on their own line under the title and wrap (phone too), instead of hiding off the edge

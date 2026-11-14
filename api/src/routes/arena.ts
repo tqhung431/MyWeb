@@ -57,20 +57,23 @@ function samePasscode(given: string, real: string) {
 
 const adminTries = rateLimit({ name: "admin-passcode", windowMs: 15 * 60_000, max: 10, key: (req) => `admin:${req.ip}` });
 
+// Stage 29: visitors only learn whether admin is on; no hints about why not (the owner reads docs/stage-27.md,
+// and the API's log says so at start-up)
+const publicProblem = (p: ReturnType<typeof adminProblem>) => (p === "short" ? "off" : p);
+
 adminRouter.get("/", async (req, res) => {
-  const problem = adminProblem(req);
-  res.json({ enabled: problem !== "off" && problem !== "short", problem, isAdmin: await isAdmin(req) });
+  const problem = publicProblem(adminProblem(req));
+  res.json({ enabled: problem !== "off", problem, isAdmin: await isAdmin(req) });
 });
 
 adminRouter.post("/", requireUser, adminTries, async (req, res) => {
   const { passcode } = passcodeBody.parse(req.body);
   const problem = adminProblem(req);
-  if (problem === "off") throw new HttpError(403, "There's no admin passcode on this Nook");
-  if (problem === "short") throw new HttpError(403, "The admin passcode is too short (it needs 16 characters or more), so admin is switched off");
-  if (problem === "https") throw new HttpError(403, "Become admin over https: open Nook at https://localhost, through Tailscale or through the tunnel");
+  if (problem === "off" || problem === "short") throw new HttpError(403, "Admin isn't enabled on this Nook");
+  if (problem === "https") throw new HttpError(403, "Admin isn't available on this connection");
   if (!samePasscode(passcode, config.ADMIN_PASSCODE)) {
     await logAdmin(req, "wrong admin passcode");
-    throw new HttpError(403, "That passcode isn't right");
+    throw new HttpError(403, "Wrong passcode");
   }
   await setAdminToken(req.cookies[COOKIE_NAME], true);
   await logAdmin(req, "became admin");
@@ -79,7 +82,7 @@ adminRouter.post("/", requireUser, adminTries, async (req, res) => {
 
 adminRouter.delete("/", requireUser, async (req, res) => {
   await setAdminToken(req.cookies[COOKIE_NAME], false);
-  res.json({ enabled: config.ADMIN_PASSCODE.length >= MIN_PASSCODE, problem: adminProblem(req), isAdmin: false });
+  res.json({ enabled: config.ADMIN_PASSCODE.length >= MIN_PASSCODE, problem: publicProblem(adminProblem(req)), isAdmin: false });
 });
 
 

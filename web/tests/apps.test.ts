@@ -18,9 +18,9 @@ describe("app registry", () => {
 
 describe("isActive", () => {
   it("matches the app and its sub-pages, but Home only exactly", () => {
-    expect(isActive("/chill/tips/x", "/chill")).toBe(true);
-    expect(isActive("/chillout", "/chill")).toBe(false);
-    expect(isActive("/chill", "/")).toBe(false);
+    expect(isActive("/focus/tips/x", "/focus")).toBe(true);
+    expect(isActive("/focusing", "/focus")).toBe(false);
+    expect(isActive("/focus", "/")).toBe(false);
     expect(isActive("/", "/")).toBe(true);
   });
 });

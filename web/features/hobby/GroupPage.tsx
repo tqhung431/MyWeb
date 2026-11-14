@@ -87,7 +87,7 @@ export function GroupPage({ slug }: { slug: string }) {
       socket.off("connect", join);
       socket.emit("hobby:leave", { slug });
     };
-  }, [socket, slug]);
+  }, [socket, slug, group?.canRead]); // Stage 29: the live room is for members, so join it again after joining
 
   if (missing) {
     return (
@@ -107,7 +107,7 @@ export function GroupPage({ slug }: { slug: string }) {
       !join &&
       !(await confirm({
         title: t("Leave {group}?", { group: group!.name }),
-        description: t("It moves out of Your groups and stops showing what's new. You can still read it, and join again any time."),
+        description: t("You won't see its posts and chat any more. You can join again any time."),
         confirmLabel: t("Leave"),
       }))
     )
@@ -159,7 +159,12 @@ export function GroupPage({ slug }: { slug: string }) {
                 </span>
               ))}
             </span>
-            {group.members.length === 0 ? (
+            {!group.canRead ? (
+              // Stage 29: who's in it is for its members
+              <span className="text-xs font-semibold text-muted">
+                {group.memberCount === 0 ? t("No members yet") : group.memberCount === 1 ? t("1 member") : t("{n} members", { n: group.memberCount })}
+              </span>
+            ) : group.members.length === 0 ? (
               <span className="text-xs font-semibold text-muted">{t("No members yet")}</span>
             ) : (
               <Popover
@@ -181,11 +186,7 @@ export function GroupPage({ slug }: { slug: string }) {
                           {m.id === user?.id && <span className="font-normal text-muted"> {t("(you)")}</span>}
                         </span>
                         {user && m.id !== user.id && (
-                          <Link
-                            href={`/messages/${m.id}`}
-                            className={buttonClasses("ghost", "sm")}
-                            aria-label={t("Message {name}", { name: m.name })}
-                          >
+                          <Link href={`/messages/${m.id}`} className={buttonClasses("ghost", "sm")} aria-label={t("Message {name}", { name: m.name })}>
                             <MessageCircle className="h-4 w-4" aria-hidden="true" />
                           </Link>
                         )}
@@ -203,8 +204,18 @@ export function GroupPage({ slug }: { slug: string }) {
             {group.joined ? t("Leave") : t("Join")}
           </Button>
           {admin && (
-            <Button variant="ghost" size="sm" onClick={() => lockGroup(slug, !group.locked).then((r) => setGroup({ ...group, locked: r.locked }), () => {})}>
-              {group.locked ? <LockOpen className="h-4 w-4" aria-hidden="true" /> : <Lock className="h-4 w-4" aria-hidden="true" />} {group.locked ? t("Unlock") : t("Lock")}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                lockGroup(slug, !group.locked).then(
+                  (r) => setGroup({ ...group, locked: r.locked }),
+                  () => {},
+                )
+              }
+            >
+              {group.locked ? <LockOpen className="h-4 w-4" aria-hidden="true" /> : <Lock className="h-4 w-4" aria-hidden="true" />}{" "}
+              {group.locked ? t("Unlock") : t("Lock")}
             </Button>
           )}
           {(group.mine || admin) && (
@@ -220,26 +231,40 @@ export function GroupPage({ slug }: { slug: string }) {
         </p>
       )}
 
-      <div className="lg:hidden">
-        <SegmentedControl<Tab>
-          label={t("Show")}
-          options={[
-            { value: "chat", label: t("Chat") },
-            { value: "posts", label: t("Posts") },
-          ]}
-          value={tab}
-          onChange={setTab}
-        />
-      </div>
+      {!group.canRead ? (
+        // Stage 29: posts, chat and pictures are for the group's members
+        <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-border p-10 text-center">
+          <Lock className="h-8 w-8 text-muted" aria-hidden="true" />
+          <p className="font-semibold">{t("Posts and chat are for members")}</p>
+          <p className="max-w-sm text-sm text-muted">{t("Anyone can join. Join to read and write here; leave any time.")}</p>
+          <Button variant="primary" onClick={() => setJoined(true)}>
+            <UserPlus className="h-4 w-4" aria-hidden="true" /> {t("Join {group}", { group: group.name })}
+          </Button>
+        </div>
+      ) : (
+        <>
+          <div className="lg:hidden">
+            <SegmentedControl<Tab>
+              label={t("Show")}
+              options={[
+                { value: "chat", label: t("Chat") },
+                { value: "posts", label: t("Posts") },
+              ]}
+              value={tab}
+              onChange={setTab}
+            />
+          </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
-        <div className={cn(tab !== "posts" && "hidden lg:block")}>
-          <Board slug={slug} groupName={group.name} joined={group.joined} onJoin={() => setJoined(true)} />
-        </div>
-        <div className={cn("lg:sticky lg:top-6 lg:self-start", tab !== "chat" && "hidden lg:block")}>
-          <Chat slug={slug} joined={group.joined} onJoin={() => setJoined(true)} className="h-[calc(100svh-22rem)] min-h-80 lg:h-[calc(100svh-12rem)]" />
-        </div>
-      </div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+            <div className={cn(tab !== "posts" && "hidden lg:block")}>
+              <Board slug={slug} groupName={group.name} joined={group.joined} onJoin={() => setJoined(true)} />
+            </div>
+            <div className={cn("lg:sticky lg:top-6 lg:self-start", tab !== "chat" && "hidden lg:block")}>
+              <Chat slug={slug} joined={group.joined} onJoin={() => setJoined(true)} className="h-[calc(100svh-22rem)] min-h-80 lg:h-[calc(100svh-12rem)]" />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

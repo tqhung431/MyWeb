@@ -94,11 +94,20 @@ Read this first in every session. It carries the context from the sessions that 
   published; milestones only via `publishMilestone()` when `preferences.shareMilestones` (Settings → Privacy);
   `recentActivity()` hides old private lines. Admin sign-in log = `sign_ins` (who, how, user agent; 90 days).
   AppHeader: apps with >4 tabs put them on their own wrapping line. Language buttons show EN/VI, not flags.
-  Next (plan): Stage 29 tidy menus +
+  29: Hobby Hub groups members-only (anyone joins; `canRead`/`requireReader` in routes/hobby.ts, socket `hobby:join`
+  checks membership, `leaveRoom()` on leaving; admin reads all). Feed = joined Nook, game wins, new songs (+ shared
+  milestones). Admin card says only "isn't enabled" / "isn't available on this connection" (GET /api/admin maps
+  "short" → "off"; reason logged at API start). Chill Corner → **Focus Room** at `/focus` (app id still "chill";
+  /chill redirects). Owner's rule: no setup hints/instructions on pages for normal users.
+  Next (plan): Stage 30 one Games app (Mini Arcade + Arcade Online + Nook Arena + Nook Games → tabs Quick games ·
+  Party · Together · Adventures · Leaderboards; Listen Together → Music) + every game fully English in English
+  (titles, classes, monsters, creatures, moves; Cloud Path follows Nook's language; Vietnamese-letters test).
+  Stage 31 Companion = Nook helper (knows every app; songs only when asked about music). Stage 32 Mầm Thú part 2.
+  Older plan notes: tidy menus +
   English-first games (Vân Lộ = "Cloud Path" in English, "Vân Lộ" in Vietnamese, never "Đường Mây"), then Mầm Thú part 2.
   Original world only: don't copy names/characters/plots from existing novels or films.
   Each stage has an explainer in `docs/stage-N.md`; write one for every new stage and update the README's stage list.
-- Apps: **Chill Corner** (focus timer, generated sounds, tips, achievements), **Music** (uploaded songs
+- Apps: **Focus Room** (was Chill Corner) (focus timer, generated sounds, tips, achievements), **Music** (uploaded songs
   stored and streamed by Nook, auto genre, charts, queue/shuffle/repeat/volume), **Mini Arcade** (6 games in
   `web/features/arcade/games`, rules in `logic/` with tests, scores in `game_scores`), **Free-time Companion**
   (Ollama + pgvector RAG, SSE streaming). **Hobby Hub** (groups, posts, comments, likes, live chat via Socket.IO rooms `group:<slug>`).
@@ -106,7 +115,7 @@ Read this first in every session. It carries the context from the sessions that 
   **Habit & Reading Tracker** (`/habits`: days are `date` strings in X-Time-Zone; `web/lib/offline.ts` queue; `public/sw.js`).
   **Arcade Online** (`api/src/arcade-online/`: game.ts has no network code; tests use a fake clock).
   **Nook Arena** (`/arena`: chess, Ngõ Pháo, Giữ Làng, Chợ Đêm Brawl, Mầm Thú, Listen Together) and **Nook TV** (`/tv`), Stages 22–26.
-- Phone tab bar: Home + apps with `pinned: true` + an "Apps" grid. Don't pin more than 3–4 (Stage 28: Chill Corner, Messages, Hobby Hub).
+- Phone tab bar: Home + apps with `pinned: true` + an "Apps" grid. Don't pin more than 3–4 (Stage 28: Focus Room, Messages, Hobby Hub).
 - People (Stage 11): **name only** (owner's choice): no email/password. Stage 27 added a PIN per name to sign in on other devices. `POST /api/me {name}`
   sets the `nook_session` cookie; names unique by lower(name). Guests (X-Client-Id) still work until they pick a name.
   Data retention (owner's choice: "store data but not for too long"): worker job `cleanup` daily deletes people unseen for

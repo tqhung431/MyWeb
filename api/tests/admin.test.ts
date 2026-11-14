@@ -45,14 +45,17 @@ describe("when becoming admin is refused", () => {
     const real = config.ADMIN_PASSCODE;
     try {
       config.ADMIN_PASSCODE = "short-pass";
-      expect((await ann.agent.get("/api/admin")).body).toMatchObject({ enabled: false, problem: "short" });
-      expect((await ann.agent.post("/api/admin").send({ passcode: "short-pass" })).status).toBe(403);
+      // Stage 29: visitors only hear "not enabled", never why
+      expect((await ann.agent.get("/api/admin")).body).toMatchObject({ enabled: false, problem: "off" });
+      const short = await ann.agent.post("/api/admin").send({ passcode: "short-pass" });
+      expect(short.status).toBe(403);
+      expect(short.body.error).toBe("Admin isn't enabled on this Nook");
       config.ADMIN_PASSCODE = real;
       config.ADMIN_REQUIRE_HTTPS = true;
       // a phone on the home network over http: refused, so the passcode never travels unencrypted
       const lan = await ann.agent.post("/api/admin").set("Host", "192.168.1.20").send({ passcode: real });
       expect(lan.status).toBe(403);
-      expect(lan.body.error).toMatch(/https/);
+      expect(lan.body.error).toBe("Admin isn't available on this connection");
       // on the Nook PC itself (localhost) it's fine; over https too (req.secure, behind Caddy)
       const local = await ann.agent.post("/api/admin").set("Host", "localhost:4000").send({ passcode: real });
       expect(local.status).toBe(200);

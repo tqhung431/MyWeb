@@ -90,7 +90,7 @@ jobs:
           set -e
           # pages (HTTPS with Caddy's local certificate, so -k)
           curl -fsSk https://localhost/ -o /dev/null
-          curl -fsSk https://localhost/chill -o /dev/null
+          curl -fsSk https://localhost/focus -o /dev/null
           curl -fsSk https://localhost/music -o /dev/null
           curl -fsSk https://localhost/companion -o /dev/null
           # the API behind Caddy: tips come from the seeded database

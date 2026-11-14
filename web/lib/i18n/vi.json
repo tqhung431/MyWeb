@@ -115,7 +115,6 @@
  "Chat with {name}": "Trò chuyện với {name}",
  "Check again": "Kiểm tra lại",
  "Cheetah reflexes": "Phản xạ báo săn",
- "Chill Corner": "Góc thư giãn",
  "Chill vocals, slowed + reverb": "Giọng chill, slowed + reverb",
  "Choose files": "Chọn tệp",
  "Choose…": "Chọn…",
@@ -1668,5 +1667,14 @@
  "Only you see: focus sessions, habits, reading, what you watch and what you listen to.": "Chỉ bạn thấy: phiên tập trung, thói quen, việc đọc sách, những gì bạn xem và nghe.",
  "Share my milestones": "Chia sẻ cột mốc của tôi",
  "Badges, habit streaks (7, 30, 100 days) and finished books appear in Live now.": "Huy hiệu, chuỗi thói quen (7, 30, 100 ngày) và sách đã đọc xong sẽ hiện trong mục Trực tiếp.",
- "Private chats, just the two of you": "Trò chuyện riêng, chỉ hai người"
+ "Private chats, just the two of you": "Trò chuyện riêng, chỉ hai người",
+ "Focus Room": "Phòng Tập Trung",
+ "You won't see its posts and chat any more. You can join again any time.": "Bạn sẽ không thấy bài đăng và trò chuyện của nhóm nữa. Bạn có thể tham gia lại bất cứ lúc nào.",
+ "Posts and chat are for members": "Bài đăng và trò chuyện chỉ dành cho thành viên",
+ "Anyone can join. Join to read and write here; leave any time.": "Ai cũng có thể tham gia. Hãy tham gia để đọc và viết ở đây; rời nhóm lúc nào cũng được.",
+ "Join {group}": "Tham gia {group}",
+ "Groups for what you love. Anyone can join; posts and chat are for members. Your groups come first and show what's new.": "Nhóm cho những gì bạn yêu thích. Ai cũng có thể tham gia; bài đăng và trò chuyện chỉ dành cho thành viên. Nhóm của bạn hiện trước và cho thấy có gì mới.",
+ "Admin isn't available on this connection.": "Không thể dùng chức năng quản trị qua kết nối này.",
+ "Admin isn't enabled on this Nook.": "Chức năng quản trị chưa được bật trên Nook này.",
+ "Pick a name first.": "Hãy chọn tên trước."
 }
