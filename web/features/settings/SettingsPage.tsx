@@ -5,7 +5,8 @@
 
 import { Check, ShieldCheck } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
-import { Button } from "@/components/ui/Button";
+import Link from "next/link";
+import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { ModeSwitch, PalettePicker } from "@/features/theme/ThemeSwitcher";
 import { LANGS } from "@/lib/i18n/core";
@@ -13,6 +14,8 @@ import { saveLang, useLang, useT } from "@/lib/i18n/I18nProvider";
 import { cn } from "@/lib/cn";
 import { useMe } from "@/features/me/MeProvider";
 import { becomeAdmin, getAdmin, stopAdmin, type AdminStatus } from "@/lib/api/arena";
+import { DevicesCard } from "@/features/me/DevicesCard";
+import { refreshAdmin } from "@/features/admin/useIsAdmin";
 import { ApiError } from "@/lib/api/client";
 
 export function SettingsPage() {
@@ -66,6 +69,7 @@ export function SettingsPage() {
         <PalettePicker />
       </Card>
 
+      <DevicesCard />
       <AdminCard />
     </div>
   );
@@ -83,7 +87,16 @@ function AdminCard() {
   useEffect(() => {
     getAdmin().then(setStatus, () => {});
   }, [user?.id]);
-  if (!status?.enabled) return null;
+  if (!status) return null;
+  if (!status.enabled) {
+    // Stage 27: say why there's no admin (no commands here: the docs explain the fix)
+    return status.problem === "short" ? (
+      <Card id="admin">
+        <CardHeader title={t("Admin")} />
+        <p className="text-sm text-muted">{t("Admin is switched off: the admin passcode is too short. It needs 16 characters or more (see docs/stage-27.md).")}</p>
+      </Card>
+    ) : null;
+  }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -91,6 +104,7 @@ function AdminCard() {
     setError("");
     try {
       setStatus(await becomeAdmin(passcode));
+      refreshAdmin();
       setPasscode("");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("That didn't work"));
@@ -100,16 +114,21 @@ function AdminCard() {
 
   return (
     <Card id="admin">
-      <CardHeader title={t("Admin")} subtitle={t("The admin chooses the videos on Nook TV and can share a screen with everyone.")} />
+      <CardHeader title={t("Admin")} subtitle={t("The admin looks after Nook: people, Hobby Hub, reports, Nook TV and the banner.")} />
       {status.isAdmin ? (
         <div className="flex flex-wrap items-center gap-3">
           <p className="flex flex-1 items-center gap-2 text-sm font-semibold">
-            <ShieldCheck className="h-5 w-5 text-emerald-500" aria-hidden="true" /> {t("You're the admin on this browser.")}
+            <ShieldCheck className="h-5 w-5 text-emerald-500" aria-hidden="true" /> {t("You're the admin on this browser for 12 hours.")}
           </p>
-          <Button variant="secondary" size="sm" onClick={() => stopAdmin().then(setStatus, () => {})}>
+          <Link href="/admin" className={buttonClasses("primary", "sm")}>
+            {t("Open the Admin page")}
+          </Link>
+          <Button variant="secondary" size="sm" onClick={() => stopAdmin().then((s) => (refreshAdmin(), setStatus(s)), () => {})}>
             {t("Stop being admin")}
           </Button>
         </div>
+      ) : status.problem === "https" ? (
+        <p className="text-sm text-muted">{t("To keep the passcode safe, become admin over https: on the Nook PC (https://localhost), through Tailscale or through the tunnel.")}</p>
       ) : !user ? (
         <p className="text-sm text-muted">{t("Pick a name first (top right), then enter the passcode.")}</p>
       ) : (

@@ -5,12 +5,13 @@
 // cookie's token, look it up. No password: whoever has the cookie IS you, so it never leaves this
 // browser (httpOnly: page JavaScript can't read it). Clearing the browser's data = a new person.
 
-import { createHash, randomBytes } from "node:crypto";
-import { and, eq, gt, isNull, lt } from "drizzle-orm";
+import { createHash, randomBytes, randomInt, scrypt as scryptCb, timingSafeEqual } from "node:crypto";
+import { promisify } from "node:util";
+import { and, desc, eq, gt, isNull, lt } from "drizzle-orm";
 import type { CookieOptions, Response } from "express";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
-import { achievements, authSessions, focusSessions, gameScores, songLikes, songPlays, songs, users, type User } from "../db/schema.js";
+import { achievements, authSessions, focusSessions, gameScores, signInCodes, songLikes, songPlays, songs, users, type User } from "../db/schema.js";
 import { valkey, valkeyReady } from "../valkey/client.js";
 
 export const COOKIE_NAME = "nook_session";
@@ -46,10 +47,11 @@ export async function endSession(res: Response, token: string | undefined): Prom
   res.clearCookie(COOKIE_NAME, optionsFor(res));
 }
 
-export type PublicUser = Pick<User, "id" | "name" | "createdAt" | "preferences">;
+export type PublicUser = Pick<User, "id" | "name" | "createdAt" | "preferences"> & { hasPin: boolean; pausedUntil: Date | null };
 
 export function publicUser(user: User): PublicUser {
-  return { id: user.id, name: user.name, createdAt: user.createdAt, preferences: user.preferences };
+  const paused = user.pausedUntil && new Date(user.pausedUntil).getTime() > Date.now() ? new Date(user.pausedUntil) : null;
+  return { id: user.id, name: user.name, createdAt: user.createdAt, preferences: user.preferences, hasPin: !!user.pinHash, pausedUntil: paused };
 }
 
 // Every request from you moves "last seen" forward (at most once an hour, to spare the database).
@@ -84,12 +86,18 @@ async function recall(id: string): Promise<{ user: User; expiresAt: Date } | nul
   if (!raw) return null;
   const c = JSON.parse(raw) as CachedSession;
   // JSON turns dates into strings; turn them back.
-  return { user: { ...c.user, createdAt: new Date(c.user.createdAt), lastSeenAt: new Date(c.user.lastSeenAt) }, expiresAt: new Date(c.expiresAt) };
+  const u = c.user;
+  return {
+    user: { ...u, createdAt: new Date(u.createdAt), lastSeenAt: new Date(u.lastSeenAt), pausedUntil: u.pausedUntil ? new Date(u.pausedUntil) : null, pinLockedUntil: u.pinLockedUntil ? new Date(u.pinLockedUntil) : null },
+    expiresAt: new Date(c.expiresAt),
+  };
 }
 
 async function remember(id: string, user: User, expiresAt: Date): Promise<void> {
   if (!valkeyReady()) return;
-  await valkey.set(cacheKey(id), JSON.stringify({ user, expiresAt }), "EX", CACHE_SECONDS).catch(() => {});
+  // the PIN's hash never goes into the cache: only whether there is one
+  const safe = { ...user, pinHash: user.pinHash ? "set" : null };
+  await valkey.set(cacheKey(id), JSON.stringify({ user: safe, expiresAt }), "EX", CACHE_SECONDS).catch(() => {});
 }
 
 async function forget(id: string): Promise<void> {
@@ -113,6 +121,8 @@ export async function userFromToken(token: string | undefined, res?: Response): 
     await remember(id, row.user, row.expiresAt);
   }
   if (row.expiresAt.getTime() <= Date.now()) return null;
+  // Stage 27: the Devices list shows when each browser was last used (written at most once an hour)
+  if (Date.now() - new Date(row.user.lastSeenAt).getTime() >= HOUR) await db.update(authSessions).set({ lastUsedAt: new Date() }).where(eq(authSessions.id, id));
 
   if (row.expiresAt.getTime() - Date.now() < (SESSION_DAYS / 2) * DAY) {
     const expiresAt = new Date(Date.now() + SESSION_DAYS * DAY);
@@ -140,16 +150,95 @@ export async function claimGuestData(userId: string, clientId: string | undefine
   await db.update(songPlays).set({ owner: `user:${userId}` }).where(eq(songPlays.owner, `client:${clientId}`));
 }
 
-// Stage 22: the admin flag lives on the session (this browser), set by typing the admin passcode
+// Stage 22: the admin flag lives on the session (this browser), set by typing the admin passcode.
+// Stage 27: it ends after ADMIN_HOURS; then the passcode is needed again.
+export const ADMIN_HOURS = 12;
 export async function isAdminToken(token: string | undefined): Promise<boolean> {
   if (!token) return false;
   const [row] = await db
-    .select({ isAdmin: authSessions.isAdmin })
+    .select({ isAdmin: authSessions.isAdmin, adminUntil: authSessions.adminUntil })
     .from(authSessions)
     .where(and(eq(authSessions.id, hashToken(token)), gt(authSessions.expiresAt, new Date())));
-  return row?.isAdmin ?? false;
+  return !!row?.isAdmin && !!row.adminUntil && row.adminUntil.getTime() > Date.now();
 }
 
 export async function setAdminToken(token: string, on: boolean): Promise<void> {
-  await db.update(authSessions).set({ isAdmin: on }).where(eq(authSessions.id, hashToken(token)));
+  await db
+    .update(authSessions)
+    .set({ isAdmin: on, adminUntil: on ? new Date(Date.now() + ADMIN_HOURS * HOUR) : null })
+    .where(eq(authSessions.id, hashToken(token)));
 }
+
+// --- Stage 27: PINs ----------------------------------------------------------------------------
+// A PIN is short, so it's stored as a slow, salted hash (scrypt): even with a copy of the database, trying all
+// million six-digit PINs takes a long time. Guessing through Nook is stopped after 10 wrong tries (routes/me.ts).
+
+const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number) => Promise<Buffer>;
+export const PIN_RE = /^\d{4,6}$/;
+export async function hashPin(pin: string): Promise<string> {
+  const salt = randomBytes(16);
+  const hash = await scrypt(pin, salt, 32);
+  return `${salt.toString("base64url")}:${hash.toString("base64url")}`;
+}
+export async function checkPin(pin: string, stored: string | null): Promise<boolean> {
+  if (!stored || !stored.includes(":")) return false;
+  const [salt, hash] = stored.split(":");
+  const got = await scrypt(pin, Buffer.from(salt, "base64url"), 32);
+  const want = Buffer.from(hash, "base64url");
+  return got.length === want.length && timingSafeEqual(got, want);
+}
+
+// --- Stage 27: your devices --------------------------------------------------------------------
+// Each signed-in browser is one row in auth_sessions. Its public id is the first 12 characters of the token's hash.
+
+export const deviceId = (sessionId: string) => sessionId.slice(0, 12);
+export const currentSessionId = (token: string | undefined) => (token ? hashToken(token) : null);
+
+export async function devicesOf(userId: string, token: string | undefined) {
+  const current = currentSessionId(token);
+  const rows = await db
+    .select({ id: authSessions.id, userAgent: authSessions.userAgent, createdAt: authSessions.createdAt, lastUsedAt: authSessions.lastUsedAt })
+    .from(authSessions)
+    .where(and(eq(authSessions.userId, userId), gt(authSessions.expiresAt, new Date())))
+    .orderBy(desc(authSessions.lastUsedAt));
+  return rows.map((r) => ({ id: deviceId(r.id), userAgent: r.userAgent ?? "", createdAt: r.createdAt, lastUsedAt: r.lastUsedAt, current: r.id === current }));
+}
+
+/** Sign out one device (by its public id), every other device, or everything */
+export async function endSessionsOf(userId: string, which: { deviceId?: string; except?: string | null }): Promise<number> {
+  const rows = await db.select({ id: authSessions.id }).from(authSessions).where(eq(authSessions.userId, userId));
+  const gone = rows.filter((r) => (which.deviceId ? deviceId(r.id) === which.deviceId : r.id !== which.except));
+  for (const r of gone) {
+    await db.delete(authSessions).where(eq(authSessions.id, r.id));
+    await forget(r.id);
+  }
+  return gone.length;
+}
+/** After a change to the person (PIN, pause, rename by the admin): every browser of theirs sees it at once */
+export async function forgetAllOf(userId: string): Promise<void> {
+  const rows = await db.select({ id: authSessions.id }).from(authSessions).where(eq(authSessions.userId, userId));
+  for (const r of rows) await forget(r.id);
+}
+
+// --- Stage 27: one-time sign-in codes ------------------------------------------------------------
+// Easy to read out or type on a phone: no 0/O, 1/I/L. Only the hash is stored; a code works once.
+
+const CODE_LETTERS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+export const CODE_MINUTES = { device: 5, claim: 24 * 60 } as const;
+export async function makeSignInCode(userId: string, kind: "device" | "claim"): Promise<{ code: string; expiresAt: Date }> {
+  const code = Array.from({ length: kind === "claim" ? 8 : 6 }, () => CODE_LETTERS[randomInt(CODE_LETTERS.length)]).join("");
+  const expiresAt = new Date(Date.now() + CODE_MINUTES[kind] * 60_000);
+  // one live code of each kind per person
+  await db.delete(signInCodes).where(and(eq(signInCodes.userId, userId), eq(signInCodes.kind, kind)));
+  await db.insert(signInCodes).values({ id: hashToken(code), userId, kind, expiresAt });
+  return { code, expiresAt };
+}
+export async function useSignInCode(code: string): Promise<{ userId: string; kind: "device" | "claim" } | null> {
+  const clean = code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const [row] = await db
+    .delete(signInCodes)
+    .where(and(eq(signInCodes.id, hashToken(clean)), gt(signInCodes.expiresAt, new Date())))
+    .returning();
+  return row ? { userId: row.userId, kind: row.kind } : null;
+}
+

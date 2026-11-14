@@ -28,7 +28,8 @@ import { and, asc, desc, eq, max, or, sql } from "drizzle-orm";
 import { Router, type Request } from "express";
 import { Chess } from "chess.js";
 import { z } from "zod";
-import { COOKIE_NAME, isAdminToken, setAdminToken } from "../auth/sessions.js";
+import { adminProblem, isAdmin, logAdmin, MIN_PASSCODE, requireAdmin } from "../admin.js";
+import { COOKIE_NAME, setAdminToken } from "../auth/sessions.js";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { arenaRatings, brawlRuns, chessGames, tvVideos, users, villageScores } from "../db/schema.js";
@@ -57,25 +58,30 @@ function samePasscode(given: string, real: string) {
 const adminTries = rateLimit({ name: "admin-passcode", windowMs: 15 * 60_000, max: 10, key: (req) => `admin:${req.ip}` });
 
 adminRouter.get("/", async (req, res) => {
-  res.json({ enabled: config.ADMIN_PASSCODE !== "", isAdmin: req.user ? await isAdminToken(req.cookies?.[COOKIE_NAME]) : false });
+  const problem = adminProblem(req);
+  res.json({ enabled: problem !== "off" && problem !== "short", problem, isAdmin: await isAdmin(req) });
 });
 
 adminRouter.post("/", requireUser, adminTries, async (req, res) => {
   const { passcode } = passcodeBody.parse(req.body);
-  if (!config.ADMIN_PASSCODE) throw new HttpError(403, "There's no admin passcode on this Nook");
-  if (!samePasscode(passcode, config.ADMIN_PASSCODE)) throw new HttpError(403, "That passcode isn't right");
+  const problem = adminProblem(req);
+  if (problem === "off") throw new HttpError(403, "There's no admin passcode on this Nook");
+  if (problem === "short") throw new HttpError(403, "The admin passcode is too short (it needs 16 characters or more), so admin is switched off");
+  if (problem === "https") throw new HttpError(403, "Become admin over https: open Nook at https://localhost, through Tailscale or through the tunnel");
+  if (!samePasscode(passcode, config.ADMIN_PASSCODE)) {
+    await logAdmin(req, "wrong admin passcode");
+    throw new HttpError(403, "That passcode isn't right");
+  }
   await setAdminToken(req.cookies[COOKIE_NAME], true);
-  res.json({ enabled: true, isAdmin: true });
+  await logAdmin(req, "became admin");
+  res.json({ enabled: true, problem: null, isAdmin: true });
 });
 
 adminRouter.delete("/", requireUser, async (req, res) => {
   await setAdminToken(req.cookies[COOKIE_NAME], false);
-  res.json({ enabled: config.ADMIN_PASSCODE !== "", isAdmin: false });
+  res.json({ enabled: config.ADMIN_PASSCODE.length >= MIN_PASSCODE, problem: adminProblem(req), isAdmin: false });
 });
 
-async function requireAdmin(req: Request) {
-  if (!req.user || !(await isAdminToken(req.cookies?.[COOKIE_NAME]))) throw new HttpError(403, "Only the admin can do this");
-}
 
 // --- Nook TV -----------------------------------------------------------------------------------
 

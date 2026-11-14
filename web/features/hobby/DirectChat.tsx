@@ -4,6 +4,7 @@
 // Messages arrive live in each person's own room ("dm:message"), so it works across all your tabs and
 // devices. Opening the chat marks it as read, and the other person sees "Seen" under their message.
 
+import { useReport } from "@/features/admin/useReport";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -19,6 +20,7 @@ import { useTyping } from "./useTyping";
 import { useT } from "@/lib/i18n/I18nProvider";
 export function DirectChat({ userId }: { userId: string }) {
   const t = useT();
+  const reportIt = useReport(); // Stage 27
   const confirm = useConfirm();
   const { user, askName } = useMe();
   const { socket } = useRealtime();
@@ -153,6 +155,7 @@ export function DirectChat({ userId }: { userId: string }) {
         onLoadOlder={loadOlder}
         onSend={send}
         onDelete={remove}
+        onReport={(m) => void reportIt("dm", m.id)}
         onTyping={onTyping}
         typingNames={typing.names}
         placeholder={person ? t("Message {name}", { name: person.name }) : t("Message")}

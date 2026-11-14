@@ -2,6 +2,7 @@
 
 // Stage 22: Nook Arena's front page: what you can play now, and what's coming in the next stages.
 
+import { useIsAdmin } from "@/features/admin/useIsAdmin";
 import { ArrowRight, Bot, Headphones, Swords, Tv } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
@@ -20,6 +21,7 @@ const NEXT = [
 export function ArenaHub() {
   const t = useT();
   const { connected, problem } = useArena();
+  const admin = useIsAdmin();
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -126,31 +128,15 @@ export function ArenaHub() {
           </p>
           <Bot className="ml-auto hidden h-5 w-5 text-muted sm:block" aria-hidden="true" />
         </div>
-        {problem === "old-caddy" && !connected && (
+        {problem && !connected && (
+          // Stage 27: no server commands on the page; the admin sees what's wrong in Admin → Health
           <div className="mt-3 rounded-2xl bg-rose-500/10 p-3 text-sm">
-            <p className="font-semibold">{t("Nook's front door (Caddy) is still using its settings from before the game server existed.")}</p>
-            <p className="mt-1 text-muted">{t("On the computer that runs Nook, in the Nook folder, run:")}</p>
-            <p className="mt-1">
-              <code className="rounded bg-black/10 px-1.5 py-0.5 dark:bg-white/10">docker compose up -d --force-recreate caddy</code>
-            </p>
-            <p className="mt-1 text-xs text-muted">{t("Then reload this page.")}</p>
-          </div>
-        )}
-        {problem && problem !== "old-caddy" && !connected && (
-          <div className="mt-3 rounded-2xl bg-rose-500/10 p-3 text-sm">
-            <p className="font-semibold">{t("If you run Nook yourself, check on that computer:")}</p>
-            <ul className="mt-1 list-disc pl-5 text-muted">
-              <li>
-                <code>docker compose ps arena</code> {t("should say \"running (healthy)\". If it's missing: git pull, then docker compose up -d --build, then docker compose up -d --force-recreate caddy")}
-              </li>
-              <li>
-                <code>docker compose logs arena</code> {t("shows why it stopped")}
-              </li>
-              <li>{t("Behind Cloudflare or nginx: /api/arena must reach Caddy like the rest of /api (see docs/stage-22.md)")}</li>
-            </ul>
-            <p className="mt-1 text-xs text-muted">
-              {t("Details")}: {problem}
-            </p>
+            <p>{t("Try again in a little while. If it keeps happening, tell the person who runs Nook.")}</p>
+            {admin && (
+              <Link href="/admin" className="mt-1 inline-block font-semibold text-primary hover:underline">
+                {t("Admin → Health shows what's wrong")}
+              </Link>
+            )}
           </div>
         )}
       </Card>

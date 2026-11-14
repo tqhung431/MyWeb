@@ -19,6 +19,13 @@ export const configSchema = z.object({
   ARENA_PORT: z.coerce.number().int().default(4100),
   // Stage 22: Nook TV's admin passcode. Empty = nobody can become admin.
   ADMIN_PASSCODE: z.string().default(""),
+  // Stage 27: become admin only over https (or on the Nook PC itself), so the passcode never travels in the clear
+  ADMIN_REQUIRE_HTTPS: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((v) => v === "true"),
+  // Stage 27: where the API finds the game server and the AI, for Admin → Health
+  ARENA_URL: z.string().default("http://127.0.0.1:4100"),
 
   // Which network address the API listens on. 127.0.0.1 = only this computer.
   // Other PCs never talk to the API directly: they go through the website, which forwards /api/*.

@@ -5,7 +5,7 @@
 // Stage 21: members write; while a member has the page open, everything counts as read.
 
 import { useConfirm } from "@/components/ui/Dialog";
-import { ArrowLeft, LogOut, MessageCircle, Trash2, UserPlus } from "lucide-react";
+import { ArrowLeft, Lock, LockOpen, LogOut, MessageCircle, Trash2, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -17,6 +17,8 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useMe } from "@/features/me/MeProvider";
 import { useRealtime, useRealtimeEvent } from "@/features/realtime/RealtimeProvider";
 import { deleteGroup, getGroup, markGroupRead, setMembership, type GroupDetail } from "@/lib/api/hobby";
+import { lockGroup } from "@/lib/api/admin";
+import { useIsAdmin } from "@/features/admin/useIsAdmin";
 import { cn } from "@/lib/cn";
 import { Board } from "./Board";
 import { Chat } from "./Chat";
@@ -26,6 +28,7 @@ type Tab = "chat" | "posts";
 
 export function GroupPage({ slug }: { slug: string }) {
   const t = useT();
+  const admin = useIsAdmin(); // Stage 27
   const confirm = useConfirm();
   const { user, askName } = useMe();
   const { socket } = useRealtime();
@@ -199,13 +202,23 @@ export function GroupPage({ slug }: { slug: string }) {
             {group.joined ? <LogOut className="h-4 w-4" aria-hidden="true" /> : <UserPlus className="h-4 w-4" aria-hidden="true" />}
             {group.joined ? t("Leave") : t("Join")}
           </Button>
-          {group.mine && (
+          {admin && (
+            <Button variant="ghost" size="sm" onClick={() => lockGroup(slug, !group.locked).then((r) => setGroup({ ...group, locked: r.locked }), () => {})}>
+              {group.locked ? <LockOpen className="h-4 w-4" aria-hidden="true" /> : <Lock className="h-4 w-4" aria-hidden="true" />} {group.locked ? t("Unlock") : t("Lock")}
+            </Button>
+          )}
+          {(group.mine || admin) && (
             <Button variant="ghost" size="sm" onClick={remove} aria-label={t("Delete {group}", { group: group.name })}>
               <Trash2 className="h-4 w-4" aria-hidden="true" />
             </Button>
           )}
         </div>
       </header>
+      {group.locked && (
+        <p className="flex items-center gap-2 rounded-2xl bg-amber-500/12 px-4 py-2 text-sm font-semibold text-amber-800 dark:text-amber-200">
+          <Lock className="h-4 w-4" aria-hidden="true" /> {t("The admin locked this group: you can read it, but not post or chat.")}
+        </p>
+      )}
 
       <div className="lg:hidden">
         <SegmentedControl<Tab>

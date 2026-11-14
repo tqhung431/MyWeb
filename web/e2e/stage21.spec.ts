@@ -16,7 +16,7 @@ test("two people chat privately; a third can't see it", async ({ browser, baseUR
   const people = await Promise.all(
     ["Lan", "Minh", "Tú"].map(async (n) => {
       const ctx = await browser.newContext({ baseURL, ignoreHTTPSErrors: true });
-      const res = await ctx.request.post("/api/me", { data: { name: `${n} ${unique()}` } });
+      const res = await ctx.request.post("/api/me", { data: { name: `${n} ${unique()}`, pin: "2468" } });
       return { ctx, id: (await res.json()).user.id as string };
     }),
   );

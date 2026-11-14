@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { User } from "@/lib/api/me";
 import { NamePrompt } from "./NamePrompt";
+import { PinRequired } from "./PinRequired";
 
 type MeState = {
   user: User | null;
@@ -90,6 +91,8 @@ export function MeProvider({ initialUser, children }: { initialUser: User | null
     <MeContext.Provider value={value}>
       {children}
       {prompt && !user && <NamePrompt onDone={setUser} onLater={later} />}
+      {/* Stage 27: a name without a PIN (from before Stage 27, or after an admin's claim code) gets one first */}
+      {user && user.hasPin === false && <PinRequired user={user} onDone={setUser} />}
     </MeContext.Provider>
   );
 }

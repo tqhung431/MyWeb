@@ -20,3 +20,12 @@ export async function getMe(): Promise<Me> {
     return { user: null }; // API down: treat as signed out, the page still renders
   }
 }
+
+// Stage 27: the admin's banner, in the first HTML so the page doesn't jump when it appears
+export async function getServerBanner(): Promise<string | null> {
+  try {
+    return (await apiFetch<{ text: string | null }>("/api/banner")).text;
+  } catch {
+    return null;
+  }
+}

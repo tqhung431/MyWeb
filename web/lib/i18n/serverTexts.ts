@@ -4,6 +4,28 @@
 import { tx } from "./core";
 
 export const SERVER_TEXTS = [
+  // Stage 27: the admin log (Admin → Nook)
+  tx("became admin"),
+  tx("wrong admin passcode"),
+  tx("renamed someone"),
+  tx("made a sign-in code"),
+  tx("signed someone out everywhere"),
+  tx("paused someone"),
+  tx("lifted a pause"),
+  tx("deleted someone"),
+  tx("locked a group"),
+  tx("unlocked a group"),
+  tx("deleted a group"),
+  tx("deleted a post"),
+  tx("deleted a comment"),
+  tx("deleted a chat message"),
+  tx("deleted something reported"),
+  tx("kept something reported"),
+  tx("deleted a song"),
+  tx("removed a score"),
+  tx("set the banner"),
+  tx("removed the banner"),
+  tx("ran the cleanup"),
   // Chợ Đêm Brawl (Stage 25): answers from the game server
   tx("Someone already plays that hero"),
   tx("Everyone needs a hero"),

@@ -5,6 +5,8 @@
 // "Linh is typing…" is sent through the socket too, and never stored.
 // Stage 21: the window itself is ChatPanel (shared with private chats); only members can write.
 
+import { useIsAdmin } from "@/features/admin/useIsAdmin";
+import { useReport } from "@/features/admin/useReport";
 import { UserPlus } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -88,6 +90,8 @@ export function Chat({ slug, joined, onJoin, className }: { slug: string; joined
     }
   }
 
+  const admin = useIsAdmin(); // Stage 27
+  const reportIt = useReport();
   const items: ChatItem[] | null = messages?.map((m) => ({ ...m, mine: m.author.id === user?.id })) ?? null;
 
   return (
@@ -99,6 +103,8 @@ export function Chat({ slug, joined, onJoin, className }: { slug: string; joined
       onLoadOlder={loadOlder}
       onSend={send}
       onDelete={remove}
+      canModerate={admin}
+      onReport={user ? (m) => void reportIt("message", m.id) : undefined}
       onTyping={onTyping}
       typingNames={typing.names}
       placeholder={user ? t("Message as {name}", { name: user.name }) : ""}

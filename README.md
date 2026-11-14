@@ -380,6 +380,7 @@ https://<random-name>.trycloudflare.com
 24. Giữ Làng (Keep the Village) — tower defense: 5 defenders with two upgrade paths, 3 maps × 30 waves or endless, solo in the browser (saved between waves) or co-op for two on the game server ✅ · [docs](docs/stage-24.md)
 25. Chợ Đêm Brawl (Night Market Brawl) — co-op action for 1–4: four heroes, five market areas, two bosses, a snack stall between areas; keyboard, gamepad or phone stick ✅ · [docs](docs/stage-25.md)
 26. Mầm Thú (Sproutlings), part 1 — a creature adventure on the island of Thanh Khê: 12 sproutlings + 5 grown forms, the Five Elements, befriending mini-games, turn-based battles against six shrine keepers ✅ · [docs](docs/stage-26.md)
+27. People and admin — names protected by a PIN (sign in on another device by PIN or a one-time code), your devices, and an Admin page: people, reports, Hobby Hub moderation, banner, health, an admin log ✅ · [docs](docs/stage-27.md)
 
 ## Licence
 

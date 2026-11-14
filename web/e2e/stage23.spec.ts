@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 
 test("start a Ngõ Pháo match with bots and play", async ({ page }) => {
   await page.addInitScript(() => sessionStorage.setItem("nook.namePrompt.later", "1"));
-  await page.request.post("/api/me", { data: { name: `Lan ${Math.random().toString(36).slice(2, 7)}` } });
+  await page.request.post("/api/me", { data: { name: `Lan ${Math.random().toString(36).slice(2, 7)}`, pin: "2468" } });
   await page.goto("/arena/alley");
   await page.getByRole("button", { name: "Start a room" }).click();
   await page.waitForURL(/\/arena\/alley\/[A-Z]{4}$/);

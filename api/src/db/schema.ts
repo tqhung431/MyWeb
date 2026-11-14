@@ -28,6 +28,12 @@ export const users = pgTable(
     // Stage 11: people not seen for DATA_RETENTION_DAYS are deleted with their data (jobs/cleanup.ts)
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    // Stage 27: a PIN protects the name (scrypt hash "salt:hash"; null = no PIN yet, so only this browser is you)
+    pinHash: text("pin_hash"),
+    pinFailures: integer("pin_failures").notNull().default(0),
+    pinLockedUntil: timestamp("pin_locked_until", { withTimezone: true }),
+    // Stage 27: paused by the admin: can read, can't post or chat, until then
+    pausedUntil: timestamp("paused_until", { withTimezone: true }),
   },
   (t) => [uniqueIndex("users_name_lower_idx").on(sql`lower(${t.name})`), index("users_last_seen_idx").on(t.lastSeenAt)],
 );
@@ -46,9 +52,76 @@ export const authSessions = pgTable(
     // Stage 22: this browser typed the admin passcode (Nook TV: add videos, share a tab)
     isAdmin: boolean("is_admin").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    // Stage 27: being admin ends after 12 hours; the Devices list shows when each browser was last used
+    adminUntil: timestamp("admin_until", { withTimezone: true }),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("auth_sessions_user_idx").on(t.userId)],
 );
+
+// Stage 27: one-time codes that sign a browser in as someone. "device": made on a browser that's already you (5 minutes);
+// "claim": made by the admin for someone who lost access (24 hours, then a new PIN is required). Only the hash is kept.
+export const signInCodes = pgTable(
+  "sign_in_codes",
+  {
+    id: text("id").primaryKey(), // sha256(code)
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").$type<"device" | "claim">().notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("sign_in_codes_user_idx").on(t.userId)],
+);
+
+// Stage 27: a deleted person's name stays reserved for a while, so nobody else can take it and pretend
+export const reservedNames = pgTable("reserved_names", {
+  name: text("name").primaryKey(), // lower case
+  until: timestamp("until", { withTimezone: true }).notNull(),
+});
+
+// Stage 27: everything the admin does, and every try to become admin. Kept DATA_RETENTION_DAYS.
+export const adminLog = pgTable(
+  "admin_log",
+  {
+    id: serial("id").primaryKey(),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+    byUserId: uuid("by_user_id").references(() => users.id, { onDelete: "set null" }),
+    byName: text("by_name").notNull(), // kept even if that person is deleted later
+    action: text("action").notNull(), // "became admin", "deleted a post", …
+    detail: text("detail").notNull().default(""),
+  },
+  (t) => [index("admin_log_at_idx").on(t.at)],
+);
+
+// Stage 27: "Report" on a post, comment, chat message, private message or picture. The admin sees only reported things.
+export const reports = pgTable(
+  "reports",
+  {
+    id: serial("id").primaryKey(),
+    kind: text("kind").$type<"post" | "comment" | "message" | "dm">().notNull(),
+    targetId: integer("target_id").notNull(),
+    reporterId: uuid("reporter_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    authorName: text("author_name").notNull(), // who wrote it, and what it said, when it was reported
+    excerpt: text("excerpt").notNull(),
+    hasPicture: boolean("has_picture").notNull().default(false),
+    where: text("where").notNull().default(""), // "Board games", "a private chat"
+    reason: text("reason").notNull().default(""),
+    status: text("status").$type<"open" | "kept" | "deleted">().notNull().default("open"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("reports_status_idx").on(t.status), uniqueIndex("reports_once_idx").on(t.kind, t.targetId, t.reporterId)],
+);
+
+// Stage 27: small settings the admin changes from the Admin page (the banner)
+export const siteSettings = pgTable("site_settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 // --- Focus sessions ----------------------------------------------------------
 
@@ -206,6 +279,8 @@ export const hobbyGroups = pgTable("hobby_groups", {
   description: text("description").notNull().default(""),
   createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }), // null = a starter group
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  // Stage 27: locked by the admin: everyone can read, nobody can post or chat
+  locked: boolean("locked").notNull().default(false),
 });
 
 export const groupMembers = pgTable(

@@ -14,7 +14,7 @@ export default function TipsError({ reset }: { error: Error; reset: () => void }
     <Card className="flex max-w-xl flex-col items-start gap-3">
       <CloudOff className="h-8 w-8 text-primary" aria-hidden="true" />
       <h2 className="text-xl font-bold">{t("Tips are resting")}</h2>
-      <p className="text-muted">{t("We couldn't reach the API. Is it running? (cd api && npm run dev)")}</p>
+      <p className="text-muted">{t("We couldn't reach Nook right now. Try again in a moment.")}</p>
       <Button variant="primary" onClick={reset} className="mt-2">
         <RotateCcw className="h-4 w-4" aria-hidden="true" />
         {t("Try again")}

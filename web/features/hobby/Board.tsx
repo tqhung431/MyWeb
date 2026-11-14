@@ -6,7 +6,9 @@
 // Stage 21: only members post and comment; others see a "Join" button in place of the box.
 
 import { useConfirm } from "@/components/ui/Dialog";
-import { Heart, Loader2, MessageCircle, Send, Trash2, UserPlus } from "lucide-react";
+import { Flag, Heart, Loader2, MessageCircle, Send, Trash2, UserPlus } from "lucide-react";
+import { useIsAdmin } from "@/features/admin/useIsAdmin";
+import { useReport } from "@/features/admin/useReport";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type FormEvent } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
@@ -166,6 +168,8 @@ type CardProps = { post: Post; version: number; onChange: (p: Post) => void; onD
 function PostCard({ post, version, onChange, onDeleted }: CardProps) {
   const t = useT();
   const confirm = useConfirm();
+  const admin = useIsAdmin(); // Stage 27: the admin can delete any post; others can report it
+  const reportIt = useReport();
   const { user, askName } = useMe();
   const [open, setOpen] = useState(false);
 
@@ -190,9 +194,14 @@ function PostCard({ post, version, onChange, onDeleted }: CardProps) {
           <p className="truncate text-sm font-semibold">{post.author.name}</p>
           <p className="text-xs text-muted">{timeAgo(post.createdAt)}</p>
         </div>
-        {post.mine && (
+        {(post.mine || admin) && (
           <Button variant="ghost" size="icon" className="h-9 w-9" onClick={remove} aria-label={t("Delete this post")}>
             <Trash2 className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        )}
+        {!post.mine && user && (
+          <Button variant="ghost" size="icon" className="h-9 w-9 text-muted" onClick={() => void reportIt("post", post.id)} aria-label={t("Report this post")}>
+            <Flag className="h-4 w-4" aria-hidden="true" />
           </Button>
         )}
       </header>
@@ -227,6 +236,8 @@ function PostCard({ post, version, onChange, onDeleted }: CardProps) {
 function Comments({ postId, version, onCount }: { postId: number; version: number; onCount: (n: number) => void }) {
   const t = useT();
   const { user, askName } = useMe();
+  const admin = useIsAdmin();
+  const reportIt = useReport();
   const { joined, onJoin } = useContext(Membership);
   const [comments, setComments] = useState<Comment[] | null>(null);
   const [body, setBody] = useState("");
@@ -275,7 +286,7 @@ function Comments({ postId, version, onCount }: { postId: number; version: numbe
             </p>
             <p className="text-sm break-words whitespace-pre-wrap">{c.body}</p>
           </div>
-          {c.mine && (
+          {(c.mine || admin) && (
             <button
               type="button"
               onClick={() => remove(c)}
@@ -283,6 +294,16 @@ function Comments({ postId, version, onCount }: { postId: number; version: numbe
               className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center self-center rounded-full text-muted opacity-60 hover:text-rose-600 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
             >
               <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          )}
+          {!c.mine && user && (
+            <button
+              type="button"
+              onClick={() => void reportIt("comment", c.id)}
+              aria-label={t("Report this comment")}
+              className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center self-center rounded-full text-muted opacity-50 hover:text-amber-600 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+            >
+              <Flag className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           )}
         </div>

@@ -35,7 +35,9 @@ describe("cleanup", () => {
     expect(await count("focus_sessions")).toBe(0);
     expect(await count("game_scores")).toBe(0);
     expect(await count("posts")).toBe(1);
-    // the name is free again
+    // Stage 27: the name stays reserved for 30 days, so nobody can take it and pretend; then it's free again
+    expect((await request(app).post("/api/me").send({ name: "Old Timer" })).status).toBe(409);
+    await pool.query("update reserved_names set until = now() - interval '1 minute'");
     expect((await request(app).post("/api/me").send({ name: "Old Timer" })).status).toBe(201);
   });
 

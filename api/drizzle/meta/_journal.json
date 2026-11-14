@@ -141,6 +141,13 @@
       "when": 1794612554803,
       "tag": "0019_brawl",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794620290979,
+      "tag": "0020_people_admin",
+      "breakpoints": true
     }
   ]
 }

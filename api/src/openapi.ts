@@ -16,7 +16,8 @@ import { saveBody } from "./routes/games.js";
 import { bookEdits, bookFields, dayBody, habitFields, habitsQuery, pagesBody, statsQuery } from "./routes/habits.js";
 import { beforeQuery, commentBody, messageBody, newGroup, postBody } from "./routes/hobby.js";
 import { peopleQuery } from "./routes/messages.js";
-import { nameBody, preferences } from "./routes/me.js";
+import { codeBody, nameBody, newMeBody, pinBody, preferences, signInBody } from "./routes/me.js";
+import { bannerBody, confirmBody, lockBody, pauseBody, reportAction, reportBody } from "./routes/admin.js";
 import { chartQuery, edits, uploadFields } from "./routes/music.js";
 import { newSession, summaryQuery } from "./routes/sessions.js";
 import { entryBody, searchQuery } from "./routes/watch.js";
@@ -40,11 +41,39 @@ export const ENDPOINTS: Endpoint[] = [
   // Health and you
   { method: "get", path: "/health", tag: "System", summary: "Is the API up, with its database and Valkey?" },
   { method: "get", path: "/api/me", tag: "You", summary: "Who you are (a name, or nobody yet)" },
-  { method: "post", path: "/api/me", tag: "You", summary: "Pick a name: sets the nook_session cookie and keeps what you did as a guest", body: nameBody },
+  { method: "post", path: "/api/me", tag: "You", summary: "Pick a name (and a PIN): sets the nook_session cookie and keeps what you did as a guest", body: newMeBody },
   { method: "patch", path: "/api/me", tag: "You", summary: "Change your name", who: "name", body: nameBody },
   { method: "delete", path: "/api/me", tag: "You", summary: "Forget me: delete your name and everything linked to it", who: "name" },
   { method: "get", path: "/api/me/data", tag: "You", summary: "What Nook keeps about you (counts), and for how long", who: "name" },
   { method: "put", path: "/api/me/preferences", tag: "You", summary: "Save your settings (focus timer lengths)", who: "name", body: preferences },
+  // Stage 27: PINs, signing in on another device, devices
+  { method: "put", path: "/api/me/pin", tag: "You", summary: "Set or change your PIN (4–6 digits)", who: "name", body: pinBody },
+  { method: "post", path: "/api/me/sign-in", tag: "You", summary: "Sign this browser in with your name and PIN (10 wrong PINs: locked for 15 minutes)", body: signInBody },
+  { method: "post", path: "/api/me/codes", tag: "You", summary: "A one-time code (5 minutes) to sign in another device", who: "name" },
+  { method: "post", path: "/api/me/sign-in/code", tag: "You", summary: "Sign in with a device code, or a claim code from the admin", body: codeBody },
+  { method: "post", path: "/api/me/sign-out", tag: "You", summary: "Sign this browser out", who: "name" },
+  { method: "get", path: "/api/me/devices", tag: "You", summary: "The browsers signed in as you", who: "name" },
+  { method: "delete", path: "/api/me/devices/{id}", tag: "You", summary: "Sign one device out (\"others\": every one but this)", who: "name" },
+  { method: "post", path: "/api/reports", tag: "Nook", summary: "Report a post, comment, chat message or private message to the admin", who: "name", body: reportBody },
+  { method: "get", path: "/api/banner", tag: "Nook", summary: "The admin's message on every page, if any" },
+  // Stage 27: the Admin page (the admin only)
+  { method: "get", path: "/api/admin/people", tag: "Admin", summary: "Everyone: joined, last seen, PIN, paused, devices", who: "name" },
+  { method: "patch", path: "/api/admin/people/{id}", tag: "Admin", summary: "Rename someone", who: "name", body: nameBody },
+  { method: "delete", path: "/api/admin/people/{id}", tag: "Admin", summary: "Delete someone and their data (type their name to confirm)", who: "name", body: confirmBody },
+  { method: "post", path: "/api/admin/people/{id}/claim-code", tag: "Admin", summary: "A one-time sign-in code (24 hours) for someone locked out", who: "name" },
+  { method: "post", path: "/api/admin/people/{id}/sign-out", tag: "Admin", summary: "Sign someone out on every device", who: "name" },
+  { method: "post", path: "/api/admin/people/{id}/pause", tag: "Admin", summary: "Read only for 1, 7 or 3650 days (0 lifts it)", who: "name", body: pauseBody },
+  { method: "post", path: "/api/admin/groups/{slug}/lock", tag: "Admin", summary: "Lock or unlock a Hobby Hub group", who: "name", body: lockBody },
+  { method: "get", path: "/api/admin/reports", tag: "Admin", summary: "Reported posts, comments and messages", who: "name" },
+  { method: "post", path: "/api/admin/reports/{id}", tag: "Admin", summary: "Keep or delete what was reported", who: "name", body: reportAction },
+  { method: "delete", path: "/api/admin/songs/{id}", tag: "Admin", summary: "Remove a song and its file", who: "name" },
+  { method: "get", path: "/api/admin/scores", tag: "Admin", summary: "The top Mini Arcade scores", who: "name" },
+  { method: "delete", path: "/api/admin/scores/{id}", tag: "Admin", summary: "Remove a score", who: "name" },
+  { method: "put", path: "/api/admin/banner", tag: "Admin", summary: "Set the message on every page (empty removes it)", who: "name", body: bannerBody },
+  { method: "get", path: "/api/admin/storage", tag: "Admin", summary: "Space used by songs and chat pictures, and free disk space", who: "name" },
+  { method: "post", path: "/api/admin/cleanup", tag: "Admin", summary: "Run the daily cleanup now", who: "name" },
+  { method: "get", path: "/api/admin/log", tag: "Admin", summary: "The admin log", who: "name" },
+  { method: "get", path: "/api/admin/health", tag: "Admin", summary: "Database, Valkey, game server, AI and disk: working or not", who: "name" },
 
   // Chill Corner
   { method: "get", path: "/api/tips", tag: "Chill Corner", summary: "All focus tips" },

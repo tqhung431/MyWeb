@@ -111,6 +111,25 @@ const VI: Record<string, string> = {
   "That score isn't possible in this game": "Điểm này không thể có trong trò chơi",
   "No save yet": "Chưa có bản lưu",
   "The Companion is off on this Nook (no Ollama configured)": "Bạn đồng hành đang tắt trên Nook này (chưa cài Ollama)",
+  // Stage 27: PINs, signing in, the admin
+  "A PIN is 4 to 6 digits": "Mã PIN gồm 4 đến 6 chữ số",
+  "That name was used here recently. Pick another one for now.": "Tên này vừa được dùng ở đây. Tạm thời hãy chọn tên khác.",
+  "That name and PIN don't match": "Tên và mã PIN không khớp",
+  "That name has no PIN yet, so it can only be used on its own device. Ask the admin for a sign-in code.": "Tên này chưa có mã PIN nên chỉ dùng được trên thiết bị của nó. Hãy xin quản trị viên một mã đăng nhập.",
+  "Too many wrong PINs for this name. Try again in 15 minutes.": "Nhập sai mã PIN quá nhiều lần. Thử lại sau 15 phút.",
+  "That code doesn't work. Codes work once, and only for a short time.": "Mã này không dùng được. Mỗi mã chỉ dùng một lần, trong thời gian ngắn.",
+  "The admin passcode is too short (it needs 16 characters or more), so admin is switched off": "Mã quản trị quá ngắn (cần từ 16 ký tự), nên chức năng quản trị đang tắt",
+  "Become admin over https: open Nook at https://localhost, through Tailscale or through the tunnel": "Hãy trở thành quản trị viên qua https: mở Nook ở https://localhost, qua Tailscale hoặc qua đường hầm",
+  "The admin paused you for now. You can still read everything.": "Quản trị viên đang tạm khóa bạn. Bạn vẫn đọc được mọi thứ.",
+  "The admin locked this group: you can read it, but not post or chat": "Quản trị viên đã khóa nhóm này: bạn đọc được nhưng không đăng bài hay trò chuyện được",
+  "That person isn't here any more": "Người này không còn ở đây nữa",
+  "You can't pause yourself here": "Bạn không thể tự tạm khóa mình ở đây",
+  "You can't delete yourself here": "Bạn không thể tự xóa mình ở đây",
+  "Type their name exactly to delete them": "Hãy gõ đúng tên người đó để xóa",
+  "That's gone already": "Nội dung đó đã bị xóa rồi",
+  "That's yours: you can delete it yourself": "Đó là của bạn: bạn có thể tự xóa",
+  "Report not found": "Không tìm thấy báo cáo",
+  "Score not found": "Không tìm thấy điểm",
 };
 
 // Keys with {x} become patterns: "Keep it under {n} characters" → /^Keep it under (.+?) characters$/
