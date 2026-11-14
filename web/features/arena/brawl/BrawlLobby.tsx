@@ -55,8 +55,8 @@ export function BrawlLobby() {
           <p className="pointer-events-none absolute -right-2 -bottom-3 text-6xl opacity-90 sm:text-7xl" aria-hidden="true">
             🏮🥢
           </p>
-          <p className="text-sm font-semibold tracking-wide text-amber-200 uppercase">{t("Night Market Brawl")}</p>
-          <h2 className="mt-1 text-3xl font-extrabold">Chợ Đêm Brawl</h2>
+          <p className="text-sm font-semibold tracking-wide text-amber-200 uppercase">{t("Co-op action · 1–4 players")}</p>
+          <h2 className="mt-1 text-3xl font-extrabold">{t("Night Market Brawl")}</h2>
           <p className="mt-1 max-w-[70%] text-white/90 sm:max-w-md">
             {t("Trouble-makers have taken over the night market. Team up (1–4 friends), bonk them back home through five areas and two bosses.")}
           </p>

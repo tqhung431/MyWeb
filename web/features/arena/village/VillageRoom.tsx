@@ -111,7 +111,7 @@ export function VillageRoom({ code }: { code: string }) {
       <section className="rounded-3xl bg-linear-to-br from-emerald-800 via-teal-700 to-amber-600 p-5 text-white shadow-card sm:p-6">
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold tracking-wide text-amber-200 uppercase">Giữ Làng · {t("Room code")}</p>
+            <p className="text-xs font-semibold tracking-wide text-amber-200 uppercase">{t("Keep the Village")} · {t("Room code")}</p>
             <p className="font-mono text-3xl font-extrabold tracking-[0.25em]">{code}</p>
           </div>
           <Button variant="light" size="sm" onClick={copy}>

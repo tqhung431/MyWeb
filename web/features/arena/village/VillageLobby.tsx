@@ -72,8 +72,8 @@ export function VillageLobby() {
           <p className="pointer-events-none absolute -right-2 -bottom-3 text-6xl opacity-90 sm:text-7xl" aria-hidden="true">
             🏮🌾
           </p>
-          <p className="text-sm font-semibold tracking-wide text-amber-200 uppercase">{t("Keep the Village")}</p>
-          <h2 className="mt-1 text-3xl font-extrabold">Giữ Làng</h2>
+          <p className="text-sm font-semibold tracking-wide text-amber-200 uppercase">{t("Tower defense · alone or with a friend")}</p>
+          <h2 className="mt-1 text-3xl font-extrabold">{t("Keep the Village")}</h2>
           <p className="mt-1 max-w-[70%] text-white/90 sm:max-w-sm">
             {t("Mischievous spirits are coming for the rice. Build defenders along the paths and keep the granary full for 30 waves.")}
           </p>

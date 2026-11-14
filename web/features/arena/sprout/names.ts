@@ -1,4 +1,6 @@
-// Stage 26 · Mầm Thú: words shown on screen (translated with t()); the sproutlings keep their Vietnamese names.
+// Stage 26 · Mầm Thú (Sproutlings): words shown on screen (translated with t()).
+// Stage 30: the sproutlings have English names too ("Droplet" in English, "Giọt" in Vietnamese, via vi.json);
+// the rules file (sprout.ts, shared with the API) keeps the Vietnamese ones as its ids' labels.
 import { tx } from "@/lib/i18n/core";
 import type { Element, MoveId, SpeciesId } from "./sprout";
 
@@ -10,22 +12,43 @@ export const ELEMENT_INFO: Record<Element, { name: string; vi: string; emoji: st
   metal: { name: tx("Metal"), vi: "Kim", emoji: "🔔", color: "#c9a227", chip: "bg-yellow-500/15 text-yellow-800 dark:text-yellow-300" },
 };
 
+// Stage 30: show with t(SPECIES_NAMES[id])
+export const SPECIES_NAMES: Record<SpeciesId, string> = {
+  giot: tx("Droplet"),
+  songGiot: tx("Wavelet"),
+  cheo: tx("Paddler"),
+  beo: tx("Weedshell"),
+  mamTre: tx("Shootling"),
+  luyTre: tx("Hedgeguard"),
+  namLun: tx("Snoozecap"),
+  thanHong: tx("Emberkit"),
+  bepLua: tx("Hearthcat"),
+  denTroi: tx("Lanternmoth"),
+  gom: tx("Potsy"),
+  loGom: tx("Kilnback"),
+  datSet: tx("Mudpie"),
+  chuongNho: tx("Tinkle"),
+  daiChuong: tx("Gongbeetle"),
+  xu: tx("Coincrab"),
+  kimChi: tx("Threadfly"),
+};
+
 export const SPECIES_INFO: Record<SpeciesId, string> = {
   giot: tx("A raindrop tadpole born in a puddle after rain."),
-  songGiot: tx("A grown Giọt: a little wave that never stops dancing."),
+  songGiot: tx("A grown Droplet: a little wave that never stops dancing."),
   cheo: tx("A duckling who rows a lotus-leaf boat across the pond."),
   beo: tx("A slow, kind turtle with a shell of floating duckweed."),
   mamTre: tx("A bamboo-shoot hedgehog. Its spikes are soft, until they aren't."),
-  luyTre: tx("A grown Mầm Tre: as sturdy as a village's bamboo hedge."),
+  luyTre: tx("A grown Shootling: as sturdy as a village's bamboo hedge."),
   namLun: tx("A sleepy mushroom. Its yawns put others to sleep too."),
   thanHong: tx("An ember kitten from an old kitchen stove. Loves warmth, not too much."),
-  bepLua: tx("A grown Than Hồng: a proud hearth cat with a flame mane."),
+  bepLua: tx("A grown Emberkit: a proud hearth cat with a flame mane."),
   denTroi: tx("A sky-lantern moth. It glows brighter when it's happy."),
   gom: tx("A clay-pot armadillo that rolls up when shy."),
-  loGom: tx("A grown Gốm: a little kiln with a warm heart and a smoking chimney."),
+  loGom: tx("A grown Potsy: a little kiln with a warm heart and a smoking chimney."),
   datSet: tx("A mud-pie frog from the riverbank. Very proud of its mud pies."),
   chuongNho: tx("A little bell beetle. It rings in rhythm with your steps."),
-  daiChuong: tx("A grown Chuông Nhỏ: its toll can be heard across the island."),
+  daiChuong: tx("A grown Tinkle: its toll can be heard across the island."),
   xu: tx("A crab that lives in an old coin with a square hole."),
   kimChi: tx("A needle dragonfly that trails a red thread wherever it flies."),
 };

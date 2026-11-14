@@ -8,7 +8,6 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/Button";
 import { useConfirm } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useLang } from "@/lib/i18n/I18nProvider";
 import { useMe } from "@/features/me/MeProvider";
 import { subscribeTheme } from "@/features/theme/theme";
@@ -34,15 +33,20 @@ export function VanLo() {
   const dark = useDark();
   const confirm = useConfirm();
   useEffect(() => () => setMusic(null), []); // stop the music when you leave the game
+  // Stage 30: a save follows Nook's language too (it used to keep the language it started in)
+  const siteLang = useLang();
+  useEffect(() => {
+    if (game && game.lang !== siteLang) update((g) => void (g.lang = siteLang));
+  }, [game, siteLang, update]);
 
   // Stage 19 (speed): while the save loads, the server-made HTML already shows the title card's heading and
   // story, so a phone has something real on screen at once instead of a spinner (Lighthouse: LCP 4.1 s → ~1 s).
   if (loading)
     return (
       <TitleCard>
-        <Intro t={(vi) => vi} />
+        <Intro t={(vi, en) => (siteLang === "vi" ? vi : en)} />
         <p className="flex items-center gap-2 text-sm text-muted">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Đang mở động phủ…
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> {siteLang === "vi" ? "Đang mở động phủ…" : "Opening your cave abode…"}
         </p>
       </TitleCard>
     );
@@ -63,15 +67,6 @@ export function VanLo() {
               <Images className="h-4 w-4" aria-hidden="true" /> {t("Kho hình", "Art gallery")}
             </Link>
             <SoundToggles t={t} />
-            <SegmentedControl<Lang>
-              label={t("Ngôn ngữ", "Language")}
-              options={[
-                { value: "vi", label: "Tiếng Việt" },
-                { value: "en", label: "English" },
-              ]}
-              value={game.lang}
-              onChange={(lang) => update((g) => void (g.lang = lang))}
-            />
             <Button
               variant="ghost"
               size="sm"
@@ -154,9 +149,10 @@ function Intro({ t }: { t: (vi: string, en: string) => string }) {
   return (
     <>
       <div>
-        <p className="text-sm font-semibold tracking-[0.3em] text-muted uppercase">Nook Games</p>
-        <h2 className="mt-1 text-5xl font-extrabold tracking-tight text-text">Vân Lộ</h2>
-        <p className="mt-1 text-lg text-muted">{t("Đường mây — một hành trình tu tiên", "The Cloud Path — a cultivation journey")}</p>
+        <p className="text-sm font-semibold tracking-[0.3em] text-muted uppercase">{t("Trò chơi Nook", "Nook Games")}</p>
+        {/* Stage 30: "Vân Lộ" in Vietnamese, "Cloud Path" in English (never "Đường Mây") */}
+        <h2 className="mt-1 text-5xl font-extrabold tracking-tight text-text">{t("Vân Lộ", "Cloud Path")}</h2>
+        <p className="mt-1 text-lg text-muted">{t("Một hành trình tu tiên", "A cultivation journey")}</p>
       </div>
       <p className="text-muted">
         {t(
@@ -171,8 +167,7 @@ function Intro({ t }: { t: (vi: string, en: string) => string }) {
 function Title({ onStart }: { onStart: (g: Game) => void }) {
   const { user } = useMe();
   const [name, setName] = useState(user?.name ?? "");
-  const siteLang = useLang(); // Stage 21: a new game starts in Nook's language; the switch below still changes it
-  const [lang, setLang] = useState<Lang>(siteLang);
+  const lang: Lang = useLang(); // Stage 30: Cloud Path always speaks Nook's language (Settings → Language)
   const [path, setPath] = useState<PathId>("kiem");
   const [rolled, setRolled] = useState<Game | null>(null);
   const t = (vi: string, en: string) => (lang === "vi" ? vi : en);
@@ -223,15 +218,6 @@ function Title({ onStart }: { onStart: (g: Game) => void }) {
   return (
     <TitleCard>
       <Intro t={t} />
-      <SegmentedControl<Lang>
-        label="Language"
-        options={[
-          { value: "vi", label: "Tiếng Việt" },
-          { value: "en", label: "English" },
-        ]}
-        value={lang}
-        onChange={setLang}
-      />
       <fieldset>
         <legend className="mb-2 text-sm font-semibold">{t("Chọn con đường tu luyện", "Choose your path")}</legend>
         <div role="radiogroup" className="grid grid-cols-2 gap-2 sm:grid-cols-3">

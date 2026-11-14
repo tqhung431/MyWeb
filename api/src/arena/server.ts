@@ -882,7 +882,7 @@ async function saveAlley(r: AlleyRoom) {
   const people = r.game.players.filter((p) => !p.id.startsWith("bot:"));
   for (const p of people) await addResult(p.id, "alley", 0, p.id === r.game.matchWinner ? 1 : 0);
   const winner = people.find((p) => p.id === r.game!.matchWinner);
-  if (winner) await publishActivity("Swords", "{name} won a Ngõ Pháo match", { name: winner.name });
+  if (winner) await publishActivity("Swords", "{name} won a Firecracker Alley match", { name: winner.name });
 }
 
 /** Tests only: reach into a running Ngõ Pháo match */

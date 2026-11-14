@@ -6,7 +6,7 @@ import { ArenaProvider } from "@/features/arena/ArenaProvider";
 export default function ArenaLayout({ children }: { children: React.ReactNode }) {
   return (
     <ArenaProvider>
-      <AppHeader appId="arena" />
+      <AppHeader /> {/* Stage 30: Games (Together, Adventures), or Music for Listen Together */}
       {children}
     </ArenaProvider>
   );

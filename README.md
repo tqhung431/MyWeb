@@ -363,6 +363,7 @@ The second line prints your address: `https://<random-name>.trycloudflare.com`.
 27. People and admin — names protected by a PIN (sign in on another device by PIN or a one-time code), your devices, and an Admin page: people, reports, Hobby Hub moderation, banner, health, an admin log ✅ · [docs](docs/stage-27.md)
 28. Chat and privacy — Messages as its own app, a message menu (copy, edit for 10 minutes, delete with Undo, report), "Message deleted" in place, a live feed with only what people do together, "Share my milestones", the admin's sign-in log ✅ · [docs](docs/stage-28.md)
 29. Privacy and small fixes — Hobby Hub groups are for members (anyone can join), the live feed shows only Nook-wide things, Settings only says whether admin is on, Chill Corner is now Focus Room ✅ · [docs](docs/stage-29.md)
+30. One Games app, in your language — Mini Arcade, Arcade Online, Nook Arena and Nook Games become one Games app (one Leaderboards page), Listen Together moves to Music, every game in English when Nook is in English (Cloud Path, Sproutlings…) ✅ · [docs](docs/stage-30.md)
 
 ## Licence
 

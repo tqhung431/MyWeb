@@ -15,7 +15,7 @@ import { BattleView } from "./BattleView";
 import { Creature } from "./Creature";
 import { IslandCanvas, type IslandState, type Pos } from "./IslandCanvas";
 import { AREAS, findTile, pathTo, tileAt, walkable } from "./island";
-import { MOVE_NAMES } from "./names";
+import { MOVE_NAMES, SPECIES_NAMES } from "./names";
 import { saveGame, TEAM_MAX, type SproutSave } from "./save";
 import * as S from "./sprout";
 import { play } from "./sound";
@@ -322,7 +322,7 @@ export function SproutGame({ initial, signedIn, onQuit }: { initial: SproutSave;
       for (const c of fighters) {
         const got = Math.ceil(total / fighters.length);
         const r = S.gainXp(c, got);
-        const name = S.SPECIES[c.species].name;
+        const name = t(SPECIES_NAMES[c.species]);
         lines.push(t("{name} +{n} XP", { name, n: got }));
         for (const l of r.levels) lines.push(t("{name} reached level {n}!", { name, n: l }));
         for (const m of r.learned) lines.push(t("{name} learned {move}!", { name, move: t(MOVE_NAMES[m]) }));
@@ -337,7 +337,7 @@ export function SproutGame({ initial, signedIn, onQuit }: { initial: SproutSave;
         setMode({
           k: "talk",
           who: k.name,
-          lines: [t(k.after), ...(keeper === AREAS.length - 1 ? [t("Every shrine on Thanh Khê is awake. You did it!")] : [t("The gate is open.")])],
+          lines: [t(k.after), ...(keeper === AREAS.length - 1 ? [t("Every shrine on Clearwater Isle is awake. You did it!")] : [t("The gate is open.")])],
           i: 0,
           then: () => setMode({ k: "result", title: t("Shrine awakened!"), lines }),
         });
@@ -360,7 +360,7 @@ export function SproutGame({ initial, signedIn, onQuit }: { initial: SproutSave;
   }
   function befriendDone(m: Extract<Mode, { k: "befriend" }>, score: number) {
     const total = score + m.bonus;
-    const name = S.SPECIES[m.species].name;
+    const name = t(SPECIES_NAMES[m.species]);
     if (total >= S.BEFRIEND_AT) {
       const c = S.makeCreature(save.nextUid++, m.species, m.level);
       c.hp = Math.max(1, Math.min(m.hp, S.statsOf(c).hp));
@@ -420,13 +420,13 @@ export function SproutGame({ initial, signedIn, onQuit }: { initial: SproutSave;
         }}
         onClose={() => setMode({ k: "island" })}
         onGrow={(c) => {
-          const before = S.SPECIES[c.species].name;
+          const before = t(SPECIES_NAMES[c.species]);
           if (!S.grow(c)) return;
           if (!save.friends.includes(c.species)) save.friends.push(c.species);
           if (!save.seen.includes(c.species)) save.seen.push(c.species);
           play("grow");
           persist(true);
-          setMode({ k: "result", title: t("{a} grew into {b}!", { a: before, b: S.SPECIES[c.species].name }), lines: [], species: c.species });
+          setMode({ k: "result", title: t("{a} grew into {b}!", { a: before, b: t(SPECIES_NAMES[c.species]) }), lines: [], species: c.species });
         }}
       />,
     );
@@ -435,7 +435,7 @@ export function SproutGame({ initial, signedIn, onQuit }: { initial: SproutSave;
     <div ref={top} className="mx-auto flex w-full max-w-3xl scroll-mt-3 flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <p className="min-w-0 flex-1 truncate font-bold">
-          {area.name} <span className="font-normal text-muted">· {t(area.en)}</span>
+          {t(area.en)}
         </p>
         <span className="rounded-full bg-surface px-2 py-0.5 text-xs font-semibold shadow-sm" title={t("Shrines awakened")}>
           🏮 {save.keepers.length}/6
@@ -491,7 +491,7 @@ export function SproutGame({ initial, signedIn, onQuit }: { initial: SproutSave;
       <div className="flex items-center gap-2">
         <button type="button" onClick={() => setMode({ k: "team", place: null })} className="flex min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-2xl border border-border bg-surface p-1.5 text-left">
           {save.team.map((c, i) => (
-            <span key={c.uid} className={cn("relative shrink-0", i >= 3 && "opacity-60")} title={`${S.SPECIES[c.species].name} · ${t("Lv {n}", { n: c.level })}`}>
+            <span key={c.uid} className={cn("relative shrink-0", i >= 3 && "opacity-60")} title={`${t(SPECIES_NAMES[c.species])} · ${t("Lv {n}", { n: c.level })}`}>
               <Creature species={c.species} size={36} />
               <span className="absolute inset-x-1 bottom-0 h-1 overflow-hidden rounded-full bg-black/15">
                 <span className={cn("block h-full", c.hp / S.statsOf(c).hp < 0.3 ? "bg-rose-500" : "bg-emerald-500")} style={{ width: `${(100 * c.hp) / S.statsOf(c).hp}%` }} />

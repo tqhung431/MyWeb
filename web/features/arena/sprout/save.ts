@@ -1,4 +1,5 @@
 // Stage 26 · Mầm Thú: your game, saved in this browser and (with a name) in Nook, so it follows you to another device.
+import { SPECIES_NAMES } from "./names";
 import { getSave, putSave } from "@/lib/api/games";
 import { AREAS } from "./island";
 import { makeCreature, SPECIES, type Creature, type SpeciesId } from "./sprout";
@@ -106,9 +107,10 @@ export function saveGame(s: SproutSave, signedIn: boolean, force = false) {
   const lead = s.team[0];
   void putSave("sprout", {
     version: 1,
-    summary: `${AREAS[s.area].name} · ${s.keepers.length}/6 · ${s.friends.length}`,
+    summary: `${AREAS[s.area].en} · ${s.keepers.length}/6 · ${s.friends.length}`,
     data: s,
     // the shared games leaderboard: shrines awakened first, then friends made
-    board: { path: SPECIES[lead.species].name.slice(0, 20), level: s.keepers.length, kills: s.friends.length },
+    board: { path: SPECIES_NAMES[lead.species].slice(0, 20), // Stage 30: the English name (shown with t())
+      level: s.keepers.length, kills: s.friends.length },
   }).catch(() => {});
 }

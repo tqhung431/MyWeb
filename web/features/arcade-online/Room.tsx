@@ -383,7 +383,7 @@ function Final({ state, host, userId, send }: { state: QuizState; host: boolean;
         ) : (
           <p className="text-sm text-muted">{t("The host can start another round.")}</p>
         )}
-        <Link href="/arcade-online/leaderboard" className={buttonClasses("secondary")}>
+        <Link href="/games/leaderboards#quiz" className={buttonClasses("secondary")}>
           <Trophy className="h-4 w-4" aria-hidden="true" /> {t("Leaderboard")}
         </Link>
       </div>

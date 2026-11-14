@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { UnreadDot, useUnread } from "@/features/hobby/UnreadProvider";
 import { UserMenu } from "@/features/me/UserMenu";
 import { LivePill } from "@/features/realtime/LiveNow";
-import { APPS, isActive } from "@/lib/apps";
+import { APPS, appForPath } from "@/lib/apps";
 import { cn } from "@/lib/cn";
 import { Brand } from "./Brand";
 
@@ -18,7 +18,8 @@ import { useT } from "@/lib/i18n/I18nProvider";
 export function Sidebar() {
   const t = useT();
   const pathname = usePathname();
-  const { badge } = useUnread(); // Stage 28: Messages and Hobby Hub each have their own
+  const { badge } = useUnread();
+  const current = appForPath(pathname); // Stage 30: /arena/chess is the Games app // Stage 28: Messages and Hobby Hub each have their own
 
   return (
     <aside className="sticky top-0 hidden h-dvh flex-col gap-8 border-r border-border bg-surface/60 px-4 py-6 backdrop-blur-xl lg:flex">
@@ -32,12 +33,7 @@ export function Sidebar() {
         <p className="mt-6 mb-2 px-3 text-xs font-semibold tracking-wider text-muted uppercase">{t("Apps")}</p>
         {APPS.map((app) =>
           app.status === "live" ? (
-            <Link
-              key={app.id}
-              href={app.href}
-              aria-current={isActive(pathname, app.href) ? "page" : undefined}
-              className={itemClasses(isActive(pathname, app.href))}
-            >
+            <Link key={app.id} href={app.href} aria-current={current?.id === app.id ? "page" : undefined} className={itemClasses(current?.id === app.id)}>
               <AppIcon icon={app.icon} accent={app.accent} size="sm" />
               <span className="truncate">{t(app.name)}</span>
               {badge(app.href) > 0 && (

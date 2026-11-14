@@ -86,7 +86,7 @@ export function AlleyRoom({ code }: { code: string }) {
         <section className="rounded-3xl bg-linear-to-br from-red-900 via-rose-800 to-amber-700 p-5 text-white shadow-card sm:p-6">
           <div className="flex flex-wrap items-center gap-3">
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold tracking-wide text-amber-200 uppercase">Ngõ Pháo · {t("Room code")}</p>
+              <p className="text-xs font-semibold tracking-wide text-amber-200 uppercase">{t("Firecracker Alley")} · {t("Room code")}</p>
               <p className="font-mono text-3xl font-extrabold tracking-[0.25em]">{code}</p>
             </div>
             <Button variant="light" size="sm" onClick={copy}>

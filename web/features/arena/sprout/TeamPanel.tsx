@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import { useT } from "@/lib/i18n/I18nProvider";
 import { Creature } from "./Creature";
-import { ELEMENT_INFO, MOVE_NAMES, SPECIES_INFO } from "./names";
+import { ELEMENT_INFO, MOVE_NAMES, SPECIES_INFO, SPECIES_NAMES } from "./names";
 import { TEAM_MAX, type SproutSave } from "./save";
 import * as S from "./sprout";
 
@@ -101,7 +101,7 @@ export function TeamPanel({ save, place, onChange, onClose, onGrow }: { save: Sp
         <p className="mt-2 text-xs text-muted">
           {team
             .filter((c) => S.SPECIES[c.species].grows && !S.canGrow(c))
-            .map((c) => t("{name} can grow at level {n}", { name: S.SPECIES[c.species].name, n: S.SPECIES[c.species].grows!.level }))
+            .map((c) => t("{name} can grow at level {n}", { name: t(SPECIES_NAMES[c.species]), n: S.SPECIES[c.species].grows!.level }))
             .join(" · ")}
         </p>
       )}
