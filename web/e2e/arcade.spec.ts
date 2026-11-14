@@ -18,5 +18,5 @@ test("Hungry Worm: countdown, play, crash, score saved", async ({ page }) => {
 
 test("the lobby lists six games", async ({ page }) => {
   await visit(page, "/arcade");
-  await expect(page.locator('a[href^="/arcade/"]').filter({ hasText: /./ })).toHaveCount(6 + 1); // 6 games + the Leaderboards tab
+  await expect(page.locator('a[href^="/arcade/"]').filter({ hasText: /./ })).toHaveCount(6); // Stage 30: the six games (Leaderboards is a Games tab now, at /games/leaderboards)
 });
