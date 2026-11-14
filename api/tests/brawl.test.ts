@@ -6,6 +6,8 @@ import * as B from "../src/arena/brawl.js";
 
 // A simple test player: walks round stalls to the nearest trouble-maker, keeps its distance with a ranged hero,
 // steps out of confetti, attacks, uses its special, shops for snacks between areas.
+// The bots' own dice are seeded too, so a test plays the same game every time (CI included)
+let botDice = B.rng(1);
 function bot(g: B.BrawlGame, h: B.Hero, now: number) {
   if (h.down) return;
   const face = (x: number, y: number) => { const l = Math.hypot(x, y); if (l > 0.01) { h.fx = x / l; h.fy = y / l; } };
@@ -26,11 +28,12 @@ function bot(g: B.BrawlGame, h: B.Hero, now: number) {
   else B.setStick(g, h.id, mx, my);
   if (d < (ranged ? 6 : 1.6)) { face(target.x - h.x, target.y - h.y); B.act(g, h.id, { a: "attack" }, now); }
   if (h.special >= 100 && (d < 2.5 || h.hero === "grandma" && g.heroes.some((x) => x.hp < x.maxHp * 0.5))) B.act(g, h.id, { a: "special" }, now);
-  if (d < 1.0 && Math.random() < 0.15) { face(h.x - target.x, h.y - target.y); B.act(g, h.id, { a: "dodge" }, now); }
+  if (d < 1.0 && botDice() < 0.15) { face(h.x - target.x, h.y - target.y); B.act(g, h.id, { a: "dodge" }, now); }
 }
 
 function play(heroes: B.HeroKind[], seed: number) {
   const g = B.newBrawl(heroes.map((hero, i) => ({ id: "p" + i, name: "P" + i, hero })), seed, 0);
+  botDice = B.rng(seed + 1000);
   let now = 0;
   while (g.phase !== "won" && g.phase !== "lost" && now < 3_600_000) {
     now += 50;
