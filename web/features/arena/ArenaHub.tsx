@@ -13,7 +13,6 @@ import { LanternHead } from "./alley/LanternHead";
 import { Piece } from "./chess/pieces";
 
 const NEXT = [
-  { name: "Chợ Đêm Brawl", en: tx("Night Market Brawl"), what: tx("Co-op action through a night market, up to 4 friends"), stage: 25, emoji: "🥢" },
   { name: "Mầm Thú", en: tx("Sproutlings"), what: tx("Befriend, raise and battle original creatures"), stage: 26, emoji: "🌱" },
 ];
 
@@ -22,7 +21,7 @@ export function ArenaHub() {
   const { connected, problem } = useArena();
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <Link
         href="/arena/alley"
         className="group relative overflow-hidden rounded-3xl bg-linear-to-br from-red-900 via-rose-800 to-amber-600 p-6 text-white shadow-card transition hover:-translate-y-0.5 "
@@ -46,9 +45,23 @@ export function ArenaHub() {
         <p className="pointer-events-none absolute -right-1 -bottom-3 text-7xl" aria-hidden="true">
           🏮🌾
         </p>
-        <p className="text-sm font-semibold tracking-wide text-amber-200 uppercase">{t("New")} · {t("Keep the Village")}</p>
+        <p className="text-sm font-semibold tracking-wide text-amber-200 uppercase">{t("Keep the Village")}</p>
         <h2 className="mt-1 text-3xl font-extrabold">Giữ Làng</h2>
         <p className="mt-1 max-w-[13rem] text-sm text-white/90">{t("Tower defense: guard the rice from mischievous spirits, alone or with a friend.")}</p>
+        <span className="mt-5 inline-flex items-center gap-1 text-sm font-bold">
+          {t("Play")} <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" aria-hidden="true" />
+        </span>
+      </Link>
+      <Link
+        href="/arena/brawl"
+        className="group relative overflow-hidden rounded-3xl bg-linear-to-br from-indigo-950 via-fuchsia-900 to-amber-600 p-6 text-white shadow-card transition hover:-translate-y-0.5 md:col-span-2 xl:col-span-1"
+      >
+        <p className="pointer-events-none absolute -right-1 -bottom-3 text-7xl" aria-hidden="true">
+          🏮🥢
+        </p>
+        <p className="text-sm font-semibold tracking-wide text-amber-200 uppercase">{t("New")} · {t("Night Market Brawl")}</p>
+        <h2 className="mt-1 text-3xl font-extrabold">Chợ Đêm Brawl</h2>
+        <p className="mt-1 max-w-[13rem] text-sm text-white/90">{t("Co-op action for 1–4: pick a hero and bonk the trouble-makers out of the night market.")}</p>
         <span className="mt-5 inline-flex items-center gap-1 text-sm font-bold">
           {t("Play")} <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" aria-hidden="true" />
         </span>

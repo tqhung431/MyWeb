@@ -577,6 +577,25 @@ export const villageScores = pgTable(
   (t) => [index("village_scores_map_idx").on(t.map, t.score), index("village_scores_user_idx").on(t.userId)],
 );
 
+// Stage 25: Chợ Đêm Brawl runs (one row per player per run), saved by the game server
+export const brawlRuns = pgTable(
+  "brawl_runs",
+  {
+    id: serial("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    hero: text("hero").notNull(),
+    players: integer("players").notNull(),
+    areas: integer("areas").notNull(),
+    won: boolean("won").notNull(),
+    timeMs: integer("time_ms").notNull(),
+    bonks: integer("bonks").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("brawl_runs_user_idx").on(t.userId), index("brawl_runs_best_idx").on(t.areas, t.timeMs)],
+);
+
 // Nook TV: YouTube videos and playlists the admin chose, on shelves
 export const tvVideos = pgTable(
   "tv_videos",

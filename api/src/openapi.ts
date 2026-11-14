@@ -209,6 +209,7 @@ export const ENDPOINTS: Endpoint[] = [
   { method: "get", path: "/api/alley/leaderboard", tag: "Nook Arena", summary: "Ngõ Pháo: most matches won" },
   { method: "post", path: "/api/village/scores", tag: "Nook Arena", summary: "Giữ Làng: save a finished solo game", who: "name", body: villageScoreBody },
   { method: "get", path: "/api/village/leaderboard", tag: "Nook Arena", summary: "Giữ Làng: best score per person on a map", query: villageBoardQuery },
+  { method: "get", path: "/api/brawl/leaderboard", tag: "Nook Arena", summary: "Chợ Đêm Brawl: furthest and fastest per person" },
 ];
 
 const WHO_TEXT: Record<Who, string> = {

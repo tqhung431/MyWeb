@@ -20,17 +20,18 @@
 // GET    /api/alley/leaderboard     Stage 23: Ngõ Pháo, most matches won
 // POST   /api/village/scores  { map, waves, rice, won, endless }   Stage 24: a finished solo Giữ Làng game
 // GET    /api/village/leaderboard?map=riverside                    best score per person on a map
+// GET    /api/brawl/leaderboard     Stage 25: Chợ Đêm Brawl, furthest and fastest per person (runs are saved by the game server)
 // POST   /api/chess/nook  { pgn, level, color }   save a finished game against Nook (the computer)
 
 import { timingSafeEqual } from "node:crypto";
-import { and, asc, desc, eq, max, or } from "drizzle-orm";
+import { and, asc, desc, eq, max, or, sql } from "drizzle-orm";
 import { Router, type Request } from "express";
 import { Chess } from "chess.js";
 import { z } from "zod";
 import { COOKIE_NAME, isAdminToken, setAdminToken } from "../auth/sessions.js";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
-import { arenaRatings, chessGames, tvVideos, users, villageScores } from "../db/schema.js";
+import { arenaRatings, brawlRuns, chessGames, tvVideos, users, villageScores } from "../db/schema.js";
 import { MAP_IDS as VILLAGE_MAPS, WAVES } from "../arena/village.js";
 import { requireUser } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
@@ -39,6 +40,7 @@ import { rateLimit } from "../middleware/security.js";
 export const adminRouter = Router();
 export const alleyRouter = Router(); // Stage 23: Ngõ Pháo
 export const villageRouter = Router(); // Stage 24: Giữ Làng
+export const brawlRouter = Router(); // Stage 25: Chợ Đêm Brawl
 export const tvRouter = Router();
 export const chessRouter = Router();
 
@@ -305,6 +307,20 @@ villageRouter.get("/leaderboard", async (req, res) => {
     .where(and(eq(villageScores.map, map)))
     .groupBy(villageScores.userId, users.name)
     .orderBy(desc(max(villageScores.score)))
+    .limit(20);
+  res.json(rows.map(({ userId, ...r }, i) => ({ rank: i + 1, ...r, me: userId === req.user?.id })));
+});
+
+// --- Chợ Đêm Brawl (Stage 25) ------------------------------------------------------------------
+
+// Best per person: the most areas cleared, then the fastest time for that
+brawlRouter.get("/leaderboard", async (req, res) => {
+  const rows = await db
+    .select({ userId: brawlRuns.userId, name: users.name, areas: max(brawlRuns.areas), runs: sql<number>`count(*)::int`, wins: sql<number>`count(*) filter (where ${brawlRuns.won})::int`, best: sql<number | null>`min(${brawlRuns.timeMs}) filter (where ${brawlRuns.won})` })
+    .from(brawlRuns)
+    .innerJoin(users, eq(users.id, brawlRuns.userId))
+    .groupBy(brawlRuns.userId, users.name)
+    .orderBy(desc(max(brawlRuns.areas)), desc(sql`count(*) filter (where ${brawlRuns.won})`), sql`min(${brawlRuns.timeMs}) filter (where ${brawlRuns.won}) asc nulls last`)
     .limit(20);
   res.json(rows.map(({ userId, ...r }, i) => ({ rank: i + 1, ...r, me: userId === req.user?.id })));
 });
