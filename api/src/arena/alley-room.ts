@@ -5,7 +5,8 @@ import * as A from "./alley.js";
 
 export const COLORS = 4; // red, jade, gold, violet (drawn by the browser)
 export const HATS = 5; // none, nón lá (leaf hat), cat ears, ribbon, little dragon horns
-const BOT_NAMES = ["Bé Pháo", "Kẹo Dừa", "Mèo Mướp", "Bánh Tét"];
+// Stage 30: names that read the same in English and Vietnamese (they were Vietnamese words)
+const BOT_NAMES = ["Bobo", "Kiki", "Momo", "Lulu"];
 
 export type Person = { id: string; name: string };
 export type AlleySeat = Person & { color: number; hat: number; ready: boolean };

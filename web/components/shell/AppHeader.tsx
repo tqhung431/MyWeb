@@ -8,18 +8,19 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { UnreadDot, useUnread } from "@/features/hobby/UnreadProvider";
-import { getApp } from "@/lib/apps";
+import { activeLink, appForPath, getApp } from "@/lib/apps";
 import { cn } from "@/lib/cn";
 
 import { useT } from "@/lib/i18n/I18nProvider";
-export function AppHeader({ appId, className }: { appId: string; className?: string }) {
+// Stage 30: without appId, the app is found from the address (/arena/listen → Music, /arena/chess → Games)
+export function AppHeader({ appId, className }: { appId?: string; className?: string }) {
   const t = useT();
-  const app = getApp(appId);
   const pathname = usePathname();
+  const app = appId ? getApp(appId) : (appForPath(pathname) ?? getApp("games"));
   const { badge } = useUnread();
 
-  // The longest matching link wins, so /focus/tips/x highlights "Tips", not "Focus".
-  const activeHref = app.links?.filter((l) => pathname === l.href || pathname.startsWith(`${l.href}/`)).sort((a, b) => b.href.length - a.href.length)[0]?.href;
+  // The longest matching link wins, so /focus/tips/x highlights "Tips", not "Focus" (Stage 30: and a tab's `match`)
+  const activeHref = activeLink(app, pathname);
 
   // Stage 28: many tabs (Arena has 7) go on their own line under the title and wrap (phone too), instead of hiding off the edge
   const many = (app.links?.length ?? 0) > 4;

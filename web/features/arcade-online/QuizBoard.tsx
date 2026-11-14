@@ -47,7 +47,7 @@ export function QuizBoard() {
                 <th className="w-8 p-2" />
                 <th className="p-2">{t("Player")}</th>
                 <th className="p-2 text-right">{t("Wins")}</th>
-                <th className="p-2 text-right">{t("Games")}</th>
+                <th className="p-2 text-right">{t("Games played")}</th>
                 <th className="hidden p-2 text-right sm:table-cell">{t("Best")}</th>
                 <th className="p-2 text-right">{t("Points")}</th>
               </tr>

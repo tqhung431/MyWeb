@@ -5,7 +5,7 @@
 // (tests/apps.test.ts fails if a "live" app has no page.)
 
 import type { LucideIcon } from "lucide-react";
-import { Clapperboard, Crown, Disc3, Gamepad2, ListChecks, MessageCircle, Moon, Mountain, Sparkles, Swords, Tv, Users } from "lucide-react";
+import { Clapperboard, Disc3, Gamepad2, ListChecks, MessageCircle, Moon, Sparkles, Tv, Users } from "lucide-react";
 
 import { tx } from "@/lib/i18n/core";
 // Stage 21: names and labels are wrapped in tx() so the translation test finds them; shown with t(app.name).
@@ -22,7 +22,10 @@ export type AppInfo = {
   accent: string; // Tailwind gradient classes for the icon tile
   status: AppStatus;
   phase: string; // where it sits in the learning plan
-  links?: { href: string; label: string }[]; // sub-pages, shown as tabs inside the app
+  // Stage 30: other addresses that belong to this app (the Games app spans /arcade, /arena…)
+  also?: string[];
+  // sub-pages, shown as tabs inside the app. `match`: more addresses that light this tab up (Stage 30)
+  links?: { href: string; label: string; match?: string[] }[];
 };
 
 export const APPS: AppInfo[] = [
@@ -46,6 +49,7 @@ export const APPS: AppInfo[] = [
     name: tx("Music"),
     tagline: tx("Songs with vocals, played by Nook itself: community charts"),
     href: "/music",
+    also: ["/arena/listen"],
     icon: Disc3,
     accent: "from-rose-500 to-orange-400",
     status: "live",
@@ -53,21 +57,28 @@ export const APPS: AppInfo[] = [
     links: [
       { href: "/music", label: tx("Charts") },
       { href: "/music/add", label: tx("Add songs") },
+      { href: "/arena/listen", label: tx("Listen Together") }, // Stage 30: was in Nook Arena (it's on the game server)
     ],
   },
   {
-    id: "arcade",
-    name: tx("Mini Arcade"),
-    shortName: tx("Arcade"),
-    tagline: tx("Six silly games, with high scores to beat"),
-    href: "/arcade",
+    // Stage 30: ONE Games app. Mini Arcade (/arcade), Arcade Online (/arcade-online), Nook Arena (/arena) and Nook Games
+    // (/games) were four entries; their pages keep their addresses and show these tabs.
+    id: "games",
+    name: tx("Games"),
+    tagline: tx("Quick games, party quizzes, live games with friends, and adventures"),
+    href: "/games",
+    also: ["/arcade", "/arcade-online", "/arena"],
     icon: Gamepad2,
     accent: "from-amber-400 to-orange-500",
     status: "live",
-    phase: "Stage 10",
+    phase: "Stages 10, 14, 16, 22–26, 30",
     links: [
-      { href: "/arcade", label: tx("Games") },
-      { href: "/arcade/scores", label: tx("Leaderboards") },
+      { href: "/games", label: tx("All games") },
+      { href: "/arcade", label: tx("Quick games") },
+      { href: "/arcade-online", label: tx("Party") },
+      { href: "/arena", label: tx("Together") },
+      { href: "/games/adventures", label: tx("Adventures"), match: ["/games/van-lo", "/arena/sprout"] },
+      { href: "/games/leaderboards", label: tx("Leaderboards"), match: ["/arcade/scores", "/arcade-online/leaderboard"] },
     ],
   },
   {
@@ -127,41 +138,6 @@ export const APPS: AppInfo[] = [
     ],
   },
   {
-    id: "arcade-online",
-    name: tx("Arcade Online"),
-    shortName: tx("Quiz"),
-    tagline: tx("Quiz Party: play live against everyone on Nook"),
-    href: "/arcade-online",
-    icon: Swords,
-    accent: "from-rose-400 to-red-500",
-    status: "live",
-    phase: "Stage 14",
-    links: [
-      { href: "/arcade-online", label: tx("Play") },
-      { href: "/arcade-online/leaderboard", label: tx("Leaderboard") },
-    ],
-  },
-  {
-    id: "arena",
-    name: tx("Nook Arena"),
-    shortName: tx("Arena"),
-    tagline: tx("Live chess, Ngõ Pháo, Giữ Làng, Chợ Đêm Brawl, Mầm Thú and Listen Together, on Nook's own game server"),
-    href: "/arena",
-    icon: Crown,
-    accent: "from-indigo-500 to-violet-600",
-    status: "live",
-    phase: "Stage 22",
-    links: [
-      { href: "/arena", label: tx("Play") },
-      { href: "/arena/chess", label: tx("Chess") },
-      { href: "/arena/alley", label: tx("Ngõ Pháo") }, // Stage 23
-      { href: "/arena/village", label: tx("Giữ Làng") }, // Stage 24
-      { href: "/arena/brawl", label: tx("Chợ Đêm Brawl") }, // Stage 25
-      { href: "/arena/sprout", label: tx("Mầm Thú") }, // Stage 26
-      { href: "/arena/listen", label: tx("Listen Together") },
-    ],
-  },
-  {
     id: "tv",
     name: tx("Nook TV"),
     shortName: tx("TV"),
@@ -175,17 +151,6 @@ export const APPS: AppInfo[] = [
       { href: "/tv", label: tx("Watch") },
       { href: "/tv/live", label: tx("Live") },
     ],
-  },
-  {
-    id: "games",
-    name: tx("Nook Games"),
-    shortName: tx("Games"),
-    tagline: tx("Bigger games with saves: Vân Lộ, a cultivation adventure"),
-    href: "/games",
-    icon: Mountain,
-    accent: "from-stone-500 to-red-700",
-    status: "live",
-    phase: "Stage 16",
   },
   {
     id: "companion",
@@ -205,6 +170,22 @@ export function getApp(id: string): AppInfo {
   const app = APPS.find((a) => a.id === id);
   if (!app) throw new Error(`Unknown app: ${id}`);
   return app;
+}
+
+// Stage 30: which app a page belongs to. The longest address wins, so /arena/listen is Music, /arena/chess is Games.
+export function appForPath(pathname: string): AppInfo | undefined {
+  let best: { app: AppInfo; len: number } | undefined;
+  for (const app of APPS)
+    for (const href of [app.href, ...(app.also ?? [])]) if (isActive(pathname, href) && href.length > (best?.len ?? -1)) best = { app, len: href.length };
+  return best?.app;
+}
+
+// The tab inside an app for this page: the longest matching address (a tab's own or one of its `match`)
+export function activeLink(app: AppInfo, pathname: string): string | undefined {
+  let best: { href: string; len: number } | undefined;
+  for (const l of app.links ?? [])
+    for (const href of [l.href, ...(l.match ?? [])]) if (isActive(pathname, href) && href.length > (best?.len ?? -1)) best = { href: l.href, len: href.length };
+  return best?.href;
 }
 
 // "/focus/tips/x" is inside "/focus"; "/" only matches itself.

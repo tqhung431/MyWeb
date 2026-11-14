@@ -14,7 +14,7 @@ import { cn } from "@/lib/cn";
 import { useT } from "@/lib/i18n/I18nProvider";
 import { Creature } from "./Creature";
 import { AREAS, STARTERS } from "./island";
-import { ELEMENT_INFO, SPECIES_INFO } from "./names";
+import { ELEMENT_INFO, SPECIES_INFO, SPECIES_NAMES } from "./names";
 import { clearLocal, loadBest, newSave, saveGame, type SproutSave } from "./save";
 import { SproutGame } from "./SproutGame";
 import { SPECIES, SPECIES_IDS, statsOf } from "./sprout";
@@ -68,15 +68,15 @@ export function SproutHome() {
             <Creature species="giot" size={74} />
             <Creature species="thanHong" size={84} />
           </div>
-          <p className="text-sm font-semibold tracking-wide text-emerald-100 uppercase">{t("Sproutlings")}</p>
-          <h2 className="mt-1 text-3xl font-extrabold">Mầm Thú</h2>
+          <p className="text-sm font-semibold tracking-wide text-emerald-100 uppercase">{t("Creature adventure · with saves")}</p>
+          <h2 className="mt-1 text-3xl font-extrabold">{t("Sproutlings")}</h2>
           <p className="mt-1 max-w-[60%] text-white/90 sm:max-w-sm">
-            {t("A storm scattered the seed-spirits of Thanh Khê island. Befriend them, grow together, and wake the six shrines.")}
+            {t("A storm scattered the seed-spirits of Clearwater Isle. Befriend them, grow together, and wake the six shrines.")}
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             {save && (
               <Button variant="light" onClick={() => setPlaying(true)}>
-                {t("Continue: {area}", { area: AREAS[save.area].name })}
+                {t("Continue: {area}", { area: t(AREAS[save.area].en) })}
               </Button>
             )}
             {loaded && (
@@ -97,9 +97,9 @@ export function SproutHome() {
                 return (
                   <button key={s} type="button" role="radio" aria-checked={false} onClick={() => start(s)} className="cursor-pointer rounded-2xl border border-border bg-surface p-3 text-center transition hover:-translate-y-0.5 hover:border-primary/50">
                     <Creature species={s} size={110} className="mx-auto" />
-                    <p className="mt-1 text-lg font-extrabold">{SPECIES[s].name}</p>
+                    <p className="mt-1 text-lg font-extrabold">{t(SPECIES_NAMES[s])}</p>
                     <p className={cn("mx-auto mt-0.5 w-fit rounded-full px-2 text-xs font-bold", el.chip)}>
-                      {el.emoji} {t(el.name)} · {el.vi}
+                      {el.emoji} {t(el.name)}
                     </p>
                     <p className="mt-2 text-xs text-muted">{t(SPECIES_INFO[s])}</p>
                   </button>
@@ -139,13 +139,13 @@ export function SproutHome() {
                   <div className={cn(!known && "opacity-25 brightness-0 dark:invert")}>
                     <Creature species={s} size={64} className="mx-auto" />
                   </div>
-                  <p className="truncate text-[11px] font-semibold">{known ? SPECIES[s].name : "?"}</p>
+                  <p className="truncate text-[11px] font-semibold">{known ? t(SPECIES_NAMES[s]) : "?"}</p>
                   {friends.has(s) && <p className="text-[10px] text-emerald-600 dark:text-emerald-400">{t("Friend")}</p>}
                 </li>
               );
             })}
           </ul>
-          {save && <p className="mt-3 text-xs text-muted">{t("Your team: {list}", { list: save.team.map((c) => `${SPECIES[c.species].name} (${c.level}, ${c.hp}/${statsOf(c).hp})`).join(", ") })}</p>}
+          {save && <p className="mt-3 text-xs text-muted">{t("Your team: {list}", { list: save.team.map((c) => `${t(SPECIES_NAMES[c.species])} (${c.level}, ${c.hp}/${statsOf(c).hp})`).join(", ") })}</p>}
         </Card>
       </div>
 

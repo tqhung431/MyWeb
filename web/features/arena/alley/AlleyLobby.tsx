@@ -59,8 +59,8 @@ export function AlleyLobby() {
             <LanternHead color={2} hat={2} size={64} />
             <LanternHead color={1} hat={4} size={72} />
           </div>
-          <p className="text-sm font-semibold tracking-wide text-amber-200 uppercase">{t("Firecracker Alley")}</p>
-          <h2 className="mt-1 text-3xl font-extrabold">Ngõ Pháo</h2>
+          <p className="text-sm font-semibold tracking-wide text-amber-200 uppercase">{t("Party maze · 2–4 players")}</p>
+          <h2 className="mt-1 text-3xl font-extrabold">{t("Firecracker Alley")}</h2>
           <p className="mt-1 max-w-sm text-white/90">{t("Drop firecrackers, break crates, grab power-ups. Last lantern-head standing wins the round; first to 3 wins the match.")}</p>
           {user && (
             <Button variant="light" size="md" className="mt-5" onClick={create} disabled={!connected || busy}>

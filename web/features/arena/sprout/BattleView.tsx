@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import { useT } from "@/lib/i18n/I18nProvider";
 import { Creature } from "./Creature";
-import { ELEMENT_INFO, EFFECT_INFO, MOVE_NAMES } from "./names";
+import { ELEMENT_INFO, EFFECT_INFO, MOVE_NAMES, SPECIES_NAMES } from "./names";
 import * as S from "./sprout";
 import { play } from "./sound";
 
@@ -36,7 +36,7 @@ function Card({ c, hp, foe, label }: { c: S.Fighter; hp: number; foe?: boolean; 
   return (
     <div className="w-40 rounded-2xl border border-border bg-surface/95 p-2 shadow-sm sm:w-56">
       <div className="flex items-baseline justify-between gap-2">
-        <p className="truncate text-sm font-bold">{label ? `${label} ${S.SPECIES[c.species].name}` : S.SPECIES[c.species].name}</p>
+        <p className="truncate text-sm font-bold">{label ? `${label} ${t(SPECIES_NAMES[c.species])}` : t(SPECIES_NAMES[c.species])}</p>
         <p className="shrink-0 text-xs font-semibold text-muted">{t("Lv {n}", { n: c.level })}</p>
       </div>
       <p className="mb-1 text-[11px] text-muted">
@@ -67,14 +67,14 @@ export function BattleView({
 }) {
   const t = useT();
   const [view, setView] = useState<View>(() => snapshot(b));
-  const [message, setMessage] = useState<string>(() => (b.wild ? t("A wild {name} appears!", { name: S.SPECIES[S.activeOf(b, 1).species].name }) : t("{keeper} wants a friendly battle!", { keeper: foeLabel })));
+  const [message, setMessage] = useState<string>(() => (b.wild ? t("A wild {name} appears!", { name: t(SPECIES_NAMES[S.activeOf(b, 1).species]) }) : t("{keeper} wants a friendly battle!", { keeper: foeLabel })));
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
   const ended = useRef(false);
 
   const nameOf = (side: number, idx: number) => {
     const c = b.sides[side].team[idx];
-    const n = S.SPECIES[c.species].name;
+    const n = t(SPECIES_NAMES[c.species]);
     return side === 0 ? n : b.wild ? t("wild {name}", { name: n }) : t("{keeper}'s {name}", { keeper: foeLabel, name: n });
   };
 
@@ -186,12 +186,12 @@ export function BattleView({
           </div>
           <div className="relative grid place-items-center">
             <div className={cn("transition", view.shake === 1 && "animate-shake", view.flash === 1 && "translate-y-4 opacity-0 duration-700")}>
-              <Creature species={foe.species} size={128} className="h-24 w-24 sm:h-32 sm:w-32" title={S.SPECIES[foe.species].name} />
+              <Creature species={foe.species} size={128} className="h-24 w-24 sm:h-32 sm:w-32" title={t(SPECIES_NAMES[foe.species])} />
             </div>
           </div>
           <div className="relative grid place-items-center">
             <div className={cn("transition", view.shake === 0 && "animate-shake", view.flash === 0 && "translate-y-4 opacity-0 duration-700")}>
-              <Creature species={mine.species} size={140} flip className="h-28 w-28 sm:h-36 sm:w-36" title={S.SPECIES[mine.species].name} />
+              <Creature species={mine.species} size={140} flip className="h-28 w-28 sm:h-36 sm:w-36" title={t(SPECIES_NAMES[mine.species])} />
             </div>
           </div>
           <div className="self-end justify-self-end">
@@ -221,7 +221,7 @@ export function BattleView({
               <Creature species={c.species} size={44} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-bold">
-                  {S.SPECIES[c.species].name} <span className="text-xs font-semibold text-muted">{t("Lv {n}", { n: c.level })}</span>
+                  {t(SPECIES_NAMES[c.species])} <span className="text-xs font-semibold text-muted">{t("Lv {n}", { n: c.level })}</span>
                 </span>
                 <HpBar hp={c.hp} max={S.statsOf(c).hp} />
               </span>

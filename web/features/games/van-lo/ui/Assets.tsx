@@ -158,7 +158,7 @@ export function Assets() {
     <div data-palette="ink" className="flex flex-col gap-6 rounded-3xl bg-background p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Link href="/games/van-lo" className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Vân Lộ
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" /> {t("Vân Lộ", "Cloud Path")}
         </Link>
         <button
           type="button"
@@ -169,7 +169,7 @@ export function Assets() {
         </button>
       </div>
       <header>
-        <h1 className="text-2xl font-extrabold">{t("Kho hình Vân Lộ", "Vân Lộ asset gallery")}</h1>
+        <h1 className="text-2xl font-extrabold">{t("Kho hình Vân Lộ", "Cloud Path asset gallery")}</h1>
         <p className="text-sm text-muted">
           {t(
             "Mọi nhân vật, quái và đồ vật đều được vẽ bằng code (không có file ảnh), rồi lưu vào bộ nhớ đệm để vẽ nhanh.",

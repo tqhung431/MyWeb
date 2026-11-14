@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 import { AppIcon } from "@/components/ui/AppIcon";
 import { UnreadDot, useUnread } from "@/features/hobby/UnreadProvider";
 import { useMe } from "@/features/me/MeProvider";
-import { isActive, LIVE_APPS } from "@/lib/apps";
+import { appForPath, LIVE_APPS } from "@/lib/apps";
 import { cn } from "@/lib/cn";
 
 import { useT } from "@/lib/i18n/I18nProvider";
@@ -28,7 +28,9 @@ export function BottomNav() {
 
   const pinned = LIVE_APPS.filter((a) => a.pinned);
   const items = [{ href: "/", label: t("Home"), icon: House }, ...pinned.map((a) => ({ href: a.href, label: t(a.shortName ?? a.name), icon: a.icon }))];
-  const inOther = !items.some((i) => isActive(pathname, i.href)); // on an app that isn't pinned
+  const current = appForPath(pathname)?.href; // Stage 30: /arena/chess belongs to Games (/games)
+  const on = (href: string) => (href === "/" ? pathname === "/" : current === href);
+  const inOther = !items.some((i) => on(i.href)); // on an app that isn't pinned
 
   return (
     <>
@@ -46,7 +48,7 @@ export function BottomNav() {
                 <Link
                   href={app.href}
                   className="flex flex-col items-center gap-1.5 text-center text-[11px] leading-tight font-semibold"
-                  aria-current={isActive(pathname, app.href) ? "page" : undefined}
+                  aria-current={current === app.href ? "page" : undefined}
                 >
                   <span className="relative">
                     <AppIcon icon={app.icon} accent={app.accent} size="md" />
@@ -74,7 +76,7 @@ export function BottomNav() {
       >
         <ul className="mx-auto flex max-w-md">
           {items.map(({ href, label, icon: Icon }) => {
-            const active = isActive(pathname, href) && !open;
+            const active = on(href) && !open;
             return (
               <li key={href} className="flex-1">
                 <Link href={href} aria-current={active ? "page" : undefined} className={cn(tab, active ? "text-primary" : "text-muted hover:text-text")}>

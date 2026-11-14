@@ -310,7 +310,7 @@ describe("Ngõ Pháo over the game server", () => {
     expect((await ask(a, "alley:start", { code })).ok).toBe(true);
     const t0 = await firstTick;
     expect(t0.players).toHaveLength(3);
-    expect(t0.players.map((p: { name: string }) => p.name)).toEqual(["Ann", "Bou", "Bé Pháo"]);
+    expect(t0.players.map((p: { name: string }) => p.name)).toEqual(["Ann", "Bou", "Bobo"]);
     expect(t0.tiles).toHaveLength(13 * 11);
 
     // Countdown, then Ann walks right from the top-left corner

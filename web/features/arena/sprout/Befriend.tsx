@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import { useT } from "@/lib/i18n/I18nProvider";
 import { Creature } from "./Creature";
-import { ELEMENT_INFO } from "./names";
+import { ELEMENT_INFO, SPECIES_NAMES } from "./names";
 import { SPECIES, type Element, type SpeciesId } from "./sprout";
 import { play } from "./sound";
 
@@ -321,7 +321,7 @@ export function Befriend({ species, bonus, onDone }: { species: SpeciesId; bonus
           <p className="text-xs font-semibold text-muted uppercase">
             {ELEMENT_INFO[el].emoji} {t(ELEMENT_INFO[el].name)}
           </p>
-          <h3 className="text-lg font-extrabold">{t("Win {name}'s trust", { name: SPECIES[species].name })}</h3>
+          <h3 className="text-lg font-extrabold">{t("Win {name}'s trust", { name: t(SPECIES_NAMES[species]) })}</h3>
           {bonus > 0 && <p className="text-xs text-emerald-600 dark:text-emerald-400">{t("It already trusts you a little (+{n}%)", { n: Math.round(bonus * 100) })}</p>}
         </div>
       </div>

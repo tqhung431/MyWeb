@@ -13,7 +13,7 @@ test("start a Ngõ Pháo match with bots and play", async ({ page }) => {
 
   // Four lantern-heads on the scoreboard, and the round clock running once the 3-2-1 is over
   await expect(page.getByText("Round 1")).toBeVisible();
-  for (const bot of ["Bé Pháo", "Kẹo Dừa", "Mèo Mướp"]) await expect(page.getByText(bot, { exact: true }).first()).toBeVisible();
+  for (const bot of ["Bobo", "Kiki", "Momo"]) await expect(page.getByText(bot, { exact: true }).first()).toBeVisible();
   await expect(page.getByText(/^0:0[1-9]$/)).toBeVisible({ timeout: 10_000 });
   await page.keyboard.down("ArrowRight");
   await page.waitForTimeout(300);

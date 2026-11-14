@@ -38,7 +38,7 @@ export const SERVER_TEXTS = [
   tx("{name} won Quiz Party against {a} and {b} ({score} pts)"),
   tx("{name} won Quiz Party against {n} others ({score} pts)"),
   tx("{name} won a chess game against {other}"),
-  tx("{name} won a Ngõ Pháo match"),
+  tx("{name} won a Firecracker Alley match"),
   tx("{name} cleared the Night Market"),
   tx("{name} finished a {n}-min focus session"),
   tx("{name} kept “{habit}” going for {n} days in a row"),

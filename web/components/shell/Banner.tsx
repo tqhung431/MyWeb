@@ -47,7 +47,10 @@ export function Banner({ initialText }: { initialText: string | null }) {
         </div>
       )}
       {paused && (
-        <div role="status" className="mb-4 flex items-center gap-3 rounded-2xl bg-amber-500/12 px-4 py-3 text-sm font-semibold text-amber-800 dark:text-amber-200">
+        <div
+          role="status"
+          className="mb-4 flex items-center gap-3 rounded-2xl bg-amber-500/12 px-4 py-3 text-sm font-semibold text-amber-800 dark:text-amber-200"
+        >
           <PauseCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
           {t("The admin paused you for now. You can still read everything.")}
         </div>

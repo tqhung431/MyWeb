@@ -62,7 +62,7 @@ export const AREAS: Area[] = [
       after: "Well done! The bamboo grove is through the gate. Its sproutlings are shy: be gentle.",
     },
     villagers: [
-      { x: 8, y: 4, name: "Bác Tư", look: 0, lines: ["After the storm the seed-spirits scattered all over Thanh Khê.", "Walk through the tall grass and you'll meet them. Be kind: knock one out and it runs home."] },
+      { x: 8, y: 4, name: "Bác Tư", look: 0, lines: ["After the storm the seed-spirits scattered all over Clearwater Isle.", "Walk through the tall grass and you'll meet them. Be kind: knock one out and it runs home."] },
       { x: 10, y: 9, name: "Bé Na", look: 1, lines: ["Water feeds Wood, Wood feeds Fire, Fire feeds Earth, Earth feeds Metal, Metal feeds Water!", "And each one tames the one two steps on. Water tames Fire. Grandma taught me."] },
     ],
     enter: [2, 6],
@@ -254,7 +254,7 @@ export const AREAS: Area[] = [
       name: "Ông Gió",
       title: "Keeper of the Peak",
       team: [["songGiot", 19], ["bepLua", 19], ["luyTre", 20]],
-      before: "Every shrine on Thanh Khê is awake, thanks to you. One last calm, friendly battle?",
+      before: "Every shrine on Clearwater Isle is awake, thanks to you. One last calm, friendly battle?",
       after: "The whole island sings again. Thank you, little gardener. Come back any time: new sproutlings will wake up soon.",
     },
     villagers: [{ x: 2, y: 4, name: "Bé Mây", look: 3, lines: ["Grandpa Gió has a sproutling of almost every element. Bring a mix!"] }],

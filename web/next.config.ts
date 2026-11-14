@@ -60,6 +60,9 @@ const nextConfig: NextConfig = {
       { source: "/tips/:slug", destination: "/focus/tips/:slug", permanent: true },
       { source: "/chill", destination: "/focus", permanent: true },
       { source: "/chill/:path*", destination: "/focus/:path*", permanent: true },
+      // Stage 30: one Leaderboards page in the Games app (the page picks the game from #…)
+      { source: "/arcade/scores", destination: "/games/leaderboards#quick", permanent: true },
+      { source: "/arcade-online/leaderboard", destination: "/games/leaderboards#quiz", permanent: true },
       // Stage 28: private chats became their own app
       { source: "/hobby-hub/messages", destination: "/messages", permanent: true },
       { source: "/hobby-hub/messages/:userId", destination: "/messages/:userId", permanent: true },
