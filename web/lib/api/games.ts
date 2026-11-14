@@ -2,7 +2,7 @@
 
 import { apiFetch } from "./client";
 
-export type GameId = "van-lo" | "village"; // Stage 24: Giữ Làng solo saves
+export type GameId = "van-lo" | "village" | "sprout"; // Stage 24: Giữ Làng solo saves · Stage 26: Mầm Thú
 export type CloudSave = { game: GameId; version: number; summary: string; data: unknown; updatedAt: string };
 
 export const getSave = (game: GameId) => apiFetch<CloudSave>(`/api/games/saves/${game}`);

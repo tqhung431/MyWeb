@@ -5,8 +5,12 @@ import { isMuted } from "@/features/arcade/sfx";
 
 let ctx: AudioContext | null = null;
 function ac(): AudioContext | null {
-  if (typeof window === "undefined" || isMuted()) return null;
-  ctx ??= new AudioContext();
+  if (typeof window === "undefined" || typeof AudioContext === "undefined" || isMuted()) return null;
+  try {
+    ctx ??= new AudioContext();
+  } catch {
+    return null; // no sound on this browser: the game goes on
+  }
   if (ctx.state === "suspended") void ctx.resume();
   return ctx;
 }

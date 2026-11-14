@@ -11,9 +11,10 @@ import { tx } from "@/lib/i18n/core";
 import { useT } from "@/lib/i18n/I18nProvider";
 import { LanternHead } from "./alley/LanternHead";
 import { Piece } from "./chess/pieces";
+import { Creature } from "./sprout/Creature";
 
 const NEXT = [
-  { name: "Mầm Thú", en: tx("Sproutlings"), what: tx("Befriend, raise and battle original creatures"), stage: 26, emoji: "🌱" },
+  { name: "Mầm Thú", en: tx("Sproutlings with friends"), what: tx("Battle and swap sproutlings with other people, 18 more sproutlings, your own garden"), stage: 27, emoji: "🤝" },
 ];
 
 export function ArenaHub() {
@@ -54,14 +55,29 @@ export function ArenaHub() {
       </Link>
       <Link
         href="/arena/brawl"
-        className="group relative overflow-hidden rounded-3xl bg-linear-to-br from-indigo-950 via-fuchsia-900 to-amber-600 p-6 text-white shadow-card transition hover:-translate-y-0.5 md:col-span-2 xl:col-span-1"
+        className="group relative overflow-hidden rounded-3xl bg-linear-to-br from-indigo-950 via-fuchsia-900 to-amber-600 p-6 text-white shadow-card transition hover:-translate-y-0.5 "
       >
         <p className="pointer-events-none absolute -right-1 -bottom-3 text-7xl" aria-hidden="true">
           🏮🥢
         </p>
-        <p className="text-sm font-semibold tracking-wide text-amber-200 uppercase">{t("New")} · {t("Night Market Brawl")}</p>
+        <p className="text-sm font-semibold tracking-wide text-amber-200 uppercase">{t("Night Market Brawl")}</p>
         <h2 className="mt-1 text-3xl font-extrabold">Chợ Đêm Brawl</h2>
         <p className="mt-1 max-w-[13rem] text-sm text-white/90">{t("Co-op action for 1–4: pick a hero and bonk the trouble-makers out of the night market.")}</p>
+        <span className="mt-5 inline-flex items-center gap-1 text-sm font-bold">
+          {t("Play")} <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" aria-hidden="true" />
+        </span>
+      </Link>
+      <Link
+        href="/arena/sprout"
+        className="group relative overflow-hidden rounded-3xl bg-linear-to-br from-emerald-600 via-teal-600 to-sky-700 p-6 text-white shadow-card transition hover:-translate-y-0.5"
+      >
+        <div className="pointer-events-none absolute -right-3 -bottom-3 flex items-end" aria-hidden="true">
+          <Creature species="mamTre" size={76} />
+          <Creature species="thanHong" size={68} />
+        </div>
+        <p className="text-sm font-semibold tracking-wide text-emerald-100 uppercase">{t("New")} · {t("Sproutlings")}</p>
+        <h2 className="mt-1 text-3xl font-extrabold">Mầm Thú</h2>
+        <p className="mt-1 max-w-[13rem] text-sm text-white/90">{t("A creature adventure: befriend sproutlings, grow together, wake the island's six shrines.")}</p>
         <span className="mt-5 inline-flex items-center gap-1 text-sm font-bold">
           {t("Play")} <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" aria-hidden="true" />
         </span>

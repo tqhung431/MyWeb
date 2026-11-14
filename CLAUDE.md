@@ -1,6 +1,6 @@
 # Nook: notes for Claude
 
-Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–25).
+Read this first in every session. It carries the context from the sessions that built Nook (Stages 1–26).
 
 ## The project
 
@@ -74,7 +74,12 @@ Read this first in every session. It carries the context from the sessions that 
   web/features/arena/brawl; test). BrawlRoom in server.ts (`brawl:*`, stepped from `alleyTick()`, tick "brawl:tick";
   room:join sends the current view). Enemies use a flow field around stalls. `brawl_runs`, `/api/brawl/leaderboard`.
   Controls: keys, Gamepad API, phone stick under the canvas. Playwright: a fullPage screenshot resets phone touch emulation.
-  Next: 26–27 Mầm Thú (design doc "Stage 22 design: Nook Arena games").
+  26: Mầm Thú part 1 (`/arena/sprout`, runs in the browser): rules in `sprout.ts` (species, moves, Ngũ Hành tames/feeds,
+  battles, `aiAction`), TWO byte-identical copies (api/src/arena + web/features/arena/sprout; test) for Stage 27's server
+  battles. Island = `island.ts` (6 areas of 20×12 chars, keepers, villagers; its texts need vi.json entries, checked by
+  web/tests/sprout-texts.test.ts). Canvas 2D island, SVG creatures (`Creature.tsx`), saves = localStorage + cloud game "sprout"
+  (board: level = shrines, kills = kinds befriended). Balance: the island bot in api/tests/sprout.test.ts.
+  Next: Stage 27 Mầm Thú part 2 (battles/swaps between people on the game server, 18 more sproutlings, the garden).
   Original world only: don't copy names/characters/plots from existing novels or films.
   Each stage has an explainer in `docs/stage-N.md`; write one for every new stage and update the README's stage list.
 - Apps: **Chill Corner** (focus timer, generated sounds, tips, achievements), **Music** (uploaded songs
@@ -84,7 +89,7 @@ Read this first in every session. It carries the context from the sessions that 
   **WatchList** (`api/src/watch/sources.ts`; tests use `tests/fake-watch.ts` on port 4995).
   **Habit & Reading Tracker** (`/habits`: days are `date` strings in X-Time-Zone; `web/lib/offline.ts` queue; `public/sw.js`).
   **Arcade Online** (`api/src/arcade-online/`: game.ts has no network code; tests use a fake clock).
-  **Nook Arena** (`/arena`: chess, Ngõ Pháo, Giữ Làng, Chợ Đêm Brawl, Listen Together) and **Nook TV** (`/tv`), Stages 22–25.
+  **Nook Arena** (`/arena`: chess, Ngõ Pháo, Giữ Làng, Chợ Đêm Brawl, Mầm Thú, Listen Together) and **Nook TV** (`/tv`), Stages 22–26.
 - Phone tab bar: Home + apps with `pinned: true` + an "Apps" grid. Don't pin more than 3–4.
 - People (Stage 11): **name only, one browser** (owner's choice): no email/password, no login page. `POST /api/me {name}`
   sets the `nook_session` cookie; names unique by lower(name). Guests (X-Client-Id) still work until they pick a name.
