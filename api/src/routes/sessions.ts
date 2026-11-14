@@ -11,7 +11,6 @@ import { z } from "zod";
 import { db } from "../db/client.js";
 import { focusSessions } from "../db/schema.js";
 import { enqueue } from "../jobs/queue.js";
-import { displayName, publishActivity } from "../realtime/emit.js";
 import { focusSessionsSaved } from "../metrics.js";
 import { rateLimit } from "../middleware/security.js";
 
@@ -58,8 +57,7 @@ sessionsRouter.post("/", saveLimit, async (req, res) => {
 
   if (input.mode === "focus") {
     focusSessionsSaved.add(1, { signed_in: o.userId !== null });
-    // Stage 6: everyone's live feed hears about it
-    await publishActivity("Timer", "{name} finished a {n}-min focus session", { name: displayName(req.user?.name), n: input.minutes });
+    // Stage 28: focus sessions are private (they used to go to everyone's live feed)
     // Stage 5: badges are checked later by the worker, not here.
     await enqueue("achievements", { ...o, timeZone: timeZoneOf(req) });
   }

@@ -3,7 +3,7 @@
 // Stage 21: Settings: language, light or dark, and the colour theme. Stage 22: the admin passcode.
 // Language is a cookie (the server renders pages in it); light/dark and colours stay in this browser.
 
-import { Check, ShieldCheck } from "lucide-react";
+import { Check, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Button, buttonClasses } from "@/components/ui/Button";
@@ -14,6 +14,7 @@ import { saveLang, useLang, useT } from "@/lib/i18n/I18nProvider";
 import { cn } from "@/lib/cn";
 import { useMe } from "@/features/me/MeProvider";
 import { becomeAdmin, getAdmin, stopAdmin, type AdminStatus } from "@/lib/api/arena";
+import { savePreferences } from "@/lib/api/me";
 import { DevicesCard } from "@/features/me/DevicesCard";
 import { refreshAdmin } from "@/features/admin/useIsAdmin";
 import { ApiError } from "@/lib/api/client";
@@ -48,8 +49,11 @@ export function SettingsPage() {
                   active ? "border-primary bg-primary/8" : "border-border hover:bg-surface-muted",
                 )}
               >
-                <span>
-                  <span aria-hidden="true">{l.id === "vi" ? "🇻🇳 " : "🇬🇧 "}</span>
+                <span className="flex items-center gap-2.5">
+                  {/* Stage 28: a language code, not a flag (Windows shows flags as "GB"/"VN", and a flag is a country) */}
+                  <span aria-hidden="true" className="rounded-md bg-surface-muted px-1.5 py-0.5 text-xs font-bold tracking-wide text-muted">
+                    {l.id.toUpperCase()}
+                  </span>
                   {l.label}
                 </span>
                 {active && <Check className="h-5 w-5 text-primary" aria-hidden="true" />}
@@ -69,9 +73,58 @@ export function SettingsPage() {
         <PalettePicker />
       </Card>
 
+      <PrivacyCard />
       <DevicesCard />
       <AdminCard />
     </div>
+  );
+}
+
+// Stage 28: what others see. The live feed shows only what people do together; milestones are opt-in.
+function PrivacyCard() {
+  const t = useT();
+  const { user, setUser } = useMe();
+  const [saving, setSaving] = useState(false);
+  if (!user) return null;
+  const on = !!user.preferences?.shareMilestones;
+  async function toggle() {
+    setSaving(true);
+    try {
+      setUser(await savePreferences({ shareMilestones: !on }));
+    } finally {
+      setSaving(false);
+    }
+  }
+  return (
+    <Card>
+      <CardHeader title={t("Privacy")} subtitle={t("What others on this Nook see about you.")} />
+      <ul className="mb-4 flex flex-col gap-1.5 text-sm">
+        <li className="flex gap-2">
+          <Eye className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+          <span>{t("Everyone sees: when you join Nook or a group, your group posts, game wins and songs you add.")}</span>
+        </li>
+        <li className="flex gap-2">
+          <EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+          <span>{t("Only you see: focus sessions, habits, reading, what you watch and what you listen to.")}</span>
+        </li>
+      </ul>
+      <label className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl border border-border p-3 hover:bg-surface-muted">
+        <span>
+          <span className="block font-semibold">{t("Share my milestones")}</span>
+          <span className="block text-sm text-muted">{t("Badges, habit streaks (7, 30, 100 days) and finished books appear in Live now.")}</span>
+        </span>
+        <input type="checkbox" role="switch" checked={on} disabled={saving} onChange={() => void toggle()} className="peer sr-only" />
+        <span
+          aria-hidden="true"
+          className={cn(
+            "relative mt-1 h-6 w-11 shrink-0 rounded-full transition peer-focus-visible:ring-2 peer-focus-visible:ring-primary",
+            on ? "bg-primary" : "bg-surface-muted ring-1 ring-border",
+          )}
+        >
+          <span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all", on ? "left-5.5" : "left-0.5")} />
+        </span>
+      </label>
+    </Card>
   );
 }
 

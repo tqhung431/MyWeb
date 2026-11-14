@@ -72,11 +72,11 @@ export function Conversations({ className }: { className?: string }) {
       )}
       <ul className="flex min-h-0 flex-col gap-1 overflow-y-auto">
         {list?.map((c) => {
-          const active = pathname === `/hobby-hub/messages/${c.id}`;
+          const active = pathname === `/messages/${c.id}`;
           return (
             <li key={c.id}>
               <Link
-                href={`/hobby-hub/messages/${c.id}`}
+                href={`/messages/${c.id}`}
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-2xl p-2.5 transition",
@@ -93,7 +93,9 @@ export function Conversations({ className }: { className?: string }) {
                   <span className="flex items-center gap-2">
                     <span className={cn("min-w-0 flex-1 truncate text-sm", c.unread ? "font-semibold text-text" : "text-muted")}>
                       {c.lastMine && t("You: ")}
-                      {c.lastImage && !c.lastBody ? (
+                      {c.lastDeleted ? (
+                        <span className="italic">{t("Message deleted")}</span>
+                      ) : c.lastImage && !c.lastBody ? (
                         <span className="inline-flex items-center gap-1">
                           <ImageIcon className="h-3.5 w-3.5" aria-hidden="true" /> {t("Picture")}
                         </span>
@@ -142,7 +144,7 @@ function PeopleSearch() {
       <ul className="flex max-h-64 flex-col overflow-y-auto">
         {people?.map((p) => (
           <li key={p.id}>
-            <Link href={`/hobby-hub/messages/${p.id}`} className="flex items-center gap-3 rounded-2xl p-2 hover:bg-surface-muted">
+            <Link href={`/messages/${p.id}`} className="flex items-center gap-3 rounded-2xl p-2 hover:bg-surface-muted">
               <Avatar name={p.name} size="sm" />
               <span className="truncate text-sm font-semibold">{p.name}</span>
             </Link>

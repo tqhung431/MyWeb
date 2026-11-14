@@ -12,7 +12,7 @@
 import { and, isNull, like, lt, ne, notExists, sql } from "drizzle-orm";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
-import { adminLog, reports, reservedNames, signInCodes, achievements, authSessions, chatMessages, directMessages, focusSessions, gameScores, songLikes, songPlays, users, watchEntries, watchTitles, onlineGames, onlineGamePlayers } from "../db/schema.js";
+import { signIns, adminLog, reports, reservedNames, signInCodes, achievements, authSessions, chatMessages, directMessages, focusSessions, gameScores, songLikes, songPlays, users, watchEntries, watchTitles, onlineGames, onlineGamePlayers } from "../db/schema.js";
 import { sweepImages } from "../hobby/images.js";
 import { deletePerson } from "../people.js";
 import { broadcast } from "../realtime/emit.js";
@@ -67,6 +67,7 @@ export async function cleanup(now = new Date()) {
   await db.delete(signInCodes).where(lt(signInCodes.expiresAt, now));
   await db.delete(reservedNames).where(lt(reservedNames.until, now));
   await db.delete(adminLog).where(lt(adminLog.at, cutoff));
+  await db.delete(signIns).where(lt(signIns.at, cutoff)); // Stage 28: the sign-in log, 90 days too
   await db.delete(reports).where(and(ne(reports.status, "open"), lt(reports.createdAt, cutoff)));
 
   if (inactive.length) broadcast("people:changed");

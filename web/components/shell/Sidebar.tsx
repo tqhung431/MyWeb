@@ -18,7 +18,7 @@ import { useT } from "@/lib/i18n/I18nProvider";
 export function Sidebar() {
   const t = useT();
   const pathname = usePathname();
-  const { total: unread } = useUnread();
+  const { badge } = useUnread(); // Stage 28: Messages and Hobby Hub each have their own
 
   return (
     <aside className="sticky top-0 hidden h-dvh flex-col gap-8 border-r border-border bg-surface/60 px-4 py-6 backdrop-blur-xl lg:flex">
@@ -40,9 +40,9 @@ export function Sidebar() {
             >
               <AppIcon icon={app.icon} accent={app.accent} size="sm" />
               <span className="truncate">{t(app.name)}</span>
-              {app.href === "/hobby-hub" && unread > 0 && (
+              {badge(app.href) > 0 && (
                 <span className="ml-auto">
-                  <UnreadDot count={unread} />
+                  <UnreadDot count={badge(app.href)} />
                   <span className="sr-only"> {t("unread")}</span>
                 </span>
               )}

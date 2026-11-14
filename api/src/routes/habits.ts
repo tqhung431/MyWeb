@@ -24,7 +24,7 @@ import { BOOK_STATUSES, books, habitDays, habits, readingLog } from "../db/schem
 import { addDays, countInWeek, dayStreak, isDay, todayIn, weekStreak } from "../habits/days.js";
 import { requireUser } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
-import { publishActivity } from "../realtime/emit.js";
+import { publishMilestone } from "../realtime/emit.js";
 import { timeZoneOf } from "./sessions.js";
 
 export const habitsRouter = Router();
@@ -146,9 +146,9 @@ habitsRouter.put("/:id/days/:day", async (req, res) => {
   const streak = habit.perWeek === 7 ? { count: dayStreak(all, today), unit: "day" } : { count: weekStreak(all, today, habit.perWeek), unit: "week" };
   res.json({ day, done, streak, thisWeek: countInWeek(all, today) });
 
-  // Round numbers are worth telling everyone
+  // Round numbers are worth telling everyone (Stage 28: if you share your milestones)
   if (done && day === today && [7, 30, 100, 365].includes(streak.count) && streak.unit === "day") {
-    await publishActivity("Flame", "{name} kept “{habit}” going for {n} days in a row", { name: req.user!.name, habit: habit.name, n: streak.count });
+    await publishMilestone(req.user, "Flame", "{name} kept “{habit}” going for {n} days in a row", { name: req.user!.name, habit: habit.name, n: streak.count });
   }
 });
 
@@ -208,7 +208,7 @@ booksRouter.patch("/:id", async (req, res) => {
     .returning();
   res.json(updated);
   if (changes.status === "finished" && book.status !== "finished") {
-    await publishActivity("BookOpen", "{name} finished reading “{book}”", { name: req.user!.name, book: book.title });
+    await publishMilestone(req.user, "BookOpen", "{name} finished reading “{book}”", { name: req.user!.name, book: book.title });
   }
 });
 
@@ -243,7 +243,7 @@ booksRouter.post("/:id/pages", async (req, res) => {
     .where(eq(books.id, book.id))
     .returning();
   res.json(updated);
-  if (finished && book.status !== "finished") await publishActivity("BookOpen", "{name} finished reading “{book}”", { name: req.user!.name, book: book.title });
+  if (finished && book.status !== "finished") await publishMilestone(req.user, "BookOpen", "{name} finished reading “{book}”", { name: req.user!.name, book: book.title });
 });
 
 booksRouter.get("/stats", async (req, res) => {

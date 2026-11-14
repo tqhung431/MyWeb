@@ -67,6 +67,9 @@ const VI: Record<string, string> = {
   "You can only delete your own posts": "Bạn chỉ xóa được bài viết của mình",
   "You can only delete your own comments": "Bạn chỉ xóa được bình luận của mình",
   "You can only delete your own messages": "Bạn chỉ xóa được tin nhắn của mình",
+  // Stage 28
+  "You can only edit your own messages": "Bạn chỉ sửa được tin nhắn của mình",
+  "Messages can only be edited for 10 minutes": "Chỉ sửa được tin nhắn trong 10 phút",
   "Join this group to post": "Tham gia nhóm để đăng bài",
   "Join this group to comment": "Tham gia nhóm để bình luận",
   "Join this group to chat": "Tham gia nhóm để trò chuyện",

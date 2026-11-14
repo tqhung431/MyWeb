@@ -14,7 +14,7 @@ import { periodQuery } from "./routes/arcadeOnline.js";
 import { chatBody } from "./routes/companion.js";
 import { saveBody } from "./routes/games.js";
 import { bookEdits, bookFields, dayBody, habitFields, habitsQuery, pagesBody, statsQuery } from "./routes/habits.js";
-import { beforeQuery, commentBody, messageBody, newGroup, postBody } from "./routes/hobby.js";
+import { beforeQuery, commentBody, editBody, messageBody, newGroup, postBody } from "./routes/hobby.js";
 import { peopleQuery } from "./routes/messages.js";
 import { codeBody, nameBody, newMeBody, pinBody, preferences, signInBody } from "./routes/me.js";
 import { bannerBody, confirmBody, lockBody, pauseBody, reportAction, reportBody } from "./routes/admin.js";
@@ -73,6 +73,7 @@ export const ENDPOINTS: Endpoint[] = [
   { method: "get", path: "/api/admin/storage", tag: "Admin", summary: "Space used by songs and chat pictures, and free disk space", who: "name" },
   { method: "post", path: "/api/admin/cleanup", tag: "Admin", summary: "Run the daily cleanup now", who: "name" },
   { method: "get", path: "/api/admin/log", tag: "Admin", summary: "The admin log", who: "name" },
+  { method: "get", path: "/api/admin/sign-ins", tag: "Admin", summary: "Who signed in, when, on what kind of device (90 days)", who: "name" },
   { method: "get", path: "/api/admin/health", tag: "Admin", summary: "Database, Valkey, game server, AI and disk: working or not", who: "name" },
 
   // Chill Corner
@@ -163,14 +164,16 @@ export const ENDPOINTS: Endpoint[] = [
     who: "name",
     body: messageBody,
   },
-  { method: "delete", path: "/api/hobby/messages/{id}", tag: "Hobby Hub", summary: "Delete your chat message", who: "name" },
+  { method: "delete", path: "/api/hobby/messages/{id}", tag: "Hobby Hub", summary: "Delete your chat message (\"Message deleted\" stays in its place)", who: "name" },
+  { method: "patch", path: "/api/hobby/messages/{id}", tag: "Hobby Hub", summary: "Edit your chat message (within 10 minutes)", who: "name", body: editBody },
   { method: "get", path: "/api/hobby/unread", tag: "Hobby Hub", summary: "Unread private messages and group posts/messages (the badge)" },
   { method: "get", path: "/api/hobby/people", tag: "Hobby Hub", summary: "People with a name, to start a private chat with", who: "name", query: peopleQuery },
   { method: "get", path: "/api/hobby/dms", tag: "Hobby Hub", summary: "Your private chats, newest first, with unread counts", who: "name" },
   { method: "get", path: "/api/hobby/dms/{userId}", tag: "Hobby Hub", summary: "One private chat, 50 messages at a time", who: "name", query: beforeQuery },
   { method: "post", path: "/api/hobby/dms/{userId}", tag: "Hobby Hub", summary: "Send a private message (words, a picture, or both)", who: "name", body: messageBody },
   { method: "put", path: "/api/hobby/dms/{userId}/read", tag: "Hobby Hub", summary: "Mark a private chat as read", who: "name" },
-  { method: "delete", path: "/api/hobby/dms/messages/{id}", tag: "Hobby Hub", summary: "Delete your private message", who: "name" },
+  { method: "delete", path: "/api/hobby/dms/messages/{id}", tag: "Hobby Hub", summary: "Delete your private message (\"Message deleted\" stays in its place)", who: "name" },
+  { method: "patch", path: "/api/hobby/dms/messages/{id}", tag: "Hobby Hub", summary: "Edit your private message (within 10 minutes)", who: "name", body: editBody },
   { method: "post", path: "/api/hobby/images", tag: "Hobby Hub", summary: "Upload a picture for a chat (multipart: file; JPEG, PNG, WebP or GIF up to 5 MB)", who: "name" },
   { method: "get", path: "/api/hobby/images/{id}", tag: "Hobby Hub", summary: "A chat picture (group chat: anyone; private chat: the two people)" },
 

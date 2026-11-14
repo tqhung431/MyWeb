@@ -57,6 +57,9 @@ const nextConfig: NextConfig = {
     return [
       { source: "/tips", destination: "/chill/tips", permanent: true },
       { source: "/tips/:slug", destination: "/chill/tips/:slug", permanent: true },
+      // Stage 28: private chats became their own app
+      { source: "/hobby-hub/messages", destination: "/messages", permanent: true },
+      { source: "/hobby-hub/messages/:userId", destination: "/messages/:userId", permanent: true },
     ];
   },
 };

@@ -16,7 +16,7 @@ import { valkey, valkeyReady } from "../valkey/client.js";
 
 // Stage 21: text is an English template ("{name} joined {group}") with params, so each browser shows it in its
 // own language. Params whose key starts with "_" are Nook's own words (a badge, a game) and get translated too.
-export type Activity = { id: string; icon: string; text: string; params?: Record<string, string | number>; at: string };
+export type Activity = { id: string; icon: string; text: string; params?: Record<string, string | number>; milestone?: boolean; at: string };
 export type Owner = { userId: string | null; clientId: string | null };
 
 const RECENT_KEY = "activity:recent";
@@ -76,10 +76,14 @@ export function notifyOwner(owner: Owner, event: string, payload: unknown): void
   target()?.to(ownerRoom(owner)).emit(event, payload);
 }
 
-// Something happened that everyone may see ("Linh finished a focus session").
+// Something happened that everyone may see ("Linh joined Board games").
 // Kept in a short list in Valkey too, so a page opened later can show recent activity.
-export async function publishActivity(icon: string, text: string, params?: Activity["params"]): Promise<void> {
-  const activity: Activity = { id: randomUUID(), icon, text, ...(params && { params }), at: new Date().toISOString() };
+//
+// Stage 28: the feed shows what people do TOGETHER (joins, groups, posts, game wins, new songs). What people do on
+// their own (focus sessions, watching, listening) is never published. Milestones (badges, habit streaks, finished
+// books) only appear for people who chose Settings → Privacy → "Share my milestones": use publishMilestone().
+export async function publishActivity(icon: string, text: string, params?: Activity["params"], opts?: { milestone?: boolean }): Promise<void> {
+  const activity: Activity = { id: randomUUID(), icon, text, ...(params && { params }), ...(opts?.milestone && { milestone: true }), at: new Date().toISOString() };
   if (valkeyReady()) {
     await valkey
       .multi()
@@ -91,10 +95,26 @@ export async function publishActivity(icon: string, text: string, params?: Activ
   target()?.emit("activity", activity);
 }
 
+/** Stage 28: a badge, a streak or a finished book, only if this person shares their milestones */
+export async function publishMilestone(
+  user: { name: string; preferences?: { shareMilestones?: boolean } | null } | null | undefined,
+  icon: string,
+  text: string,
+  params: Activity["params"],
+): Promise<void> {
+  if (!user?.preferences?.shareMilestones) return;
+  await publishActivity(icon, text, params, { milestone: true });
+}
+
+// Lines from before Stage 28 that are private now: they leave the feed too
+const PRIVATE_ICONS = new Set(["Timer", "Clapperboard", "Headphones"]); // focus sessions, WatchList, "is listening to"
+const MILESTONE = [/unlocked/, /going for \{n\} days/, /finished reading/];
+export const isShareable = (a: Activity) => !PRIVATE_ICONS.has(a.icon) && (a.milestone || !MILESTONE.some((r) => r.test(a.text)));
+
 export async function recentActivity(): Promise<Activity[]> {
   if (!valkeyReady()) return [];
   const items = await valkey.lrange(RECENT_KEY, 0, RECENT_MAX - 1).catch(() => [] as string[]);
-  return items.map((i) => JSON.parse(i) as Activity);
+  return items.map((i) => JSON.parse(i) as Activity).filter(isShareable);
 }
 
 // How people appear in the public activity feed: the name they picked, or "A guest".

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { getT } from "@/lib/i18n/server";
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: (await getT())("Messages · Hobby Hub") };
+  return { title: (await getT())("Messages") };
 }
 
 // The list is in the layout (MessagesShell); on a big screen this fills the right side.

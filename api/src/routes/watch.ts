@@ -15,7 +15,7 @@ import { users, WATCH_STATUSES, watchEntries, watchTitles } from "../db/schema.j
 import { requireUser } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
 import { rateLimit } from "../middleware/security.js";
-import { broadcast, publishActivity } from "../realtime/emit.js";
+import { broadcast } from "../realtime/emit.js";
 import { lookUp, search, SourceDown, type Source, type Title } from "../watch/sources.js";
 
 export const watchRouter = Router();
@@ -124,13 +124,6 @@ async function saveTitle(t: Title): Promise<number> {
   return row.id;
 }
 
-const STATUS_WORDS = {
-  want: "{name} wants to watch “{title}”",
-  watching: "{name} is watching “{title}”",
-  done: "{name} finished “{title}”{stars}",
-  dropped: "{name} stopped watching “{title}”",
-} as const;
-
 watchRouter.put("/list/:source/:externalId", requireUser, async (req, res) => {
   const source = sourceParam.parse(req.params.source);
   const externalId = externalIdParam.parse(req.params.externalId);
@@ -180,12 +173,7 @@ watchRouter.put("/list/:source/:externalId", requireUser, async (req, res) => {
     .where(and(eq(watchEntries.userId, req.user!.id), eq(watchEntries.titleId, titleId!)));
   res.json(entry);
 
-  broadcast("watch:changed");
-  // Only status changes make the live feed (not every star or note)
-  if (before?.status !== input.status) {
-    const stars = input.stars ? ` ${"★".repeat(input.stars)}` : "";
-    await publishActivity("Clapperboard", STATUS_WORDS[input.status], { name: req.user!.name, title: name, stars });
-  }
+  broadcast("watch:changed"); // Stage 28: what you watch is private (no more "… is watching" in the live feed)
 });
 
 watchRouter.delete("/list/:titleId", requireUser, async (req, res) => {

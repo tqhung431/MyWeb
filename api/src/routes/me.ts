@@ -52,6 +52,7 @@ import {
   songLikes,
   songs,
   reservedNames,
+  signIns,
   users,
   watchEntries,
   habits,
@@ -125,6 +126,7 @@ meRouter.post("/", ...newNameLimits, async (req, res) => {
     });
 
   await startSession(res, user.id, req.get("user-agent"));
+  await logSignIn(user, "new", req.get("user-agent"));
   await claimGuestData(user.id, req.get("x-client-id")); // what you did before picking a name stays yours
   res.status(201).json({ user: publicUser(user) });
 
@@ -194,6 +196,7 @@ export const preferences = z.object({
       long: z.number().int().min(1).max(60),
     })
     .optional(),
+  shareMilestones: z.boolean().optional(), // Stage 28: Settings → Privacy
 });
 
 meRouter.put("/preferences", requireUser, async (req, res) => {
@@ -208,6 +211,11 @@ meRouter.put("/preferences", requireUser, async (req, res) => {
   res.json({ user: publicUser(user) });
 });
 
+
+// Stage 28: the admin's sign-in log (who, when, what kind of device; nothing else)
+async function logSignIn(user: { id: string; name: string }, how: "new" | "pin" | "code" | "claim", userAgent: string | undefined) {
+  await db.insert(signIns).values({ userId: user.id, name: user.name, how, userAgent: userAgent?.slice(0, 300) ?? null });
+}
 
 // --- Stage 27: PIN, signing in on another device, devices ------------------------------------------
 
@@ -248,6 +256,7 @@ meRouter.post("/sign-in", signInLimit, async (req, res) => {
   await db.update(users).set({ pinFailures: 0, pinLockedUntil: null }).where(eq(users.id, user.id));
   if (req.user) await endSession(res, req.cookies?.[COOKIE_NAME]); // signed in as someone else on this browser: not any more
   await startSession(res, user.id, req.get("user-agent"));
+  await logSignIn(user, "pin", req.get("user-agent"));
   res.json({ user: publicUser(user) });
 });
 
@@ -267,6 +276,7 @@ meRouter.post("/sign-in/code", signInLimit, async (req, res) => {
   if (!user) throw new HttpError(401, "That code doesn't work. Codes work once, and only for a short time.");
   if (req.user) await endSession(res, req.cookies?.[COOKIE_NAME]);
   await startSession(res, user.id, req.get("user-agent"));
+  await logSignIn(user, used.kind === "claim" ? "claim" : "code", req.get("user-agent"));
   res.json({ user: publicUser(user) });
 });
 

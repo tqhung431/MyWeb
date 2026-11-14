@@ -24,13 +24,13 @@ test("two people chat privately; a third can't see it", async ({ browser, baseUR
   const text = `secret ${unique()}`;
 
   const page = await lan.ctx.newPage();
-  await page.goto(`/hobby-hub/messages/${minh.id}`);
+  await page.goto(`/messages/${minh.id}`);
   await page.getByRole("textbox", { name: "Message" }).fill(text);
   await page.keyboard.press("Enter");
   await expect(page.getByText(text)).toBeVisible();
 
   const other = await minh.ctx.newPage();
-  await other.goto(`/hobby-hub/messages/${lan.id}`);
+  await other.goto(`/messages/${lan.id}`);
   await expect(other.getByText(text).last()).toBeVisible();
   await expect(page.getByText("Seen")).toBeVisible(); // Lan sees that Minh read it
 

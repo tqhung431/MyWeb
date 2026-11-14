@@ -123,7 +123,7 @@ describe("security", () => {
 });
 
 describe("live events", () => {
-  it("pushes a new badge to its owner only, and tells everyone in the feed", async () => {
+  it("pushes a new badge to its owner only; the feed stays quiet (Stage 28: badges are private unless shared)", async () => {
     const guest = randomUUID();
     const owner = tab({ clientId: guest });
     const stranger = tab();
@@ -131,17 +131,18 @@ describe("live events", () => {
     await Promise.all([next(owner, "presence"), next(stranger, "presence")]);
 
     let strangerGotBadge = false;
+    const strangerHeard: Activity[] = [];
     stranger.on("achievement", () => (strangerGotBadge = true));
+    stranger.on("activity", (a: Activity) => strangerHeard.push(a));
 
     await request(app).post("/api/sessions").set("X-Client-Id", guest).send({ mode: "focus", minutes: 25 });
     const badge = next<{ code: string }>(owner, "achievement", (a) => a.code === "first-focus");
-    const feed = next<Activity>(stranger, "activity", (a) => filled(a).includes("First focus"));
     await processJob("achievements", { userId: null, clientId: guest, timeZone: "UTC" }); // what the worker does
 
     expect((await badge).code).toBe("first-focus");
-    expect(filled(await feed)).toBe("A guest unlocked “First focus”");
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 150));
     expect(strangerGotBadge).toBe(false);
+    expect(strangerHeard).toEqual([]); // no "finished a focus session", no "unlocked"
   });
 
   it("knows people by their cookie and shows the name they picked", async () => {
@@ -153,15 +154,15 @@ describe("live events", () => {
     const other = tab();
     await next(phone, "presence");
     const feed = next<Activity>(other, "activity", (a) => filled(a).startsWith("Linh"));
-    await browser.post("/api/sessions").send({ mode: "focus", minutes: 25 });
-    expect(filled(await feed)).toBe("Linh Pham finished a 25-min focus session");
+    await browser.post("/api/hobby/groups").send({ name: "Night owls", emoji: "🦉" });
+    expect(filled(await feed)).toBe("Linh Pham started the group 🦉 Night owls");
   });
 
   it("sends the recent feed to a page that connects later", async () => {
-    await request(app).post("/api/sessions").set("X-Client-Id", randomUUID()).send({ mode: "focus", minutes: 25 });
+    await request(app).post("/api/me").send({ name: "Early Bird" });
     const late = tab();
     const recent = await next<Activity[]>(late, "activity:recent");
-    expect(filled(recent[0])).toBe("A guest finished a 25-min focus session");
+    expect(filled(recent[0])).toBe("Early Bird joined Nook");
   });
 });
 
@@ -177,9 +178,9 @@ describe("many servers, one Valkey", () => {
       expect(await next<Presence>(onFirst, "presence", (p) => p.online === 2 && p.focusing === 1)).toEqual({ online: 2, focusing: 1 });
 
       // An event published on server 1 reaches the browser on server 2
-      const heard = next<Activity>(onSecond, "activity", (a) => filled(a).includes("25-min"));
-      await request(app).post("/api/sessions").set("X-Client-Id", randomUUID()).send({ mode: "focus", minutes: 25 });
-      expect(filled(await heard)).toMatch(/finished a 25-min focus session/);
+      const heard = next<Activity>(onSecond, "activity", (a) => filled(a).includes("Far Away"));
+      await request(app).post("/api/me").send({ name: "Far Away" });
+      expect(filled(await heard)).toBe("Far Away joined Nook");
     } finally {
       second.realtime.close();
       setRealtimeServer(io);

@@ -87,7 +87,14 @@ Read this first in every session. It carries the context from the sessions that 
   (`logAdmin`). `/admin` page (People, Reports, Content, Nook banner/storage/log, Health). Admin can't read private chats,
   only reported messages. Paused users: `blockPaused`. Locked groups: `hobby_groups.locked`. No server commands in pages
   (owner's rule): point to docs / Admin → Health. Owner's rule: Nook stores no emails.
-  Next (plan): Stage 28 chat and privacy (Messages app, message menu, feed shows joins only), Stage 29 tidy menus +
+  28: Chat and privacy. Private chats = Messages app (`/messages`, pinned; Music unpinned; old /hobby-hub/messages
+  redirects in next.config). Deleting = soft delete (`deleted_by` author|admin, body "", picture file removed:
+  `api/src/hobby/erase.ts`), "Message deleted" stays in place; Undo = ChatPanel waits 5 s before calling the API;
+  edit for 10 min (`edited_at`). `MessageMenu.tsx` (tap / right-click / ⋯). Feed: focus, WatchList, listening never
+  published; milestones only via `publishMilestone()` when `preferences.shareMilestones` (Settings → Privacy);
+  `recentActivity()` hides old private lines. Admin sign-in log = `sign_ins` (who, how, user agent; 90 days).
+  AppHeader: apps with >4 tabs put them on their own wrapping line. Language buttons show EN/VI, not flags.
+  Next (plan): Stage 29 tidy menus +
   English-first games (Vân Lộ = "Cloud Path" in English, "Vân Lộ" in Vietnamese, never "Đường Mây"), then Mầm Thú part 2.
   Original world only: don't copy names/characters/plots from existing novels or films.
   Each stage has an explainer in `docs/stage-N.md`; write one for every new stage and update the README's stage list.
@@ -99,7 +106,7 @@ Read this first in every session. It carries the context from the sessions that 
   **Habit & Reading Tracker** (`/habits`: days are `date` strings in X-Time-Zone; `web/lib/offline.ts` queue; `public/sw.js`).
   **Arcade Online** (`api/src/arcade-online/`: game.ts has no network code; tests use a fake clock).
   **Nook Arena** (`/arena`: chess, Ngõ Pháo, Giữ Làng, Chợ Đêm Brawl, Mầm Thú, Listen Together) and **Nook TV** (`/tv`), Stages 22–26.
-- Phone tab bar: Home + apps with `pinned: true` + an "Apps" grid. Don't pin more than 3–4.
+- Phone tab bar: Home + apps with `pinned: true` + an "Apps" grid. Don't pin more than 3–4 (Stage 28: Chill Corner, Messages, Hobby Hub).
 - People (Stage 11): **name only** (owner's choice): no email/password. Stage 27 added a PIN per name to sign in on other devices. `POST /api/me {name}`
   sets the `nook_session` cookie; names unique by lower(name). Guests (X-Client-Id) still work until they pick a name.
   Data retention (owner's choice: "store data but not for too long"): worker job `cleanup` daily deletes people unseen for

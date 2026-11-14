@@ -6,7 +6,8 @@
 // GET    /api/hobby/dms/:userId?before=id        one private chat, 50 messages at a time, oldest first
 // POST   /api/hobby/dms/:userId  { body, imageId? }   send
 // PUT    /api/hobby/dms/:userId/read             "I've read this chat"
-// DELETE /api/hobby/dms/messages/:id             delete your message
+// DELETE /api/hobby/dms/messages/:id             delete your message ("Message deleted" stays, Stage 28)
+// PATCH  /api/hobby/dms/messages/:id  { body }   edit your message within 10 minutes (Stage 28)
 // POST   /api/hobby/images   (multipart: file)   upload a picture, then send its id with a message
 // GET    /api/hobby/images/:id                   a picture, for the people who may see it
 //
@@ -21,12 +22,13 @@ import multer from "multer";
 import { z } from "zod";
 import { db } from "../db/client.js";
 import { chatImages, directMessages, users } from "../db/schema.js";
-import { dropImageIfUnused, imageJson, imagePath, inspectImage, MAX_IMAGE_MB, saveImage } from "../hobby/images.js";
+import { imageJson, imagePath, inspectImage, MAX_IMAGE_MB, saveImage } from "../hobby/images.js";
 import { requireUser } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errors.js";
 import { rateLimit } from "../middleware/security.js";
 import { notifyOwner } from "../realtime/emit.js";
-import { beforeQuery, messageBody, ownImage } from "./hobby.js";
+import { canStillEdit, eraseDirectMessage } from "../hobby/erase.js";
+import { beforeQuery, editBody, messageBody, ownImage } from "./hobby.js";
 
 export const messagesRouter = Router();
 
@@ -56,7 +58,7 @@ messagesRouter.get("/unread", async (req, res) => {
   const [row] = (
     await db.execute<{ messages: number; groups: number }>(sql`
       select
-        (select count(*)::int from direct_messages where recipient_id = ${me} and read_at is null) as messages,
+        (select count(*)::int from direct_messages where recipient_id = ${me} and read_at is null and deleted_by is null) as messages,
         (select coalesce(sum(
             (select count(*) from posts p where p.group_id = gm.group_id and p.created_at > gm.last_read_at and p.author_id <> ${me})
           + (select count(*) from chat_messages c where c.group_id = gm.group_id and c.created_at > gm.last_read_at and c.author_id <> ${me})
@@ -91,6 +93,7 @@ messagesRouter.get("/dms", requireUser, async (req, res) => {
       name: string;
       lastBody: string;
       lastImage: boolean;
+      lastDeleted: boolean;
       lastMine: boolean;
       lastAt: string;
       unread: number;
@@ -99,11 +102,11 @@ messagesRouter.get("/dms", requireUser, async (req, res) => {
         select case when sender_id = ${me} then recipient_id else sender_id end as other, *
         from direct_messages where sender_id = ${me} or recipient_id = ${me}
       ), latest as (
-        select distinct on (other) other, body, image_id, sender_id, created_at from mine order by other, id desc
+        select distinct on (other) other, body, image_id, sender_id, created_at, deleted_by from mine order by other, id desc
       )
-      select u.id, u.name, l.body as "lastBody", l.image_id is not null as "lastImage", l.sender_id = ${me} as "lastMine",
+      select u.id, u.name, l.body as "lastBody", l.image_id is not null as "lastImage", l.deleted_by is not null as "lastDeleted", l.sender_id = ${me} as "lastMine",
         l.created_at as "lastAt",
-        (select count(*)::int from direct_messages d where d.sender_id = u.id and d.recipient_id = ${me} and d.read_at is null) as unread
+        (select count(*)::int from direct_messages d where d.sender_id = u.id and d.recipient_id = ${me} and d.read_at is null and d.deleted_by is null) as unread
       from latest l join users u on u.id = l.other
       order by l.created_at desc`)
   ).rows;
@@ -120,6 +123,8 @@ messagesRouter.get("/dms/:userId", requireUser, async (req, res) => {
       body: directMessages.body,
       createdAt: directMessages.createdAt,
       readAt: directMessages.readAt,
+      deletedBy: directMessages.deletedBy,
+      editedAt: directMessages.editedAt,
       senderId: directMessages.senderId,
       image: { id: chatImages.id, width: chatImages.width, height: chatImages.height },
     })
@@ -146,7 +151,7 @@ messagesRouter.post("/dms/:userId", requireUser, perUser("dm", 30_000, 20), asyn
     .insert(directMessages)
     .values({ senderId: me.id, recipientId: person.id, body, imageId: img?.id ?? null })
     .returning();
-  const message = { id: m.id, body: m.body, createdAt: m.createdAt, readAt: null, image: imageJson(img) };
+  const message = { id: m.id, body: m.body, createdAt: m.createdAt, readAt: null, deletedBy: null, editedAt: null, image: imageJson(img) };
   res.status(201).json({ ...message, mine: true });
   // Both people's tabs: the sender's other tabs show it too
   toUser(person.id, "dm:message", { from: { id: me.id, name: me.name }, with: me.id, message: { ...message, mine: false } });
@@ -171,11 +176,22 @@ messagesRouter.delete("/dms/messages/:id", requireUser, async (req, res) => {
   const [m] = await db.select().from(directMessages).where(eq(directMessages.id, id));
   if (!m || (m.senderId !== req.user!.id && m.recipientId !== req.user!.id)) throw new HttpError(404, "Message not found");
   if (m.senderId !== req.user!.id) throw new HttpError(403, "You can only delete your own messages");
-  await db.delete(directMessages).where(eq(directMessages.id, id));
-  await dropImageIfUnused(m.imageId);
+  await eraseDirectMessage(id, "author"); // Stage 28: "Message deleted" stays in its place
   res.status(204).end();
-  toUser(m.senderId, "dm:deleted", { with: m.recipientId, id });
-  toUser(m.recipientId, "dm:deleted", { with: m.senderId, id });
+});
+
+// Stage 28: change your own message within 10 minutes
+messagesRouter.patch("/dms/messages/:id", requireUser, async (req, res) => {
+  const id = z.coerce.number().int().positive().parse(req.params.id);
+  const { body } = editBody.parse(req.body);
+  const [m] = await db.select().from(directMessages).where(eq(directMessages.id, id));
+  if (!m || m.deletedBy || (m.senderId !== req.user!.id && m.recipientId !== req.user!.id)) throw new HttpError(404, "Message not found");
+  if (m.senderId !== req.user!.id) throw new HttpError(403, "You can only edit your own messages");
+  if (!canStillEdit(m.createdAt)) throw new HttpError(409, "Messages can only be edited for 10 minutes");
+  const [e] = await db.update(directMessages).set({ body, editedAt: new Date() }).where(eq(directMessages.id, id)).returning();
+  res.json({ id: e.id, body: e.body, editedAt: e.editedAt });
+  toUser(m.senderId, "dm:edited", { with: m.recipientId, id, body: e.body, editedAt: e.editedAt });
+  toUser(m.recipientId, "dm:edited", { with: m.senderId, id, body: e.body, editedAt: e.editedAt });
 });
 
 // --- pictures ----------------------------------------------------------------------------
